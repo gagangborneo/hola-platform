@@ -51,13 +51,13 @@ nominal ini.
 
 ## F0.A — Repo, tooling, infra lokal · 4h
 
-- [ ] **F0-01** `0,5h` 🔒 — Inisialisasi repo, `pnpm-workspace.yaml`, struktur folder `apps/` + `packages/` + `docs/`, `.gitignore`, `.nvmrc` (Node 20+). *acuan:* [16 § 4.1](16-CONVENTIONS.md#41-root)
-- [ ] **F0-02** `0,5h` 🔒 — `tsconfig.base.json` dengan 10 opsi wajib (`strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `verbatimModuleSyntax`, `noFallthroughCasesInSwitch`, …) + `tsconfig.json` turunan tiap workspace. *acuan:* [16 § 1.1](16-CONVENTIONS.md#11-konfigurasi)
-- [ ] **F0-03** `0,5h` 🔒 — `biome.json`: 10 aturan wajib aktif + format (indent 2, width 100, single quote, semicolon `asNeeded`, trailing comma `all`, import organizing). *acuan:* [16 § 2](16-CONVENTIONS.md#2-biome)
-- [ ] **F0-04** `0,5h` 🔒 — Override `noRestrictedImports` per app/package (4 baris tabel: web/admin/mobile, shared, api-client, api). *acuan:* [16 § 2 `noRestrictedImports` per app](16-CONVENTIONS.md#norestrictedimports-per-app)
-- [ ] **F0-05** `0,5h` 🔒 — `turbo.json` (pipeline `typecheck`/`lint`/`test`/`build`/`dev`) + seluruh 22 perintah root `package.json`. *acuan:* [02 § 11 Perintah pnpm](02-INFRASTRUCTURE.md#perintah-pnpm-yang-wajib-ada-di-root-packagejson)
-- [ ] **F0-06** `1h` ⚙️🔒 — `docker-compose.yml`: `postgres:16-alpine`, `redis:7-alpine` dengan **3 flag wajib** (`appendonly yes`, `appendfsync everysec`, `maxmemory-policy noeviction`), `minio`, `minio-init` (3 bucket), `mailpit`. *acuan:* [02 § 11](02-INFRASTRUCTURE.md#layanan-di-docker-composeyml-root-repo), [02 § 2](02-INFRASTRUCTURE.md#2-daftar-container--sumber-daya)
-- [ ] **F0-07** `0,5h` — `.env.example` lokal yang cocok dengan compose + bagian "cara mulai" di README. *acuan:* [02 § 11 `.env.example` lokal](02-INFRASTRUCTURE.md#envexample-lokal-nilai-yang-cocok-dengan-compose)
+- [x] **F0-01** `0,5h` 🔒 — Inisialisasi repo, `pnpm-workspace.yaml`, struktur folder `apps/` + `packages/` + `docs/`, `.gitignore`, `.nvmrc` (Node 20+). *acuan:* [16 § 4.1](16-CONVENTIONS.md#41-root)
+- [x] **F0-02** `0,5h` 🔒 — `tsconfig.base.json` dengan 10 opsi wajib (`strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `verbatimModuleSyntax`, `noFallthroughCasesInSwitch`, …) + `tsconfig.json` turunan tiap workspace. *acuan:* [16 § 1.1](16-CONVENTIONS.md#11-konfigurasi)
+- [x] **F0-03** `0,5h` 🔒 — `biome.json`: 10 aturan wajib aktif + format (indent 2, width 100, single quote, semicolon `asNeeded`, trailing comma `all`, import organizing). *acuan:* [16 § 2](16-CONVENTIONS.md#2-biome)
+- [x] **F0-04** `0,5h` 🔒 — Override `noRestrictedImports` per app/package (4 baris tabel: web/admin/mobile, shared, api-client, api). *acuan:* [16 § 2 `noRestrictedImports` per app](16-CONVENTIONS.md#norestrictedimports-per-app)
+- [x] **F0-05** `0,5h` 🔒 — `turbo.json` (pipeline `typecheck`/`lint`/`test`/`build`/`dev`) + seluruh 22 perintah root `package.json`. *acuan:* [02 § 11 Perintah pnpm](02-INFRASTRUCTURE.md#perintah-pnpm-yang-wajib-ada-di-root-packagejson)
+- [x] **F0-06** `1h` ⚙️🔒 — `docker-compose.yml`: `postgres:16-alpine`, `redis:7-alpine` dengan **3 flag wajib** (`appendonly yes`, `appendfsync everysec`, `maxmemory-policy noeviction`), `minio`, `minio-init` (3 bucket), `mailpit`. *acuan:* [02 § 11](02-INFRASTRUCTURE.md#layanan-di-docker-composeyml-root-repo), [02 § 2](02-INFRASTRUCTURE.md#2-daftar-container--sumber-daya)
+- [x] **F0-07** `0,5h` — `.env.example` lokal yang cocok dengan compose + bagian "cara mulai" di README. *acuan:* [02 § 11 `.env.example` lokal](02-INFRASTRUCTURE.md#envexample-lokal-nilai-yang-cocok-dengan-compose)
 
 ## F0.B — `packages/shared` · 8h
 
