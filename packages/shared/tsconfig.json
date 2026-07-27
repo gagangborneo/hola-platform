@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // SENGAJA tanpa "types": ["node"]. packages/shared harus jalan di React
+    // Native — menyediakan tipe Node akan membuat `process.env` dan `fs`
+    // lolos typecheck padahal dilarang (docs/01-ARCHITECTURE.md § 3.6).
+    "types": []
+  },
+  "include": ["src/**/*.ts"]
+}
