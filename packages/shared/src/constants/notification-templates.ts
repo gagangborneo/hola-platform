@@ -1,0 +1,47 @@
+/**
+ * Kode template notifikasi (`notification_templates.code`).
+ *
+ * ┌─ CELAH DOKUMEN — perlu diputuskan ────────────────────────────────────────┐
+ * │ docs/ TIDAK memuat katalog kanonik TEMPLATE_CODE. Yang ada hanya bentuk    │
+ * │ namanya (docs/03 § `notification_templates`: "code (PK, mis.               │
+ * │ `booking.confirmed`)") dan satu contoh lain di docs/09 BR-T-56             │
+ * │ (`cafe_invoice.escalation`).                                               │
+ * │                                                                            │
+ * │ Karena AI-10/AI-11 melarang mengarang katalog sendiri, file ini HANYA      │
+ * │ memuat template yang benar-benar dikirim di Phase 0 — semuanya berasal     │
+ * │ dari alur yang tertulis eksplisit di docs/05-AUTH.md. Template modul lain  │
+ * │ ditambahkan bersama modulnya, setelah katalognya masuk ke docs/.           │
+ * │                                                                            │
+ * │ Tindakan yang disarankan: tambahkan tabel katalog template ke docs/02 § 7. │
+ * └────────────────────────────────────────────────────────────────────────────┘
+ *
+ * Konvensi nama: `{domain}.{peristiwa}` (docs/03 § `notification_templates`).
+ *
+ * `dedupe_key` BUKAN bagian dari kode template — ia disusun per pemanggilan dan
+ * menjadi bagian UNIQUE `(user_id, template_code, dedupe_key)` (C-19).
+ */
+
+export const TEMPLATE_CODE = {
+  // ── Auth (docs/05 § 8, § 9) — satu-satunya lingkup Phase 0 ─────────────────
+  /** Tautan verifikasi alamat email setelah registrasi (docs/05 § 8). */
+  AUTH_EMAIL_VERIFY: 'auth.email_verify',
+  /** Tautan reset password, TTL 1 jam, sekali pakai (docs/05 § 8). */
+  AUTH_PASSWORD_RESET: 'auth.password_reset',
+  /** Pemberitahuan password berhasil diubah (docs/05 § 8 `/password/change`). */
+  AUTH_PASSWORD_CHANGED: 'auth.password_changed',
+  /** Pemberitahuan akun terkunci setelah 10 gagal login (docs/05 § 8 Brute force). */
+  AUTH_ACCOUNT_LOCKED: 'auth.account_locked',
+} as const
+
+export type TemplateCode = (typeof TEMPLATE_CODE)[keyof typeof TEMPLATE_CODE]
+
+/**
+ * Template transaksional mengabaikan preferensi notifikasi user
+ * (docs/02 § 7 aturan 3). Seluruh template auth bersifat transaksional.
+ */
+export const TRANSACTIONAL_TEMPLATE_CODES: readonly TemplateCode[] = [
+  TEMPLATE_CODE.AUTH_EMAIL_VERIFY,
+  TEMPLATE_CODE.AUTH_PASSWORD_RESET,
+  TEMPLATE_CODE.AUTH_PASSWORD_CHANGED,
+  TEMPLATE_CODE.AUTH_ACCOUNT_LOCKED,
+]
