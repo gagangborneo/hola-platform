@@ -1,0 +1,200 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.5/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "includes": [
+      "**",
+      "!**/node_modules",
+      "!**/dist",
+      "!**/build",
+      "!**/.next",
+      "!**/.turbo",
+      "!**/.expo",
+      "!**/coverage",
+      "!**/*.gen.ts",
+      "!packages/db/drizzle"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100,
+    "lineEnding": "lf"
+  },
+  "json": {
+    "formatter": {
+      "trailingCommas": "none"
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "jsxQuoteStyle": "double",
+      "semicolons": "asNeeded",
+      "trailingCommas": "all",
+      "arrowParentheses": "always",
+      "bracketSpacing": true
+    }
+  },
+  "assist": {
+    "enabled": true,
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "domains": {
+      "project": "recommended"
+    },
+    "rules": {
+      "preset": "recommended",
+      "suspicious": {
+        "noExplicitAny": "error"
+      },
+      "style": {
+        "noNonNullAssertion": "error",
+        "useConst": "error",
+        "noParameterAssign": "error"
+      },
+      "correctness": {
+        "noUnusedVariables": "error",
+        "noUnusedImports": "error"
+      },
+      "complexity": {
+        "noBannedTypes": "error"
+      },
+      "nursery": {
+        "noFloatingPromises": "error"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["apps/web/**", "apps/admin/**", "apps/mobile/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "@hola/db": "Frontend tidak boleh menyentuh database. Semua akses lewat @hola/api-client → apps/api (docs/01-ARCHITECTURE.md § 2).",
+                  "drizzle-orm": "Frontend tidak boleh menyentuh database (docs/01-ARCHITECTURE.md § 2).",
+                  "postgres": "Frontend tidak boleh menyentuh database (docs/01-ARCHITECTURE.md § 2).",
+                  "pg": "Frontend tidak boleh menyentuh database (docs/01-ARCHITECTURE.md § 2).",
+                  "ioredis": "Frontend tidak boleh menyentuh Redis (docs/01-ARCHITECTURE.md § 2).",
+                  "bullmq": "Frontend tidak boleh enqueue job (docs/01-ARCHITECTURE.md § 2).",
+                  "argon2": "Hashing password hanya di apps/api (docs/05-AUTH.md).",
+                  "midtrans-client": "Integrasi gateway hanya di apps/api (docs/07-MODULE-PAYMENT.md § 2)."
+                },
+                "patterns": [
+                  {
+                    "group": ["@hola/db/*"]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/shared/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noProcessEnv": "error",
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "fs": "packages/shared harus jalan di React Native — tanpa API Node (docs/01-ARCHITECTURE.md § 3.6).",
+                  "path": "packages/shared harus jalan di React Native — tanpa API Node (docs/01-ARCHITECTURE.md § 3.6).",
+                  "crypto": "packages/shared harus jalan di React Native — tanpa API Node (docs/01-ARCHITECTURE.md § 3.6).",
+                  "pg": "packages/shared tidak boleh menyentuh database (docs/01-ARCHITECTURE.md § 3.6).",
+                  "ioredis": "packages/shared tidak boleh menyentuh Redis (docs/01-ARCHITECTURE.md § 3.6).",
+                  "@hola/db": "packages/shared tidak boleh bergantung pada packages/db (docs/01-ARCHITECTURE.md § 4)."
+                },
+                "patterns": [
+                  {
+                    "group": ["node:*"]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/api-client/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "@hola/db": "api-client hanya bicara HTTP; import dari apps/api wajib `import type` (docs/01-ARCHITECTURE.md § 3.7).",
+                  "drizzle-orm": "api-client hanya bicara HTTP (docs/01-ARCHITECTURE.md § 3.7).",
+                  "postgres": "api-client hanya bicara HTTP (docs/01-ARCHITECTURE.md § 3.7).",
+                  "pg": "api-client hanya bicara HTTP (docs/01-ARCHITECTURE.md § 3.7).",
+                  "ioredis": "api-client hanya bicara HTTP (docs/01-ARCHITECTURE.md § 3.7).",
+                  "bullmq": "api-client hanya bicara HTTP (docs/01-ARCHITECTURE.md § 3.7)."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/api/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsole": "error"
+          },
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "next": "apps/api tidak boleh menarik dependensi UI (docs/16-CONVENTIONS.md § 2).",
+                  "react": "apps/api tidak boleh menarik dependensi UI (docs/16-CONVENTIONS.md § 2).",
+                  "react-native": "apps/api tidak boleh menarik dependensi UI (docs/16-CONVENTIONS.md § 2)."
+                },
+                "patterns": [
+                  {
+                    "group": ["next/*", "react/*", "expo", "expo-*", "expo/*"]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**/*.test.ts", "**/*.test.tsx", "**/*.config.ts", "**/scripts/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsole": "off"
+          },
+          "style": {
+            "noProcessEnv": "off"
+          }
+        }
+      }
+    }
+  ]
+}
