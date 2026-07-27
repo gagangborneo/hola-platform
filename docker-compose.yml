@@ -60,11 +60,9 @@ services:
       MINIO_ROOT_USER: hola
       MINIO_ROOT_PASSWORD: hola12345
       TZ: Asia/Makassar
-    # Port host dapat di-override lewat .env bila bentrok dengan layanan lain
-    # di mesin developer. Default tetap 9000/9001 (docs/02-INFRASTRUCTURE.md § 11).
     ports:
-      - '${MINIO_PORT:-9000}:9000'
-      - '${MINIO_CONSOLE_PORT:-9001}:9001'
+      - '9000:9000'
+      - '9001:9001'
     volumes:
       - hola_miniodata:/data
     healthcheck:
@@ -100,10 +98,9 @@ services:
     environment:
       TZ: Asia/Makassar
       MP_MAX_MESSAGES: '500'
-    # Port host dapat di-override lewat .env bila bentrok (lihat minio).
     ports:
-      - '${MAILPIT_SMTP_PORT:-1025}:1025'
-      - '${MAILPIT_UI_PORT:-8025}:8025'
+      - '1025:1025'
+      - '8025:8025'
     healthcheck:
       test: ['CMD', 'wget', '-q', '-O', '-', 'http://localhost:8025/readyz']
       interval: 10s

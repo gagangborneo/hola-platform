@@ -53,11 +53,6 @@ Target: dari `git clone` sampai `pnpm dev` berhasil di mesin bersih **< 15 menit
 Bucket dibuat otomatis oleh service `minio-init`: `hola-media` (public read),
 `hola-private`, `hola-backup`.
 
-> **Kalau port bentrok dengan layanan lain di mesin Anda**, override di `.env` — jangan ubah
-> `docker-compose.yml`. Tersedia: `MINIO_PORT`, `MINIO_CONSOLE_PORT`, `MAILPIT_SMTP_PORT`,
-> `MAILPIT_UI_PORT`. Kalau port MinIO diubah, sesuaikan juga `S3_ENDPOINT` dan
-> `MEDIA_PUBLIC_BASE_URL`; kalau port Mailpit diubah, sesuaikan `SMTP_PORT`.
-
 ---
 
 ## Perintah
