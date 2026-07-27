@@ -1,0 +1,10 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+
+# Paket yang boleh menjalankan build script saat install (pnpm >= 10 memblokir
+# secara default). Ditambah sesuai kebutuhan, bukan diaktifkan menyeluruh.
+onlyBuiltDependencies:
+  - '@biomejs/biome'
+  - 'argon2'
+  - 'esbuild'

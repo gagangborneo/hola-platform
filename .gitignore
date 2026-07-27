@@ -1,0 +1,53 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+
+# Cache
+.turbo/
+.cache/
+.eslintcache
+
+# Test & coverage
+coverage/
+.vitest/
+
+# Environment — .env.example WAJIB di-commit, sisanya tidak
+.env
+.env.*
+!.env.example
+!.env.test
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Editor & OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Expo / React Native (apps/mobile — Phase 3)
+.expo/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# Sentry
+.sentryclirc
+
+# Runbook artefak sementara (isi runbook sendiri tetap di-commit)
+docs/runbooks/*.tmp
