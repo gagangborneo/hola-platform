@@ -7,6 +7,25 @@
   "engines": {
     "node": ">=20"
   },
+  "scripts": {
+    "setup": "pnpm install && pnpm dev:infra && pnpm db:migrate && pnpm db:seed",
+    "dev": "turbo run dev",
+    "dev:mobile": "pnpm --filter @hola/mobile exec expo start",
+    "dev:infra": "docker compose up -d",
+    "dev:infra:down": "docker compose down",
+    "dev:infra:reset": "docker compose down -v && docker compose up -d",
+    "db:generate": "pnpm --filter @hola/db run generate",
+    "db:migrate": "pnpm --filter @hola/db run migrate",
+    "db:studio": "pnpm --filter @hola/db run studio",
+    "db:seed": "pnpm --filter @hola/db run seed",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "test": "turbo run test",
+    "test:integration": "turbo run test:integration",
+    "check:env": "pnpm --filter @hola/shared run check:env"
+  },
   "devDependencies": {
     "@biomejs/biome": "^2.5.5",
     "@types/node": "^26.1.1",
