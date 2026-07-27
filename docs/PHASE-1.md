@@ -61,20 +61,20 @@ nominal ini.
 
 ## F0.B — `packages/shared` · 8h
 
-- [ ] **F0-08** `1h` 🔒 — `constants/enums.ts`: **seluruh 60 enum** sebagai `as const` object + union type (bukan `enum` TypeScript). *acuan:* [03 § 3](03-DATA-MODEL.md#3-daftar-enum), [16 BR-TS-05](16-CONVENTIONS.md#12-aturan-tipe)
-- [ ] **F0-09** `0,5h` — `constants/error-codes.ts`: katalog `ERROR_CODE` lengkap. *acuan:* [04 § 5 Katalog error code](04-API-CONTRACT.md#katalog-error-code)
-- [ ] **F0-10** `0,5h` 🔒 — `constants/queues.ts`: `QUEUE.*` (6 queue) + `JOB.*` (37 job) sebagai union type. *acuan:* [02 § 5.1](02-INFRASTRUCTURE.md#51-queue), [02 § 5.2](02-INFRASTRUCTURE.md#52-tabel-job)
-- [ ] **F0-11** `0,5h` — `constants/limits.ts` + `constants/settings-keys.ts` + `constants/notification-templates.ts`. *acuan:* [16 § 4.3](16-CONVENTIONS.md#43-packagesshared)
-- [ ] **F0-12** `0,5h` 🔒 — `redis-keys.ts`: builder **pure** untuk 9 pola key, semuanya berprefiks `hola:{env}:`. Tidak boleh ada string key literal di service. *acuan:* [02 § 4.1](02-INFRASTRUCTURE.md#41-namespace-key), [16 BR-RD-02](16-CONVENTIONS.md#7-pola-redis-client)
-- [ ] **F0-13** `0,5h` — `format/money.ts` (`formatIDR`), `format/date.ts` (`formatWita`, `formatDateRange`), `format/duration.ts` + test
-- [ ] **F0-14** `0,5h` 🔒 — `utils/round.ts` `roundTo100()` *half-up* + test tabel kasus. *acuan:* [07 § 3.3 P10](07-MODULE-PAYMENT.md#33-detail-per-step), [08 § 8 Contoh](08-MODULE-PROMO.md#8-perhitungan-diskon)
-- [ ] **F0-15** `1h` 🔒 — `utils/slot-grid.ts`: `isSlotAligned()`, `buildSlotGrid()` — **pure**, menerima `now` sebagai parameter (BR-TS-10) + test. *acuan:* [03 § 8.2](03-DATA-MODEL.md#82-definisi-slot--grid)
-- [ ] **F0-16** `0,5h` — `utils/iso-week.ts` + test (dipakai `WEEKLY_STREAK` Phase 3, dibuat sekarang agar tidak ada helper waktu kedua)
-- [ ] **F0-17** `0,5h` — `env/`: schema zod env per app (api, web, admin, mobile) sesuai 4 tabel + script `pnpm check:env`. *acuan:* [02 § 8](02-INFRASTRUCTURE.md#8-daftar-environment-variable-per-app)
-- [ ] **F0-18** `0,5h` — `schemas/common.ts`: `paginationQuery` (cursor + offset), `idParam`, `money`, `isoDateTime`, `dateRange`. *acuan:* [04 § 6](04-API-CONTRACT.md#6-pagination-filter-sorting)
-- [ ] **F0-19** `0,5h` — `schemas/auth.ts` (register, login, refresh, password, otp) + `types/quote.ts` (bentuk `Quote`). *acuan:* [05](05-AUTH.md), [07 § 3.1](07-MODULE-PAYMENT.md#31-kontrak-fungsi)
-- [ ] **F0-20** `0,5h` 🔴 — Test tabel-driven: setiap konstanta enum **identik** dengan daftar di [03 § 3](03-DATA-MODEL.md#3-daftar-enum)
-- [ ] **F0-21** `0,5h` — Verifikasi larangan: `packages/shared` tidak mengimpor `fs`/`path`/`crypto` Node dan tidak menyentuh `process.env` (harus jalan di React Native). *acuan:* [01 § 3.6](01-ARCHITECTURE.md#36-packagesshared)
+- [x] **F0-08** `1h` 🔒 — `constants/enums.ts`: **seluruh 60 enum** sebagai `as const` object + union type (bukan `enum` TypeScript). *acuan:* [03 § 3](03-DATA-MODEL.md#3-daftar-enum), [16 BR-TS-05](16-CONVENTIONS.md#12-aturan-tipe)
+- [x] **F0-09** `0,5h` — `constants/error-codes.ts`: katalog `ERROR_CODE` lengkap. *acuan:* [04 § 5 Katalog error code](04-API-CONTRACT.md#katalog-error-code)
+- [x] **F0-10** `0,5h` 🔒 — `constants/queues.ts`: `QUEUE.*` (6 queue) + `JOB.*` (37 job) sebagai union type. *acuan:* [02 § 5.1](02-INFRASTRUCTURE.md#51-queue), [02 § 5.2](02-INFRASTRUCTURE.md#52-tabel-job)
+- [x] **F0-11** `0,5h` — `constants/limits.ts` + `constants/settings-keys.ts` + `constants/notification-templates.ts`. *acuan:* [16 § 4.3](16-CONVENTIONS.md#43-packagesshared)
+- [x] **F0-12** `0,5h` 🔒 — `redis-keys.ts`: builder **pure** untuk 9 pola key, semuanya berprefiks `hola:{env}:`. Tidak boleh ada string key literal di service. *acuan:* [02 § 4.1](02-INFRASTRUCTURE.md#41-namespace-key), [16 BR-RD-02](16-CONVENTIONS.md#7-pola-redis-client)
+- [x] **F0-13** `0,5h` — `format/money.ts` (`formatIDR`), `format/date.ts` (`formatWita`, `formatDateRange`), `format/duration.ts` + test
+- [x] **F0-14** `0,5h` 🔒 — `utils/round.ts` `roundTo100()` *half-up* + test tabel kasus. *acuan:* [07 § 3.3 P10](07-MODULE-PAYMENT.md#33-detail-per-step), [08 § 8 Contoh](08-MODULE-PROMO.md#8-perhitungan-diskon)
+- [x] **F0-15** `1h` 🔒 — `utils/slot-grid.ts`: `isSlotAligned()`, `buildSlotGrid()` — **pure**, menerima `now` sebagai parameter (BR-TS-10) + test. *acuan:* [03 § 8.2](03-DATA-MODEL.md#82-definisi-slot--grid)
+- [x] **F0-16** `0,5h` — `utils/iso-week.ts` + test (dipakai `WEEKLY_STREAK` Phase 3, dibuat sekarang agar tidak ada helper waktu kedua)
+- [x] **F0-17** `0,5h` — `env/`: schema zod env per app (api, web, admin, mobile) sesuai 4 tabel + script `pnpm check:env`. *acuan:* [02 § 8](02-INFRASTRUCTURE.md#8-daftar-environment-variable-per-app)
+- [x] **F0-18** `0,5h` — `schemas/common.ts`: `paginationQuery` (cursor + offset), `idParam`, `money`, `isoDateTime`, `dateRange`. *acuan:* [04 § 6](04-API-CONTRACT.md#6-pagination-filter-sorting)
+- [x] **F0-19** `0,5h` — `schemas/auth.ts` (register, login, refresh, password, otp) + `types/quote.ts` (bentuk `Quote`). *acuan:* [05](05-AUTH.md), [07 § 3.1](07-MODULE-PAYMENT.md#31-kontrak-fungsi)
+- [x] **F0-20** `0,5h` 🔴 — Test tabel-driven: setiap konstanta enum **identik** dengan daftar di [03 § 3](03-DATA-MODEL.md#3-daftar-enum)
+- [x] **F0-21** `0,5h` — Verifikasi larangan: `packages/shared` tidak mengimpor `fs`/`path`/`crypto` Node dan tidak menyentuh `process.env` (harus jalan di React Native). *acuan:* [01 § 3.6](01-ARCHITECTURE.md#36-packagesshared)
 
 ## F0.C — `packages/db` · 6h
 

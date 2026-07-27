@@ -17,6 +17,10 @@
     // ── Pendukung ───────────────────────────────────────────────────────────
     // `bundler` resolution mensyaratkan module ESNext/Preserve.
     "module": "ESNext",
+    // Diperlukan oleh berkas yang dijalankan Node langsung lewat type stripping
+    // (scripts/check-env.ts → packages/shared/src/env/*): Node mewajibkan
+    // ekstensi eksplisit pada impor relatif. Aman karena kita selalu `noEmit`.
+    "allowImportingTsExtensions": true,
     "lib": ["ES2022"],
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,

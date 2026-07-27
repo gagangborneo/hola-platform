@@ -24,7 +24,7 @@
     "lint:fix": "biome check --write .",
     "test": "turbo run test",
     "test:integration": "turbo run test:integration",
-    "check:env": "pnpm --filter @hola/shared run check:env"
+    "check:env": "node scripts/check-env.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.5",
