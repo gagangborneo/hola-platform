@@ -12,7 +12,7 @@
  * F0-19 menetapkan bentuknya; P1-07 mengunci `QuoteInput` bersama implementasi
  * pipeline-nya.
  */
-import type { PromoType, RateClass } from '../constants/enums'
+import type { PromoType, RateClass } from '../constants/enums.ts'
 
 /** Dinaikkan setiap kali logika pipeline berubah (docs/07 § 3.1). */
 export const QUOTE_PIPELINE_VERSION = 1

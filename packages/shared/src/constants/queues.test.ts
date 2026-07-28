@@ -4,7 +4,7 @@
  * DOC_QUEUES dan DOC_JOBS adalah SALINAN VERBATIM kolom tabel dokumen.
  */
 import { describe, expect, it } from 'vitest'
-import { JOB, JOB_QUEUE, QUEUE, QUEUE_CONCURRENCY } from './queues'
+import { JOB, JOB_QUEUE, QUEUE, QUEUE_CONCURRENCY } from './queues.ts'
 
 const DOC_QUEUES = `
 booking 5

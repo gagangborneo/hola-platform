@@ -5,7 +5,7 @@
  * Saat dokumen berubah, salin ulang barisnya ke sini.
  */
 import { describe, expect, it } from 'vitest'
-import { ERROR_CODE, ERROR_HTTP_STATUS, WARNING_CODE } from './error-codes'
+import { ERROR_CODE, ERROR_HTTP_STATUS, WARNING_CODE } from './error-codes.ts'
 
 const DOC_ERRORS = `
 VALIDATION_ERROR 422

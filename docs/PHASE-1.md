@@ -78,16 +78,16 @@ nominal ini.
 
 ## F0.C — `packages/db` · 6h
 
-- [ ] **F0-22** `0,5h` — Konfigurasi drizzle-kit, koneksi Drizzle tunggal, mapping kolom uang `bigint → number` (BR-TS-07), helper UUID v7. *acuan:* [16 § 4.2](16-CONVENTIONS.md#42-appsapi), [03 § 2](03-DATA-MODEL.md#2-konvensi-tipe-data--kolom-standar)
-- [ ] **F0-23** `0,5h` 🔒 — Migration 0001: **53 tipe enum PostgreSQL**, nilainya identik dengan F0-08. *acuan:* [03 § 3](03-DATA-MODEL.md#3-daftar-enum)
-- [ ] **F0-24** `1h` 🔒 — Tabel identity: `users` (+ `ck_users_identifier`, UNIQUE email lowercase & phone), `refresh_tokens` (C-23 + index), `customer_profiles`. *acuan:* [03 § 5](03-DATA-MODEL.md#5-entitas-identity--access)
-- [ ] **F0-25** `1h` 🔒 — Tabel venue & lapangan: `venues`, `sports`, `courts` (+ C-24), `court_operating_hours` (UNIQUE `(court_id, day_of_week)`), `special_dates`, `addons`. *acuan:* [03 § 6](03-DATA-MODEL.md#6-entitas-venue-court-pricing)
-- [ ] **F0-26** `0,5h` — Tabel `price_rules` + 3 CHECK (`ck_price_rules_scope`, `_specific_date`, `_time_range`). *acuan:* [03 § 6 `price_rules`](03-DATA-MODEL.md#price_rules)
-- [ ] **F0-27** `0,5h` — Tabel sistem: `app_settings`, `audit_logs`, `idempotency_records` (C-22), `otp_challenges`, `password_reset_tokens`. *acuan:* [03 § 17](03-DATA-MODEL.md#17-entitas-notification-media-system)
-- [ ] **F0-28** `0,5h` — Tabel media & notifikasi: `media_files`, `notification_templates`, `notifications` (C-19), `push_tokens`. *acuan:* [03 § 17](03-DATA-MODEL.md#17-entitas-notification-media-system)
-- [ ] **F0-29** `0,5h` — Sequence kode manusia: `seq_booking_code`, `seq_payment_code`, `seq_refund_code`, `seq_invoice_number`, `seq_journal_entry`, `seq_employee_number`. *acuan:* [03 § 2 Format kode manusia](03-DATA-MODEL.md#format-kode-manusia)
-- [ ] **F0-30** `0,5h` — Index fondasi yang relevan Phase 0 (`idx_audit_logs_entity`, `idx_notifications_status_created`, index `refresh_tokens`). *acuan:* [03 § 18](03-DATA-MODEL.md#index-untuk-performa-minimal)
-- [ ] **F0-31** `0,5h` 🔴 — Test integrasi: enum TypeScript ≡ `pg_enum` di database uji (menangkap drift F0-08 vs F0-23)
+- [x] **F0-22** `0,5h` — Konfigurasi drizzle-kit, koneksi Drizzle tunggal, mapping kolom uang `bigint → number` (BR-TS-07), helper UUID v7. *acuan:* [16 § 4.2](16-CONVENTIONS.md#42-appsapi), [03 § 2](03-DATA-MODEL.md#2-konvensi-tipe-data--kolom-standar)
+- [x] **F0-23** `0,5h` 🔒 — Migration 0001: **53 tipe enum PostgreSQL**, nilainya identik dengan F0-08. *acuan:* [03 § 3](03-DATA-MODEL.md#3-daftar-enum)
+- [x] **F0-24** `1h` 🔒 — Tabel identity: `users` (+ `ck_users_identifier`, UNIQUE email lowercase & phone), `refresh_tokens` (C-23 + index), `customer_profiles`. *acuan:* [03 § 5](03-DATA-MODEL.md#5-entitas-identity--access)
+- [x] **F0-25** `1h` 🔒 — Tabel venue & lapangan: `venues`, `sports`, `courts` (+ C-24), `court_operating_hours` (UNIQUE `(court_id, day_of_week)`), `special_dates`, `addons`. *acuan:* [03 § 6](03-DATA-MODEL.md#6-entitas-venue-court-pricing)
+- [x] **F0-26** `0,5h` — Tabel `price_rules` + 3 CHECK (`ck_price_rules_scope`, `_specific_date`, `_time_range`). *acuan:* [03 § 6 `price_rules`](03-DATA-MODEL.md#price_rules)
+- [x] **F0-27** `0,5h` — Tabel sistem: `app_settings`, `audit_logs`, `idempotency_records` (C-22), `otp_challenges`, `password_reset_tokens`. *acuan:* [03 § 17](03-DATA-MODEL.md#17-entitas-notification-media-system)
+- [x] **F0-28** `0,5h` — Tabel media & notifikasi: `media_files`, `notification_templates`, `notifications` (C-19), `push_tokens`. *acuan:* [03 § 17](03-DATA-MODEL.md#17-entitas-notification-media-system)
+- [x] **F0-29** `0,5h` — Sequence kode manusia: `seq_booking_code`, `seq_payment_code`, `seq_refund_code`, `seq_invoice_number`, `seq_journal_entry`, `seq_employee_number`. *acuan:* [03 § 2 Format kode manusia](03-DATA-MODEL.md#format-kode-manusia)
+- [x] **F0-30** `0,5h` — Index fondasi yang relevan Phase 0 (`idx_audit_logs_entity`, `idx_notifications_status_created`, index `refresh_tokens`). *acuan:* [03 § 18](03-DATA-MODEL.md#index-untuk-performa-minimal)
+- [x] **F0-31** `0,5h` 🔴 — Test integrasi: enum TypeScript ≡ `pg_enum` di database uji (menangkap drift F0-08 vs F0-23)
 
 ## F0.D — `apps/api` core · 7h
 

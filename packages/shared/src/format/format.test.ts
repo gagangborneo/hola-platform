@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { witaToInstant } from '../utils/wita'
+import { witaToInstant } from '../utils/wita.ts'
 import {
   formatDateRange,
   formatWita,
   formatWitaDate,
   formatWitaTime,
   formatWitaWeekday,
-} from './date'
-import { formatCountdown, formatDuration } from './duration'
-import { formatIDR } from './money'
+} from './date.ts'
+import { formatCountdown, formatDuration } from './duration.ts'
+import { formatIDR } from './money.ts'
 
 const wita = (dateYmd: string, hhmm: string): Date => {
   const [h, m] = hhmm.split(':')

@@ -10,7 +10,7 @@
  * Native, jadi tidak boleh menyentuh `node:fs` (docs/01-ARCHITECTURE.md § 3.6).
  */
 import { describe, expect, it } from 'vitest'
-import { enumValues, PG_ENUMS } from './enums'
+import { enumValues, PG_ENUMS } from './enums.ts'
 
 const DOC_TABLE = `
 user_role = customer, admin, staff, tenant

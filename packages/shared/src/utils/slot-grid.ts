@@ -18,7 +18,7 @@
  * Tidak ada `new Date()` di file ini: fungsi yang bergantung waktu menerima
  * `now` sebagai parameter (docs/16 BR-TS-10).
  */
-import { parseTimeToMinutes, witaDateYmd, witaToInstant } from './wita'
+import { parseTimeToMinutes, witaDateYmd, witaToInstant } from './wita.ts'
 
 const MS_PER_MINUTE = 60_000
 

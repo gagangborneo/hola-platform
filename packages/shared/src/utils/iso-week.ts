@@ -15,7 +15,7 @@
  *
  * Pure, tanpa `new Date()` internal (docs/16 BR-TS-10).
  */
-import { pad2, toWitaParts } from './wita'
+import { pad2, toWitaParts } from './wita.ts'
 
 export interface IsoWeek {
   /** Tahun ISO — bisa berbeda dari tahun kalender di pergantian tahun. */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { roundTo100 } from './round'
+import { roundTo100 } from './round.ts'
 
 describe('roundTo100 (docs/07 § 3.3 P10)', () => {
   const cases: Array<[number, number, string]> = [

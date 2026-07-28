@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isoWeekKey, isoWeekOf } from './iso-week'
+import { isoWeekKey, isoWeekOf } from './iso-week.ts'
 
 /** Instan UTC yang jatuh pada tengah hari WITA agar bebas dari ambiguitas batas hari. */
 const witaNoon = (dateYmd: string): Date => new Date(`${dateYmd}T04:00:00Z`)

@@ -7,7 +7,7 @@
  * ditegakkan server, tanpa menduplikasi aturannya.
  */
 import { z } from 'zod'
-import { ERROR_CODE, WARNING_CODE } from '../constants/error-codes'
+import { ERROR_CODE, WARNING_CODE } from '../constants/error-codes.ts'
 
 // ── Primitif ─────────────────────────────────────────────────────────────────
 

@@ -7,8 +7,8 @@
  * karena itu tidak pernah berbeda dari yang ditegakkan server.
  */
 import { z } from 'zod'
-import { PASSWORD_MIN_LENGTH } from '../constants/limits'
-import { idSchema } from './common'
+import { PASSWORD_MIN_LENGTH } from '../constants/limits.ts'
+import { idSchema } from './common.ts'
 
 // ── Primitif identitas ───────────────────────────────────────────────────────
 

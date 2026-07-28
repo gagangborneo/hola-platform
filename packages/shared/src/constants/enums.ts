@@ -554,7 +554,20 @@ export const PG_ENUMS = {
 
 export type PgEnumName = keyof typeof PG_ENUMS
 
-/** Nilai sebuah enum sebagai array, urut sesuai deklarasi. */
-export function enumValues<T extends Record<string, string>>(e: T): Array<T[keyof T]> {
-  return Object.values(e) as Array<T[keyof T]>
+/**
+ * Nilai sebuah enum sebagai tuple non-kosong, urut sesuai deklarasi.
+ *
+ * Tipe return-nya sengaja `[T, ...T[]]`, bukan `T[]`: `pgEnum()` Drizzle dan
+ * `z.enum()` keduanya mensyaratkan tuple non-kosong. Mengembalikan array biasa
+ * memaksa setiap pemanggil menulis `as` — dan `as` di jalur enum persis yang
+ * bisa menyembunyikan drift yang ingin kita cegah.
+ */
+export function enumValues<T extends Record<string, string>>(
+  e: T,
+): [T[keyof T], ...Array<T[keyof T]>] {
+  const [first, ...rest] = Object.values(e) as Array<T[keyof T]>
+  if (first === undefined) {
+    throw new Error('Enum tidak boleh kosong')
+  }
+  return [first, ...rest]
 }

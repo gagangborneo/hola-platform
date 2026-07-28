@@ -5,7 +5,7 @@
  * Saat modul lain menambah template ke dokumen, salin barisnya ke sini juga.
  */
 import { describe, expect, it } from 'vitest'
-import { TEMPLATE_CODE, TRANSACTIONAL_TEMPLATE_CODES } from './notification-templates'
+import { TEMPLATE_CODE, TRANSACTIONAL_TEMPLATE_CODES } from './notification-templates.ts'
 
 const DOC_TEMPLATES = `
 auth.email_verify email transaksional

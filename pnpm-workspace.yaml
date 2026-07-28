@@ -3,8 +3,9 @@ packages:
   - 'packages/*'
 
 # Paket yang boleh menjalankan build script saat install (pnpm >= 10 memblokir
-# secara default). Ditambah sesuai kebutuhan, bukan diaktifkan menyeluruh.
-onlyBuiltDependencies:
-  - '@biomejs/biome'
-  - 'argon2'
-  - 'esbuild'
+# secara default). Ditambah satu per satu sesuai kebutuhan, bukan diizinkan
+# menyeluruh — build script adalah jalur eksekusi kode saat `pnpm install`.
+allowBuilds:
+  '@biomejs/biome': true
+  argon2: true
+  esbuild: true

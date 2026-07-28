@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { areSlotsContiguous, buildSlotGrid, isSlotAligned, slotEndsAt } from './slot-grid'
-import { witaDateYmd, witaToInstant } from './wita'
+import { areSlotsContiguous, buildSlotGrid, isSlotAligned, slotEndsAt } from './slot-grid.ts'
+import { witaDateYmd, witaToInstant } from './wita.ts'
 
 /** Court seed: buka 06:00–23:00 WITA, slot 60 menit (docs/02 § 11 seed). */
 const GRID = { slotDurationMinutes: 60, opensTime: '06:00', closesTime: '23:00' }

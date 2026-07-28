@@ -5,7 +5,7 @@
  * diganti nilai contoh yang tetap.
  */
 import { describe, expect, it } from 'vitest'
-import { APP_ENV, createRedisKeys } from './redis-keys'
+import { APP_ENV, createRedisKeys } from './redis-keys.ts'
 
 const COURT = 'c1'
 const STARTS_AT = '2026-08-04T10:00:00Z'

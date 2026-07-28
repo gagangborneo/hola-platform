@@ -4,7 +4,7 @@
  * Timestamp lintas batas tetap UTC/ISO-8601 (docs/16 BR-TS-08); konversi WITA
  * hanya di lapisan presentasi. Tanpa `Intl` — lihat alasannya di `format/money.ts`.
  */
-import { pad2, toWitaParts } from '../utils/wita'
+import { pad2, toWitaParts } from '../utils/wita.ts'
 
 const MONTHS_SHORT = [
   'Jan',
