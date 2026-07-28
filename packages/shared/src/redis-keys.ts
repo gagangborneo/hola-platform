@@ -1,5 +1,5 @@
 /**
- * Builder key Redis — 9 pola dari docs/02-INFRASTRUCTURE.md § 4.1.
+ * Builder key Redis — pola dari docs/02-INFRASTRUCTURE.md § 4.1.
  *
  * Semua key diawali `hola:{env}:`. Menyusun string key secara ad-hoc di service
  * DILARANG (docs/16-CONVENTIONS.md BR-RD-02, AI-6): satu typo pada prefiks
@@ -40,6 +40,10 @@ export interface RedisKeys {
   workerHeartbeat(): string
   /** Prefiks yang diberikan ke BullMQ (R-8). BullMQ mengelola isinya sendiri. */
   bullPrefix(): string
+  /** Cache context autentikasi. TTL: 60 detik, hanya optimisasi. */
+  userContext(userId: string): string
+  /** Denylist access-token jti. TTL: sisa umur JWT; pemeriksaannya fail-open. */
+  tokenDenylist(jti: string): string
   /** Prefiks mentah `hola:{env}:` — untuk SCAN berpola, bukan untuk menyusun key. */
   prefix(): string
 }
@@ -56,6 +60,8 @@ export function createRedisKeys(env: AppEnv): RedisKeys {
     lock: (name) => `${p}lock:${name}`,
     workerHeartbeat: () => `${p}worker:heartbeat`,
     bullPrefix: () => `${p}bull`,
+    userContext: (userId) => `${p}auth:user:${userId}`,
+    tokenDenylist: (jti) => `${p}auth:denylist:${jti}`,
     prefix: () => p,
   }
 }

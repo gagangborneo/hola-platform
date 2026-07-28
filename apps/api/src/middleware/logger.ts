@@ -5,6 +5,8 @@
  * Field wajib: `request_id`, `method`, `path`, `status`, `duration_ms`,
  * `user_id`, `role`, `ip`.
  */
+
+import type { UserRole } from '@hola/shared'
 import type { MiddlewareHandler } from 'hono'
 import { logger } from '../config/logger.ts'
 import { incrementMetric, observeMetric } from '../config/metrics.ts'
@@ -12,7 +14,13 @@ import type { RequestVariables } from './request-id.ts'
 
 export interface AuthVariables {
   userId?: string
-  role?: string
+  role?: UserRole
+  cafeTenantId?: string
+  employeeId?: string
+  tokenJti?: string
+  tokenIssuedAt?: Date
+  tokenExpiresAt?: Date
+  tokenVersion?: number
 }
 
 type Vars = RequestVariables & AuthVariables

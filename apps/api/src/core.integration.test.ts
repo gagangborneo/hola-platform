@@ -1,10 +1,19 @@
-import { appSettings, idempotencyRecords } from '@hola/db'
-import { ERROR_CODE, RATE_LIMIT_BUCKET, SETTINGS_KEY } from '@hola/shared'
-import { inArray, sql } from 'drizzle-orm'
+import { createHash } from 'node:crypto'
+import {
+  appSettings,
+  auditLogs,
+  idempotencyRecords,
+  passwordResetTokens,
+  refreshTokens,
+  users,
+} from '@hola/db'
+import { ERROR_CODE, RATE_LIMIT_BUCKET, SETTINGS_KEY, USER_ROLE } from '@hola/shared'
+import { eq, inArray, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 import { app } from './app.ts'
 import { closeDatabase, db } from './config/db.ts'
+import { logger } from './config/logger.ts'
 import { renderMetrics, resetMetrics } from './config/metrics.ts'
 import { closeRedis, keys, redis, safeRedis } from './config/redis.ts'
 import { env } from './env.ts'
@@ -24,6 +33,11 @@ import { idempotency } from './middleware/idempotency.ts'
 import type { AuthVariables } from './middleware/logger.ts'
 import { rateLimit } from './middleware/rate-limit.ts'
 import { type RequestVariables, requestId } from './middleware/request-id.ts'
+import { createUser, findUserByEmail } from './modules/auth/auth.repository.ts'
+import { login as loginService } from './modules/auth/auth.service.ts'
+import { issueEmailVerificationToken } from './modules/auth/jwt.ts'
+import { hashPassword } from './modules/auth/password.ts'
+import { createOpaqueToken, hashOpaqueToken } from './modules/auth/tokens.ts'
 
 const IDEMPOTENCY_KEYS = [
   '018f0000-0000-7000-8000-000000000101',
@@ -37,6 +51,18 @@ const IDEMPOTENCY_SCOPES = [
   'test.fail-once',
   'test.scope-a',
   'test.scope-b',
+] as const
+
+const AUTH_EMAILS = [
+  'customer.auth-test@hola.test',
+  'rotate.auth-test@hola.test',
+  'locked.auth-test@hola.test',
+  'reset.auth-test@hola.test',
+  'admin.auth-test@hola.test',
+  'staff.auth-test@hola.test',
+  'weak.auth-test@hola.test',
+  'sessions.auth-test@hola.test',
+  'rbac-customer.auth-test@hola.test',
 ] as const
 
 async function cleanIntegrationState(): Promise<void> {
@@ -55,6 +81,27 @@ async function cleanIntegrationState(): Promise<void> {
       await redis.del(keys.idempotency(scope, key))
     }
   }
+  await db.delete(users).where(inArray(users.email, [...AUTH_EMAILS]))
+  for (const email of AUTH_EMAILS) {
+    const identity = createHash('sha256').update(email, 'utf8').digest('hex')
+    await Promise.all([
+      redis.del(keys.rateLimit(RATE_LIMIT_BUCKET.AUTH_REGISTER, `ip:unknown:identity:${identity}`)),
+      redis.del(keys.rateLimit(RATE_LIMIT_BUCKET.AUTH_LOGIN, `ip:unknown:identity:${identity}`)),
+    ])
+  }
+  const weakIdentity = createHash('sha256').update('weak.auth-test@hola.test', 'utf8').digest('hex')
+  await Promise.all([
+    redis.del(
+      keys.rateLimit(RATE_LIMIT_BUCKET.AUTH_REGISTER, `ip:unknown:identity:${weakIdentity}`),
+    ),
+    redis.del(
+      keys.rateLimit(
+        RATE_LIMIT_BUCKET.AUTH_OTP,
+        `ip:unknown:identity:${createHash('sha256').update('+6281234567890', 'utf8').digest('hex')}`,
+      ),
+    ),
+    redis.del(keys.rateLimit(RATE_LIMIT_BUCKET.AUTH_REFRESH, 'ip:unknown')),
+  ])
 }
 
 beforeEach(async () => {
@@ -346,5 +393,386 @@ describe('endpoint system', () => {
       },
     })
     expect(response.headers.get(HEADER.RATELIMIT_LIMIT)).toBe('300')
+  })
+})
+
+describe('Auth & RBAC', () => {
+  const password = 'MagentaPaddle2026!'
+
+  function authContext(
+    now: Date = new Date(),
+    mail: {
+      send: (message: { to: string; subject: string; text: string; html: string }) => Promise<void>
+    } = { send: async () => undefined },
+  ) {
+    return {
+      db,
+      redis,
+      redisKeys: keys,
+      safeRedis,
+      env,
+      logger,
+      mail,
+      now,
+      sleep: async () => undefined,
+    }
+  }
+
+  async function register(email: string): Promise<void> {
+    const response = await app.request('/api/v1/auth/register', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email, password, full_name: 'Pemain Auth' }),
+    })
+    expect(response.status).toBe(200)
+    expect(await response.json()).toMatchObject({
+      data: { message: 'Cek email untuk melanjutkan.' },
+    })
+  }
+
+  async function mobileLogin(
+    email: string,
+    candidatePassword: string = password,
+  ): Promise<{
+    accessToken: string
+    refreshToken: string
+  }> {
+    const response = await app.request('/api/v1/auth/login', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-client-platform': 'mobile-ios' },
+      body: JSON.stringify({ identifier: email, password: candidatePassword }),
+    })
+    expect(response.status).toBe(200)
+    const body = (await response.json()) as {
+      data: { access_token: string; refresh_token: string; expires_in: number }
+    }
+    expect(body.data.expires_in).toBeLessThanOrEqual(900)
+    return { accessToken: body.data.access_token, refreshToken: body.data.refresh_token }
+  }
+
+  it('F0-43/F0-44: argon2id+pepper, password contextual, dan register anti-enumerasi', async () => {
+    const email = AUTH_EMAILS[0]
+    await register(email)
+    await register(email)
+
+    const user = await findUserByEmail(db, email)
+    expect(user?.role).toBe(USER_ROLE.CUSTOMER)
+    expect(user?.passwordHash).toContain('$argon2id$')
+    expect(user?.passwordHash).toContain('m=19456')
+    expect(user?.passwordHash).toContain('t=2')
+    expect(user?.passwordHash).toContain('p=1')
+
+    const webLogin = await app.request('/api/v1/auth/login', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-client-platform': 'web' },
+      body: JSON.stringify({ identifier: email, password }),
+    })
+    expect(webLogin.status).toBe(200)
+    const refreshCookie = webLogin.headers.get('set-cookie') ?? ''
+    expect(refreshCookie).toContain('HttpOnly')
+    expect(refreshCookie).toContain('Secure')
+    expect(refreshCookie).toContain('SameSite=Lax')
+    expect(refreshCookie).toContain('Path=/api/v1/auth')
+
+    const weak = await app.request('/api/v1/auth/register', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        email: 'weak.auth-test@hola.test',
+        password: 'password',
+        full_name: 'password',
+      }),
+    })
+    expect(weak.status).toBe(422)
+  })
+
+  it('F0-45: login salah mengunci pada kegagalan ke-10 tanpa mengungkap akun', async () => {
+    const email = AUTH_EMAILS[2]
+    await register(email)
+    const base = new Date()
+    const messages: Array<{ subject: string }> = []
+    const mail = {
+      send: async (message: { subject: string }) => {
+        messages.push(message)
+      },
+    }
+    for (let attempt = 0; attempt < 10; attempt++) {
+      await expect(
+        loginService(
+          authContext(base, mail),
+          { identifier: email, password: 'SalahPassword2026!' },
+          {
+            ipAddress: '127.0.0.1',
+            userAgent: 'vitest',
+            deviceLabel: 'test',
+          },
+        ),
+      ).rejects.toMatchObject({ code: ERROR_CODE.UNAUTHENTICATED })
+    }
+    const user = await findUserByEmail(db, email)
+    expect(user?.failedLoginCount).toBe(10)
+    expect(user?.lockedUntil?.getTime()).toBeGreaterThan(base.getTime())
+    expect(messages).toMatchObject([{ subject: 'Akun Hola sementara dikunci' }])
+  })
+
+  it('F0-46/F0-47: refresh opaque berotasi, reuse mencabut family dan token_version', async () => {
+    const email = AUTH_EMAILS[1]
+    await register(email)
+    const first = await mobileLogin(email)
+    expect(first.refreshToken).toMatch(/^[A-Za-z0-9_-]{43}$/)
+    const stored = await db
+      .select({ tokenHash: refreshTokens.tokenHash })
+      .from(refreshTokens)
+      .where(eq(refreshTokens.tokenHash, hashOpaqueToken(first.refreshToken)))
+    expect(stored).toHaveLength(1)
+
+    const rotated = await app.request('/api/v1/auth/refresh', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-client-platform': 'mobile-ios' },
+      body: JSON.stringify({ refresh_token: first.refreshToken }),
+    })
+    expect(rotated.status).toBe(200)
+    const rotatedBody = (await rotated.json()) as { data: { refresh_token: string } }
+    expect(rotatedBody.data.refresh_token).not.toBe(first.refreshToken)
+
+    const reuse = await app.request('/api/v1/auth/refresh', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-client-platform': 'mobile-ios' },
+      body: JSON.stringify({ refresh_token: first.refreshToken }),
+    })
+    expect(reuse.status).toBe(401)
+    expect(await reuse.json()).toMatchObject({ error: { code: ERROR_CODE.TOKEN_REVOKED } })
+
+    const revokedAccess = await app.request('/api/v1/auth/sessions', {
+      headers: { authorization: `Bearer ${first.accessToken}` },
+    })
+    expect(revokedAccess.status).toBe(401)
+    const user = await findUserByEmail(db, email)
+    expect(user?.tokenVersion).toBe(1)
+  })
+
+  it('F0-47 T-5: perangkat ke-11 mencabut refresh session tertua', async () => {
+    const email = AUTH_EMAILS[6]
+    await register(email)
+    for (let device = 0; device < 11; device++) {
+      await loginService(
+        authContext(),
+        { identifier: email, password },
+        { ipAddress: '127.0.0.1', userAgent: `vitest-${device}`, deviceLabel: `device-${device}` },
+      )
+    }
+    const user = await findUserByEmail(db, email)
+    if (!user) throw new Error('fixture user hilang')
+    const sessions = await db.select().from(refreshTokens).where(eq(refreshTokens.userId, user.id))
+    expect(sessions.filter((session) => session.revokedAt === null)).toHaveLength(10)
+    expect(sessions.filter((session) => session.revokedReason === 'max_sessions')).toHaveLength(1)
+  })
+
+  it('F0-48/F0-50/F0-51: session sendiri dapat dicabut, denylist aktif, dan route default-deny', async () => {
+    const email = AUTH_EMAILS[0]
+    await register(email)
+    const session = await mobileLogin(email)
+    const sessions = await app.request('/api/v1/auth/sessions', {
+      headers: { authorization: `Bearer ${session.accessToken}` },
+    })
+    expect(sessions.status).toBe(200)
+    const sessionsBody = (await sessions.json()) as {
+      data: Array<{ id: string; token_hash?: string }>
+    }
+    expect(sessionsBody.data).toHaveLength(1)
+    expect(sessionsBody.data[0]?.token_hash).toBeUndefined()
+    const cachedUser = await findUserByEmail(db, email)
+    if (!cachedUser) throw new Error('fixture user hilang')
+    expect(await redis.get(keys.userContext(cachedUser.id))).toContain('tokenVersion')
+    const sessionId = sessionsBody.data[0]?.id
+    expect(sessionId).toBeDefined()
+
+    const remove = await app.request(`/api/v1/auth/sessions/${sessionId}`, {
+      method: 'DELETE',
+      headers: { authorization: `Bearer ${session.accessToken}` },
+    })
+    expect(remove.status).toBe(204)
+    const rbac = await app.request('/api/v1/admin/users', {
+      headers: { authorization: `Bearer ${session.accessToken}` },
+    })
+    expect(rbac.status).toBe(403)
+    const logout = await app.request('/api/v1/auth/logout', {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${session.accessToken}`,
+        'content-type': 'application/json',
+        'x-client-platform': 'mobile-ios',
+      },
+      body: JSON.stringify({ refresh_token: session.refreshToken }),
+    })
+    expect(logout.status).toBe(204)
+    const denied = await app.request('/api/v1/auth/sessions', {
+      headers: { authorization: `Bearer ${session.accessToken}` },
+    })
+    expect(denied.status).toBe(401)
+  })
+
+  it('F0-49: reset token sekali-pakai mencabut sesi dan JWT verifikasi email memperbarui status', async () => {
+    const email = AUTH_EMAILS[3]
+    await register(email)
+    const user = await findUserByEmail(db, email)
+    expect(user).not.toBeNull()
+    if (!user) throw new Error('fixture user hilang')
+    const session = await mobileLogin(email)
+    const resetToken = createOpaqueToken()
+    await db.insert(passwordResetTokens).values({
+      userId: user.id,
+      tokenHash: hashOpaqueToken(resetToken),
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    })
+    const reset = await app.request('/api/v1/auth/password/reset', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ token: resetToken, password: 'LavenderOrbit2026!' }),
+    })
+    expect(reset.status).toBe(204)
+    const replay = await app.request('/api/v1/auth/password/reset', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ token: resetToken, password: 'LavenderOrbit2026!' }),
+    })
+    expect(replay.status).toBe(401)
+    const revoked = await app.request('/api/v1/auth/sessions', {
+      headers: { authorization: `Bearer ${session.accessToken}` },
+    })
+    expect(revoked.status).toBe(401)
+
+    const resetSession = await mobileLogin(email, 'LavenderOrbit2026!')
+    await db.update(users).set({ emailVerifiedAt: new Date() }).where(eq(users.id, user.id))
+    const forgotKnown = await app.request('/api/v1/auth/password/forgot', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email }),
+    })
+    const forgotUnknown = await app.request('/api/v1/auth/password/forgot', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: 'absent.auth-test@hola.test' }),
+    })
+    expect(forgotKnown.status).toBe(200)
+    expect(forgotUnknown.status).toBe(200)
+    expect(
+      await db.select().from(passwordResetTokens).where(eq(passwordResetTokens.userId, user.id)),
+    ).toHaveLength(2)
+
+    const changed = await app.request('/api/v1/auth/password/change', {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${resetSession.accessToken}`,
+        'content-type': 'application/json',
+        'x-client-platform': 'mobile-ios',
+      },
+      body: JSON.stringify({
+        current_password: 'LavenderOrbit2026!',
+        new_password: 'CoralComet2026!',
+      }),
+    })
+    expect(changed.status).toBe(200)
+    const changedBody = (await changed.json()) as {
+      data: { access_token: string; refresh_token: string }
+    }
+    expect(changedBody.data.refresh_token).toBeDefined()
+    const currentSession = await app.request('/api/v1/auth/sessions', {
+      headers: { authorization: `Bearer ${changedBody.data.access_token}` },
+    })
+    expect(currentSession.status).toBe(200)
+    const emailRequest = await app.request('/api/v1/auth/email/verify/request', {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${changedBody.data.access_token}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({}),
+    })
+    expect(emailRequest.status).toBe(200)
+
+    const verification = await issueEmailVerificationToken({ id: user.id, email }, env)
+    const verify = await app.request('/api/v1/auth/email/verify', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ token: verification }),
+    })
+    expect(verify.status).toBe(204)
+    expect((await findUserByEmail(db, email))?.emailVerifiedAt).not.toBeNull()
+  })
+
+  it('F0-54/F0-55: OTP disabled; admin membuat, mengubah, dan mencabut sesi user dengan audit', async () => {
+    const adminEmail = AUTH_EMAILS[4]
+    const passwordHash = await hashPassword(password, env)
+    await createUser(db, {
+      role: USER_ROLE.ADMIN,
+      email: adminEmail,
+      phone: undefined,
+      passwordHash,
+      fullName: 'Admin Auth',
+    })
+    const admin = await mobileLogin(adminEmail)
+    const otp = await app.request('/api/v1/auth/otp/request', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ phone: '+6281234567890' }),
+    })
+    expect(otp.status).toBe(403)
+    expect(await otp.json()).toMatchObject({ error: { code: ERROR_CODE.FEATURE_DISABLED } })
+
+    const created = await app.request('/api/v1/admin/users', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${admin.accessToken}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        email: AUTH_EMAILS[5],
+        password,
+        full_name: 'Staff Auth',
+        role: USER_ROLE.STAFF,
+      }),
+    })
+    expect(created.status).toBe(201)
+    const createdBody = (await created.json()) as { data: { id: string; role: string } }
+    expect(createdBody.data.role).toBe(USER_ROLE.STAFF)
+
+    const staff = await mobileLogin(AUTH_EMAILS[5])
+    await register(AUTH_EMAILS[7])
+    const customer = await mobileLogin(AUTH_EMAILS[7])
+    const adminUsersMatrix = [
+      { role: USER_ROLE.CUSTOMER, token: customer.accessToken, expectedStatus: 403 },
+      { role: USER_ROLE.STAFF, token: staff.accessToken, expectedStatus: 403 },
+      { role: USER_ROLE.ADMIN, token: admin.accessToken, expectedStatus: 200 },
+    ] as const
+    for (const row of adminUsersMatrix) {
+      const response = await app.request('/api/v1/admin/users', {
+        headers: { authorization: `Bearer ${row.token}` },
+      })
+      expect(response.status, `role ${row.role}`).toBe(row.expectedStatus)
+    }
+
+    const patched = await app.request(`/api/v1/admin/users/${createdBody.data.id}`, {
+      method: 'PATCH',
+      headers: { authorization: `Bearer ${admin.accessToken}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ status: 'suspended' }),
+    })
+    expect(patched.status).toBe(200)
+    expect(await patched.json()).toMatchObject({ data: { status: 'suspended' } })
+    expect((await findUserByEmail(db, AUTH_EMAILS[5]))?.tokenVersion).toBe(1)
+    const revoke = await app.request(`/api/v1/admin/users/${createdBody.data.id}/revoke-sessions`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${admin.accessToken}` },
+    })
+    expect(revoke.status).toBe(204)
+    expect((await findUserByEmail(db, AUTH_EMAILS[5]))?.tokenVersion).toBe(2)
+    const audit = await db
+      .select({ action: auditLogs.action })
+      .from(auditLogs)
+      .where(eq(auditLogs.entityId, createdBody.data.id))
+    expect(audit.map((row) => row.action)).toEqual(
+      expect.arrayContaining([
+        'admin.user_create',
+        'admin.user_update',
+        'admin.user_revoke_sessions',
+      ]),
+    )
   })
 })

@@ -7,8 +7,9 @@
  * karena itu tidak pernah berbeda dari yang ditegakkan server.
  */
 import { z } from 'zod'
+import { USER_ROLE, USER_STATUS } from '../constants/enums.ts'
 import { PASSWORD_MIN_LENGTH } from '../constants/limits.ts'
-import { idSchema } from './common.ts'
+import { idSchema, offsetPaginationQuery } from './common.ts'
 
 // ── Primitif identitas ───────────────────────────────────────────────────────
 
@@ -31,7 +32,7 @@ export const phone = z
  * (bukan 10.000 password terlemah, bukan email/nama sendiri) BUTUH konteks
  * server — keduanya diterapkan di apps/api pada F0-43, bukan di schema ini.
  */
-export const newPassword = z.string().min(PASSWORD_MIN_LENGTH).max(200)
+export const newPassword = z.string().min(PASSWORD_MIN_LENGTH).max(128)
 
 /** Password saat login: tidak divalidasi kekuatannya, hanya keberadaannya. */
 export const currentPassword = z.string().min(1).max(200)
@@ -98,6 +99,35 @@ export const changePasswordSchema = z.object({
 export const requestEmailVerificationSchema = z.object({ email: email.optional() })
 export const verifyEmailSchema = z.object({ token: z.string().min(1) })
 
+// ── Admin users (docs/04 § 9.15, docs/05 § 6.14) ───────────────────────────
+
+const userRoleValues = Object.values(USER_ROLE)
+const userStatusValues = Object.values(USER_STATUS)
+
+/** Admin tidak dapat membuat customer: customer hanya melalui register publik. */
+export const adminCreateUserSchema = z.object({
+  email,
+  phone: phone.optional(),
+  password: newPassword,
+  full_name: z.string().trim().min(1).max(120),
+  role: z.enum(userRoleValues).exclude(['customer']),
+})
+
+export const adminPatchUserSchema = z
+  .object({
+    role: z.enum(userRoleValues).optional(),
+    status: z.enum(userStatusValues).optional(),
+  })
+  .refine((value) => value.role !== undefined || value.status !== undefined, {
+    message: 'Minimal satu field harus diubah',
+  })
+
+export const adminUsersQuerySchema = offsetPaginationQuery.extend({
+  role: z.enum(userRoleValues).optional(),
+  status: z.enum(userStatusValues).optional(),
+  q: z.string().trim().min(1).max(120).optional(),
+})
+
 // ── OTP (docs/05 § 8) ────────────────────────────────────────────────────────
 
 /**
@@ -126,3 +156,6 @@ export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>
 export type OtpRequestInput = z.infer<typeof otpRequestSchema>
 export type OtpVerifyInput = z.infer<typeof otpVerifySchema>
+export type AdminCreateUserInput = z.infer<typeof adminCreateUserSchema>
+export type AdminPatchUserInput = z.infer<typeof adminPatchUserSchema>
+export type AdminUsersQuery = z.infer<typeof adminUsersQuerySchema>

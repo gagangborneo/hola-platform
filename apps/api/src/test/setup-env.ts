@@ -40,7 +40,7 @@ Object.assign(process.env, {
   S3_BUCKET_BACKUP: 'hola-backup',
   S3_FORCE_PATH_STYLE: 'true',
   MEDIA_PUBLIC_BASE_URL: 'http://localhost:9000/hola-media',
-  MAIL_TRANSPORT: 'smtp',
+  MAIL_TRANSPORT: 'console',
   RESEND_API_KEY: '',
   MAIL_FROM: 'Hola <noreply@hola.test>',
   SMTP_HOST: 'localhost',

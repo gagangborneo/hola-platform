@@ -6,16 +6,22 @@
  * (BR-SV-02).
  */
 import type { HolaDb } from '@hola/db'
+import type { RedisKeys } from '@hola/shared'
 import type { MiddlewareHandler } from 'hono'
 import type { Redis } from 'ioredis'
 import { db } from '../config/db.ts'
 import { type Logger, logger } from '../config/logger.ts'
-import { redis } from '../config/redis.ts'
+import { mail } from '../config/mail.ts'
+import { keys, redis, safeRedis } from '../config/redis.ts'
 import { type Env, env } from '../env.ts'
+import type { MailAdapter } from '../providers/mail.ts'
 
 export interface CoreDependencies {
   db: HolaDb
   redis: Redis
+  redisKeys: RedisKeys
+  safeRedis: typeof safeRedis
+  mail: MailAdapter
   logger: Logger
   env: Env
 }
@@ -24,7 +30,7 @@ export interface CoreDependencyVariables {
   core: CoreDependencies
 }
 
-const core: CoreDependencies = { db, redis, logger, env }
+const core: CoreDependencies = { db, redis, redisKeys: keys, safeRedis, mail, logger, env }
 
 export const coreDependencies: MiddlewareHandler<{
   Variables: CoreDependencyVariables

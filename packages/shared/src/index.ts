@@ -13,6 +13,7 @@ export * from './constants/limits.ts'
 export * from './constants/notification-templates.ts'
 export * from './constants/queues.ts'
 export * from './constants/settings-keys.ts'
+export * from './constants/weak-passwords.ts'
 
 export * from './format/date.ts'
 export * from './format/duration.ts'

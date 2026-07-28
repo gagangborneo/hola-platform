@@ -13,6 +13,9 @@ import { type CoreDependencyVariables, coreDependencies } from './middleware/cor
 import { errorHandler, notFoundHandler } from './middleware/error-handler.ts'
 import { type AuthVariables, requestLogger } from './middleware/logger.ts'
 import { type RequestVariables, requestId } from './middleware/request-id.ts'
+import { assertRouteGuards } from './middleware/require-role.ts'
+import { adminUsersRoutes } from './modules/admin/admin-users.routes.ts'
+import { authRoutes } from './modules/auth/auth.routes.ts'
 import { configRoutes } from './modules/system/config.routes.ts'
 import { healthRoutes } from './modules/system/health.routes.ts'
 
@@ -33,7 +36,15 @@ export const PUBLIC_ROUTE_ALLOWLIST: ReadonlySet<string> = new Set([
   'GET /readyz',
   'GET /healthz/worker',
   'GET /internal/metrics', // dijaga X-Internal-Token, bukan RBAC
-  'GET /config/public',
+  'GET /api/v1/config/public',
+  'POST /api/v1/auth/register',
+  'POST /api/v1/auth/login',
+  'POST /api/v1/auth/refresh',
+  'POST /api/v1/auth/otp/request',
+  'POST /api/v1/auth/otp/verify',
+  'POST /api/v1/auth/password/forgot',
+  'POST /api/v1/auth/password/reset',
+  'POST /api/v1/auth/email/verify',
 ])
 
 const API_PREFIX = '/api/v1'
@@ -84,7 +95,13 @@ export function createApp() {
 
   // Health & metrik hidup DI LUAR prefiks versi: ia infrastruktur, bukan API
   // produk, dan URL-nya tidak boleh berubah saat versi API naik.
-  const routes = app.route('/', healthRoutes).route(API_PREFIX, configRoutes)
+  const routes = app
+    .route('/', healthRoutes)
+    .route(API_PREFIX, configRoutes)
+    .route(API_PREFIX, authRoutes)
+    .route(API_PREFIX, adminUsersRoutes)
+
+  assertRouteGuards(routes.routes, PUBLIC_ROUTE_ALLOWLIST)
 
   return routes
 }

@@ -1,5 +1,5 @@
 /**
- * Test drift: 9 pola key ≡ docs/02-INFRASTRUCTURE.md § 4.1.
+ * Test drift: pola key ≡ docs/02-INFRASTRUCTURE.md § 4.1.
  *
  * EXPECTED disalin dari kolom "Pola key" tabel dokumen, dengan placeholder
  * diganti nilai contoh yang tetap.
@@ -24,10 +24,12 @@ describe('redis-keys ≡ docs/02-INFRASTRUCTURE.md § 4.1', () => {
     ['Lock ringan', k.lock('daily-summary'), 'hola:prod:lock:daily-summary'],
     ['Worker heartbeat', k.workerHeartbeat(), 'hola:prod:worker:heartbeat'],
     ['BullMQ', k.bullPrefix(), 'hola:prod:bull'],
+    ['Cache context user', k.userContext('u1'), 'hola:prod:auth:user:u1'],
+    ['Denylist token', k.tokenDenylist('j1'), 'hola:prod:auth:denylist:j1'],
   ]
 
-  it('tepat 9 pola key seperti tabel dokumen', () => {
-    expect(cases).toHaveLength(9)
+  it('tepat 11 pola key seperti tabel dokumen', () => {
+    expect(cases).toHaveLength(11)
   })
 
   it.each(cases)('%s → %s', (_label, actual, expected) => {
