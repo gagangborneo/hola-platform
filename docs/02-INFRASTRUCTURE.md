@@ -528,6 +528,36 @@ Implementasi disiapkan sebagai adapter: `NotificationChannelAdapter` dengan impl
 `resend`, `expo`, `noop` (untuk `whatsapp` saat flag off). Mengaktifkan WhatsApp = menambah
 satu adapter + set `NOTIF_WHATSAPP_ENABLED=true`, tanpa mengubah kode pemanggil.
 
+### Katalog `template_code`
+
+`notification_templates.code` adalah kunci primer template
+([03 § `notification_templates`](03-DATA-MODEL.md#notification_templates)). Konstantanya hidup di
+`packages/shared/src/constants/notification-templates.ts` — **dilarang** menulisnya sebagai
+string literal di service ([16 AI-6](16-CONVENTIONS.md#10-aturan-untuk-ai-coding-assistant)).
+
+**Konvensi nama:** `{domain}.{peristiwa}`, huruf kecil, `snake_case` pada bagian peristiwa.
+
+**Katalog tumbuh per modul.** Sebuah template baru masuk ke tabel ini **bersama modul yang
+mengirimnya**, di PR yang sama — bukan dikarang di muka. Kolom "Transaksional" menentukan apakah
+preferensi user diabaikan (aturan 3 di bawah).
+
+Phase 0 (auth — [05 § 8](05-AUTH.md#8-registrasi--login)):
+
+| `code` | Kanal | Transaksional | Dikirim saat |
+|---|---|---|---|
+| `auth.email_verify` | email | ✓ | Registrasi, dan saat user meminta ulang tautan verifikasi |
+| `auth.password_reset` | email | ✓ | `POST /auth/password/forgot`. Token TTL 1 jam, sekali pakai |
+| `auth.password_changed` | email | ✓ | Password berhasil diubah lewat `/password/change` atau `/reset` |
+| `auth.account_locked` | email | ✓ | Akun terkunci setelah 10 gagal login berturut-turut |
+
+Template modul lain (booking, payment, refund, event, tenant, turnamen, gamification)
+**ditambahkan di phase-nya masing-masing**. Contoh bentuk yang sudah disebut dokumen lain:
+`booking.confirmed` ([03 § `notification_templates`](03-DATA-MODEL.md#notification_templates)),
+`cafe_invoice.escalation` ([09 BR-T-56](09-MODULE-TENANT.md#5-status-tagihan--penagihan)).
+
+`dedupe_key` **bukan** bagian dari `template_code`. Ia disusun per pemanggilan dan menjadi bagian
+UNIQUE `(user_id, template_code, dedupe_key)` — lihat aturan 2 di bawah.
+
 ### Aturan notifikasi
 
 1. Setiap notifikasi punya `template_code` yang terdaftar di `notification_templates`.
@@ -820,7 +850,7 @@ Tujuan: developer bisa `pnpm dev` setelah satu perintah, tanpa kredensial cloud.
 | Service | Image | Port host | Volume | Catatan |
 |---|---|---|---|---|
 | `postgres` | `postgres:16-alpine` | `5432:5432` | `hola_pgdata` | `POSTGRES_DB=hola`, `POSTGRES_USER=hola`, `POSTGRES_PASSWORD=hola` |
-| `redis` | `redis:7-alpine` | `6379:6379` | `hola_redisdata` | command: `redis-server --appendonly yes --maxmemory-policy noeviction` |
+| `redis` | `redis:7-alpine` | `6379:6379` | `hola_redisdata` | command: `redis-server --appendonly yes --appendfsync everysec --maxmemory-policy noeviction` — **ketiga flag** wajib, lihat [§ 2](#2-daftar-container--sumber-daya) |
 | `minio` | `minio/minio` | `9000:9000`, `9001:9001` | `hola_miniodata` | console di 9001, root user/pass `hola`/`hola12345` |
 | `minio-init` | `minio/mc` | — | — | Job sekali jalan: buat bucket `hola-media` (public read), `hola-private`, `hola-backup`; keluar setelah selesai |
 | `mailpit` | `axllent/mailpit` | `1025:1025` (SMTP), `8025:8025` (UI) | — | Menangkap email lokal. `MAIL_TRANSPORT=smtp`, `SMTP_HOST=localhost`, `SMTP_PORT=1025` |
@@ -828,6 +858,11 @@ Tujuan: developer bisa `pnpm dev` setelah satu perintah, tanpa kredensial cloud.
 Yang **tidak** ada di compose lokal: `hola-api`, `hola-web`, `hola-admin`, `hola-worker`.
 Aplikasi dijalankan langsung dengan `pnpm dev` di host supaya hot reload cepat. Compose hanya
 menyediakan **dependensi**.
+
+Service `postgres` menjalankan `docker/postgres/init/*.sql` saat volume pertama kali dibuat.
+Isinya satu hal: membuat database **`hola_test`**, yang diwajibkan
+[16 BR-TT-05](16-CONVENTIONS.md#82-aturan-test) untuk test integrasi (`TEST_DATABASE_URL`).
+Tanpa itu `pnpm test:integration` tidak bisa jalan di mesin bersih.
 
 ### Perintah pnpm yang wajib ada di root `package.json`
 
@@ -842,6 +877,7 @@ menyediakan **dependensi**.
 | `pnpm db:seed` | seed data dev (lihat di bawah) |
 | `pnpm dev` | `turbo run dev` (api + worker + web + admin paralel) |
 | `pnpm dev:mobile` | `expo start` di `apps/mobile` |
+| `pnpm build` | `turbo run build` — bagian dari gate CI (DoD-0-02) |
 | `pnpm typecheck` | `turbo run typecheck` |
 | `pnpm lint` | `biome check .` |
 | `pnpm lint:fix` | `biome check --write .` |
@@ -886,7 +922,12 @@ MAIL_TRANSPORT=smtp
 SMTP_HOST=localhost
 SMTP_PORT=1025
 MIDTRANS_IS_PRODUCTION=false
+TEST_DATABASE_URL=postgres://hola:hola@localhost:5432/hola_test
 ```
+
+> Ini file lokal di root, isinya nilai yang cocok dengan compose. Ia **bukan** yang diperiksa
+> `pnpm check:env` — yang diperiksa adalah `apps/<app>/.env.example`, dibandingkan dengan schema
+> zod di [§ 8](#8-daftar-environment-variable-per-app).
 
 ### Cara menguji webhook Midtrans di lokal
 

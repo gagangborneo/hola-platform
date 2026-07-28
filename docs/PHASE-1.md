@@ -55,13 +55,13 @@ nominal ini.
 - [x] **F0-02** `0,5h` 🔒 — `tsconfig.base.json` dengan 10 opsi wajib (`strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `verbatimModuleSyntax`, `noFallthroughCasesInSwitch`, …) + `tsconfig.json` turunan tiap workspace. *acuan:* [16 § 1.1](16-CONVENTIONS.md#11-konfigurasi)
 - [x] **F0-03** `0,5h` 🔒 — `biome.json`: 10 aturan wajib aktif + format (indent 2, width 100, single quote, semicolon `asNeeded`, trailing comma `all`, import organizing). *acuan:* [16 § 2](16-CONVENTIONS.md#2-biome)
 - [x] **F0-04** `0,5h` 🔒 — Override `noRestrictedImports` per app/package (4 baris tabel: web/admin/mobile, shared, api-client, api). *acuan:* [16 § 2 `noRestrictedImports` per app](16-CONVENTIONS.md#norestrictedimports-per-app)
-- [x] **F0-05** `0,5h` 🔒 — `turbo.json` (pipeline `typecheck`/`lint`/`test`/`build`/`dev`) + seluruh 22 perintah root `package.json`. *acuan:* [02 § 11 Perintah pnpm](02-INFRASTRUCTURE.md#perintah-pnpm-yang-wajib-ada-di-root-packagejson)
+- [x] **F0-05** `0,5h` 🔒 — `turbo.json` (pipeline `typecheck`/`lint`/`test`/`build`/`dev`) + seluruh 17 perintah root `package.json`. *acuan:* [02 § 11 Perintah pnpm](02-INFRASTRUCTURE.md#perintah-pnpm-yang-wajib-ada-di-root-packagejson)
 - [x] **F0-06** `1h` ⚙️🔒 — `docker-compose.yml`: `postgres:16-alpine`, `redis:7-alpine` dengan **3 flag wajib** (`appendonly yes`, `appendfsync everysec`, `maxmemory-policy noeviction`), `minio`, `minio-init` (3 bucket), `mailpit`. *acuan:* [02 § 11](02-INFRASTRUCTURE.md#layanan-di-docker-composeyml-root-repo), [02 § 2](02-INFRASTRUCTURE.md#2-daftar-container--sumber-daya)
 - [x] **F0-07** `0,5h` — `.env.example` lokal yang cocok dengan compose + bagian "cara mulai" di README. *acuan:* [02 § 11 `.env.example` lokal](02-INFRASTRUCTURE.md#envexample-lokal-nilai-yang-cocok-dengan-compose)
 
 ## F0.B — `packages/shared` · 8h
 
-- [x] **F0-08** `1h` 🔒 — `constants/enums.ts`: **seluruh 60 enum** sebagai `as const` object + union type (bukan `enum` TypeScript). *acuan:* [03 § 3](03-DATA-MODEL.md#3-daftar-enum), [16 BR-TS-05](16-CONVENTIONS.md#12-aturan-tipe)
+- [x] **F0-08** `1h` 🔒 — `constants/enums.ts`: **seluruh 53 enum** sebagai `as const` object + union type (bukan `enum` TypeScript). *acuan:* [03 § 3](03-DATA-MODEL.md#3-daftar-enum), [16 BR-TS-05](16-CONVENTIONS.md#12-aturan-tipe)
 - [x] **F0-09** `0,5h` — `constants/error-codes.ts`: katalog `ERROR_CODE` lengkap. *acuan:* [04 § 5 Katalog error code](04-API-CONTRACT.md#katalog-error-code)
 - [x] **F0-10** `0,5h` 🔒 — `constants/queues.ts`: `QUEUE.*` (6 queue) + `JOB.*` (37 job) sebagai union type. *acuan:* [02 § 5.1](02-INFRASTRUCTURE.md#51-queue), [02 § 5.2](02-INFRASTRUCTURE.md#52-tabel-job)
 - [x] **F0-11** `0,5h` — `constants/limits.ts` + `constants/settings-keys.ts` + `constants/notification-templates.ts`. *acuan:* [16 § 4.3](16-CONVENTIONS.md#43-packagesshared)
@@ -79,7 +79,7 @@ nominal ini.
 ## F0.C — `packages/db` · 6h
 
 - [ ] **F0-22** `0,5h` — Konfigurasi drizzle-kit, koneksi Drizzle tunggal, mapping kolom uang `bigint → number` (BR-TS-07), helper UUID v7. *acuan:* [16 § 4.2](16-CONVENTIONS.md#42-appsapi), [03 § 2](03-DATA-MODEL.md#2-konvensi-tipe-data--kolom-standar)
-- [ ] **F0-23** `0,5h` 🔒 — Migration 0001: **60 tipe enum PostgreSQL**, nilainya identik dengan F0-08. *acuan:* [03 § 3](03-DATA-MODEL.md#3-daftar-enum)
+- [ ] **F0-23** `0,5h` 🔒 — Migration 0001: **53 tipe enum PostgreSQL**, nilainya identik dengan F0-08. *acuan:* [03 § 3](03-DATA-MODEL.md#3-daftar-enum)
 - [ ] **F0-24** `1h` 🔒 — Tabel identity: `users` (+ `ck_users_identifier`, UNIQUE email lowercase & phone), `refresh_tokens` (C-23 + index), `customer_profiles`. *acuan:* [03 § 5](03-DATA-MODEL.md#5-entitas-identity--access)
 - [ ] **F0-25** `1h` 🔒 — Tabel venue & lapangan: `venues`, `sports`, `courts` (+ C-24), `court_operating_hours` (UNIQUE `(court_id, day_of_week)`), `special_dates`, `addons`. *acuan:* [03 § 6](03-DATA-MODEL.md#6-entitas-venue-court-pricing)
 - [ ] **F0-26** `0,5h` — Tabel `price_rules` + 3 CHECK (`ck_price_rules_scope`, `_specific_date`, `_time_range`). *acuan:* [03 § 6 `price_rules`](03-DATA-MODEL.md#price_rules)

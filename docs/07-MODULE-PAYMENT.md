@@ -364,7 +364,7 @@ Aturan pembulatan (`roundTo100`):
 
 ### 3.4 Contoh perhitungan lengkap
 
-**Kasus:** Booking 2 slot padel Sabtu 28 Juli 2026 (weekend) di PDL-01, jam 19:00 & 20:00.
+**Kasus:** Booking 2 slot padel Sabtu 1 Agustus 2026 (weekend) di PDL-01, jam 19:00 & 20:00.
 Sewa 1 raket. Kode promo `HOLA20` (20%, maks Rp 50.000).
 
 Data:

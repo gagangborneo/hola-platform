@@ -105,6 +105,11 @@ Aturan: kode dibuat **di dalam transaksi** yang membuat barisnya, memakai Postgr
 Semua enum didefinisikan sebagai tipe enum PostgreSQL **dan** sebagai konstanta di
 `packages/shared/src/constants/enums.ts`. Nilainya wajib identik.
 
+**Total: 53 enum.** Tabel di bawah adalah daftar lengkapnya — tidak ada enum lain di v1.
+Menambah enum berarti menambah barisnya di sini lebih dulu, lalu di `enums.ts`, lalu di
+migration. Dua test menjaga ketiganya tetap sinkron: satu unit test membandingkan `enums.ts`
+dengan tabel ini, satu test integrasi membandingkan `enums.ts` dengan `pg_enum` di database uji.
+
 | Nama enum | Nilai | Dipakai di |
 |---|---|---|
 | `user_role` | `customer`, `admin`, `staff`, `tenant` | `users.role` |

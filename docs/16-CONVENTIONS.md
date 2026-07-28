@@ -55,7 +55,7 @@ Satu `biome.json` di root, dengan override per app.
 | Aturan | Level | Alasan |
 |---|---|---|
 | `suspicious/noExplicitAny` | error | BR-TS-01 |
-| `suspicious/noConsoleLog` | error di `apps/api` | API memakai pino, bukan `console` |
+| `suspicious/noConsole` | error di `apps/api` | API memakai pino, bukan `console` |
 | `style/noNonNullAssertion` | error | BR-TS-03 |
 | `correctness/noUnusedVariables` | error | — |
 | `correctness/noUnusedImports` | error | — |
@@ -63,7 +63,7 @@ Satu `biome.json` di root, dengan override per app.
 | `nursery/noFloatingPromises` (atau padanan) | error | Promise yang tidak di-await adalah sumber bug senyap di service & job |
 | `style/useConst` | error | — |
 | `style/noParameterAssign` | error | — |
-| **`nursery/noRestrictedImports`** | **error** | **Inti penegakan batas arsitektur — lihat di bawah** |
+| **`style/noRestrictedImports`** | **error** | **Inti penegakan batas arsitektur — lihat di bawah** |
 
 ### `noRestrictedImports` per app
 

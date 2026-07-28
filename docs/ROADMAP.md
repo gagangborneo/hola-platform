@@ -170,7 +170,7 @@ Phase 0 **selesai** hanya jika **kedua belas** butir di bawah dapat didemokan:
 | Target | Isi |
 |---|---|
 | `packages/shared` | `constants/` (enums, error-codes, queues, limits, settings-keys, notification-templates), `redis-keys.ts`, `format/` (`formatIDR`, `formatWita`), `utils/` (`roundTo100`, `isSlotAligned`, `buildSlotGrid`, `iso-week`), `env/` (schema zod per app), `schemas/common.ts` + `schemas/auth.ts`. Struktur mengikuti [16 § 4.3](16-CONVENTIONS.md#43-packagesshared) |
-| `packages/db` | Drizzle config, **seluruh 60 enum** PostgreSQL ([03 § 3](03-DATA-MODEL.md#3-daftar-enum)) dibuat sekali di migration 0001, tabel fondasi (`users`, `refresh_tokens`, `customer_profiles`, `venues`, `sports`, `courts`, `court_operating_hours`, `special_dates`, `addons`, `price_rules`, `app_settings`, `audit_logs`, `media_files`, `notification_templates`, `notifications`, `push_tokens`, `otp_challenges`, `password_reset_tokens`, `idempotency_records`), sequence kode manusia, seed script |
+| `packages/db` | Drizzle config, **seluruh 53 enum** PostgreSQL ([03 § 3](03-DATA-MODEL.md#3-daftar-enum)) dibuat sekali di migration 0001, tabel fondasi (`users`, `refresh_tokens`, `customer_profiles`, `venues`, `sports`, `courts`, `court_operating_hours`, `special_dates`, `addons`, `price_rules`, `app_settings`, `audit_logs`, `media_files`, `notification_templates`, `notifications`, `push_tokens`, `otp_challenges`, `password_reset_tokens`, `idempotency_records`), sequence kode manusia, seed script |
 | `apps/api` | `app.ts` + `index.ts` + `worker.ts` + `bullboard.ts`, middleware lengkap ([16 § 4.2](16-CONVENTIONS.md#42-appsapi)), `lib/` (errors, response, pagination, transaction, codes, time), modul `auth`, `users`, `media` (presign/confirm), `notifications`, `admin/settings`, `admin/audit-logs`, `config/public`, `healthz`/`readyz`/`internal/metrics`, provider `mail` |
 | `packages/api-client` | `createHolaClient()`, refresh **single-flight** (T-12), pemetaan `HolaApiError` |
 | `apps/web` | Shell: layout, halaman login/daftar/lupa-password, penyimpanan access token **di memori**, TanStack Query, Sentry, security headers (S-4) |
@@ -199,7 +199,7 @@ flowchart TD
     B["⚙️ 2. docker-compose lokal<br/>postgres + redis + minio + mailpit"] --> C
     C["3. packages/shared — konstanta, enum,<br/>redis-keys, format, utils, env schema"] --> D
     C --> E
-    D["4. packages/db — 60 enum + tabel fondasi<br/>+ sequence + migration 0001"] --> E
+    D["4. packages/db — 53 enum + tabel fondasi<br/>+ sequence + migration 0001"] --> E
     E["5. apps/api core — env, db, redis, logger,<br/>middleware, error handler, healthz/readyz"] --> F
     E --> G
     F["6. Modul auth + RBAC<br/>(05-AUTH.md secara utuh)"] --> H
@@ -268,7 +268,7 @@ flowchart TD
 | Blok ([PHASE-1.md](PHASE-1.md)) | Hari kerja |
 |---|---|
 | F0.A — Repo, tooling, docker-compose lokal | 4 |
-| F0.B — `packages/shared` (60 enum, konstanta, redis-keys, utils, env) | 8 |
+| F0.B — `packages/shared` (53 enum, konstanta, redis-keys, utils, env) | 8 |
 | F0.C — `packages/db` (migration 0001, tabel fondasi, sequence, index) | 6 |
 | F0.D — `apps/api` core (env, middleware, rate limit Lua, idempotency, lib) | 7 |
 | **F0.E — Auth + RBAC** ([05](05-AUTH.md) secara utuh, termasuk test) | **11** |

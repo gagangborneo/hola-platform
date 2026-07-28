@@ -1,19 +1,12 @@
 /**
  * Kode template notifikasi (`notification_templates.code`).
  *
- * ┌─ CELAH DOKUMEN — perlu diputuskan ────────────────────────────────────────┐
- * │ docs/ TIDAK memuat katalog kanonik TEMPLATE_CODE. Yang ada hanya bentuk    │
- * │ namanya (docs/03 § `notification_templates`: "code (PK, mis.               │
- * │ `booking.confirmed`)") dan satu contoh lain di docs/09 BR-T-56             │
- * │ (`cafe_invoice.escalation`).                                               │
- * │                                                                            │
- * │ Karena AI-10/AI-11 melarang mengarang katalog sendiri, file ini HANYA      │
- * │ memuat template yang benar-benar dikirim di Phase 0 — semuanya berasal     │
- * │ dari alur yang tertulis eksplisit di docs/05-AUTH.md. Template modul lain  │
- * │ ditambahkan bersama modulnya, setelah katalognya masuk ke docs/.           │
- * │                                                                            │
- * │ Tindakan yang disarankan: tambahkan tabel katalog template ke docs/02 § 7. │
- * └────────────────────────────────────────────────────────────────────────────┘
+ * Sumber kebenaran: docs/02-INFRASTRUCTURE.md § 7 "Katalog `template_code`".
+ *
+ * Katalog itu tumbuh PER MODUL: sebuah template masuk ke dokumen bersama modul
+ * yang mengirimnya, di PR yang sama. Karena itu file ini hanya memuat template
+ * Phase 0 (auth) — bukan karena yang lain terlupa, melainkan karena modulnya
+ * memang belum ada.
  *
  * Konvensi nama: `{domain}.{peristiwa}` (docs/03 § `notification_templates`).
  *
