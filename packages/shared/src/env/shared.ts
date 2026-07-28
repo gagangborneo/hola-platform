@@ -25,13 +25,24 @@ export const booleanFromEnv = z
   .pipe(z.enum(['true', 'false', '1', '0']))
   .transform((v) => v === 'true' || v === '1')
 
-/** `"a,b , c"` → `['a', 'b', 'c']`. Entri kosong dibuang. */
-export const csvList = z
-  .string()
-  .transform((v) =>
-    v
-      .split(',')
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0),
-  )
-  .pipe(z.array(z.string()).min(1))
+const splitCsv = (v: string): string[] =>
+  v
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0)
+
+/**
+ * `"a,b , c"` → `['a', 'b', 'c']`. Entri kosong dibuang, dan daftar kosong
+ * DITOLAK — dipakai untuk env yang tidak masuk akal bila kosong, mis.
+ * `CORS_ORIGINS`.
+ */
+export const csvList = z.string().transform(splitCsv).pipe(z.array(z.string()).min(1))
+
+/**
+ * Seperti `csvList`, tetapi string kosong sah dan menghasilkan `[]`.
+ *
+ * Dipakai untuk allowlist opsional (`MIDTRANS_WEBHOOK_ALLOWED_IPS`): baris
+ * kosong di `.env.example` adalah cara normal menyatakan "tidak ada allowlist",
+ * dan itu tidak boleh membuat aplikasi gagal boot.
+ */
+export const optionalCsvList = z.string().transform(splitCsv)

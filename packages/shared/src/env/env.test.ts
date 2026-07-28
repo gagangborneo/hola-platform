@@ -170,6 +170,7 @@ describe('schema env (docs/02 § 8)', () => {
       MAIL_TRANSPORT: 'console',
       MAIL_FROM: 'Hola <noreply@hola.test>',
       EXPO_ACCESS_TOKEN: 'tok',
+      INTERNAL_TOKEN: 'i'.repeat(32),
       BULLBOARD_USER: 'admin',
       BULLBOARD_PASSWORD: 'secret',
     }
@@ -206,6 +207,7 @@ describe('schema env (docs/02 § 8)', () => {
       MEDIA_PUBLIC_BASE_URL: 'http://localhost:9000/m',
       MAIL_FROM: 'Hola <noreply@hola.test>',
       EXPO_ACCESS_TOKEN: 'tok',
+      INTERNAL_TOKEN: 'i'.repeat(32),
       BULLBOARD_USER: 'admin',
       BULLBOARD_PASSWORD: 'secret',
       MAIL_TRANSPORT: 'resend',

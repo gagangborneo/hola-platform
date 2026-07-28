@@ -91,17 +91,17 @@ nominal ini.
 
 ## F0.D — `apps/api` core · 7h
 
-- [ ] **F0-32** `0,5h` 🔒 — Struktur `apps/api`, `env.ts` (validasi zod, **gagal keras saat boot**), `index.ts`, `app.ts` + ekspor `AppType`. *acuan:* [16 § 4.2](16-CONVENTIONS.md#42-appsapi), [02 § 8](02-INFRASTRUCTURE.md#8-daftar-environment-variable-per-app)
-- [ ] **F0-33** `0,5h` 🔒 — `config/db.ts`, `config/redis.ts` (**dua koneksi terpisah**: umum + BullMQ), helper `safeRedis(op, fallback)` dengan log `warn` + metrik `redis_degraded_total`. *acuan:* [16 BR-RD-01/BR-RD-03](16-CONVENTIONS.md#7-pola-redis-client)
-- [ ] **F0-34** `0,5h` — `config/logger.ts` pino: field wajib per request & per job, **redaction 11 kunci** + `config/sentry.ts` (error yang *diharapkan* tidak dikirim). *acuan:* [02 § 9](02-INFRASTRUCTURE.md#9-observability)
-- [ ] **F0-35** `1h` 🔒 — `lib/errors.ts`: kelas `AppError` + factory per `ERROR_CODE` + `UniqueViolationError` (membawa nama constraint) + `middleware/error-handler.ts` sebagai **satu-satunya** tempat error → response. *acuan:* [04 § 5](04-API-CONTRACT.md#5-format-error), [16 BR-SV-22](16-CONVENTIONS.md#53-bentuk-repository)
-- [ ] **F0-36** `0,5h` — `lib/response.ts` (envelope `{data}`/`{error}` + header standar) + `lib/pagination.ts` (cursor encode/decode, offset). *acuan:* [04 § 4](04-API-CONTRACT.md#4-format-response-sukses), [04 § 6](04-API-CONTRACT.md#6-pagination-filter-sorting)
-- [ ] **F0-37** `1h` 🔒 — `lib/transaction.ts` (`withTransaction` + callback `afterCommit` untuk enqueue) + `lib/codes.ts` (generator kode dari sequence, **di dalam** transaksi) + `lib/time.ts` (WITA, tanggal bisnis, grid). *acuan:* [16 BR-SV-13/BR-SV-14](16-CONVENTIONS.md#52-bentuk-service)
-- [ ] **F0-38** `0,5h` — `middleware/request-id.ts` (ULID + header `X-Request-Id`) + `middleware/logger.ts`
-- [ ] **F0-39** `1h` — `middleware/rate-limit.ts`: fixed window via Lua `EVALSHA`, **12 bucket**, identifier user/ip, **fail-open** + metrik + header `Retry-After`. *acuan:* [02 § 4.5](02-INFRASTRUCTURE.md#45-konfigurasi-rate-limit), [16 BR-RD-08](16-CONVENTIONS.md#7-pola-redis-client)
-- [ ] **F0-40** `0,5h` — `middleware/idempotency.ts`: Redis fast path 24 jam + `idempotency_records` (C-22) sebagai jaminan durabel + header `X-Idempotent-Replay`. *acuan:* [04 § 8](04-API-CONTRACT.md#8-idempotency--concurrency)
-- [ ] **F0-41** `0,5h` — `GET /healthz`, `GET /readyz` (cek PG + Redis, laporkan `degraded`), `GET /healthz/worker`, `GET /internal/metrics` (header `X-Internal-Token`). *acuan:* [02 § 2](02-INFRASTRUCTURE.md#2-daftar-container--sumber-daya), [02 § 9](02-INFRASTRUCTURE.md#9-observability)
-- [ ] **F0-42** `0,5h` — `GET /config/public`: `midtrans_client_key`, `server_time`, `min_supported_mobile_version`, timezone, teks kebijakan, flag fitur. *acuan:* [04 § 9.2](04-API-CONTRACT.md#92-konfigurasi-publik)
+- [x] **F0-32** `0,5h` 🔒 — Struktur `apps/api`, `env.ts` (validasi zod, **gagal keras saat boot**), `index.ts`, `app.ts` + ekspor `AppType`. *acuan:* [16 § 4.2](16-CONVENTIONS.md#42-appsapi), [02 § 8](02-INFRASTRUCTURE.md#8-daftar-environment-variable-per-app)
+- [x] **F0-33** `0,5h` 🔒 — `config/db.ts`, `config/redis.ts` (**dua koneksi terpisah**: umum + BullMQ), helper `safeRedis(op, fallback)` dengan log `warn` + metrik `redis_degraded_total`. *acuan:* [16 BR-RD-01/BR-RD-03](16-CONVENTIONS.md#7-pola-redis-client)
+- [x] **F0-34** `0,5h` — `config/logger.ts` pino: field wajib per request & per job, **redaction 11 kunci** + `config/sentry.ts` (error yang *diharapkan* tidak dikirim). *acuan:* [02 § 9](02-INFRASTRUCTURE.md#9-observability)
+- [x] **F0-35** `1h` 🔒 — `lib/errors.ts`: kelas `AppError` + factory per `ERROR_CODE` + `UniqueViolationError` (membawa nama constraint) + `middleware/error-handler.ts` sebagai **satu-satunya** tempat error → response. *acuan:* [04 § 5](04-API-CONTRACT.md#5-format-error), [16 BR-SV-22](16-CONVENTIONS.md#53-bentuk-repository)
+- [x] **F0-36** `0,5h` — `lib/response.ts` (envelope `{data}`/`{error}` + header standar) + `lib/pagination.ts` (cursor encode/decode, offset). *acuan:* [04 § 4](04-API-CONTRACT.md#4-format-response-sukses), [04 § 6](04-API-CONTRACT.md#6-pagination-filter-sorting)
+- [x] **F0-37** `1h` 🔒 — `lib/transaction.ts` (`withTransaction` + callback `afterCommit` untuk enqueue) + `lib/codes.ts` (generator kode dari sequence, **di dalam** transaksi) + `lib/time.ts` (WITA, tanggal bisnis, grid). *acuan:* [16 BR-SV-13/BR-SV-14](16-CONVENTIONS.md#52-bentuk-service)
+- [x] **F0-38** `0,5h` — `middleware/request-id.ts` (ULID + header `X-Request-Id`) + `middleware/logger.ts`
+- [x] **F0-39** `1h` — `middleware/rate-limit.ts`: fixed window via Lua `EVALSHA`, **12 bucket**, identifier user/ip, **fail-open** + metrik + header `Retry-After`. *acuan:* [02 § 4.5](02-INFRASTRUCTURE.md#45-konfigurasi-rate-limit), [16 BR-RD-08](16-CONVENTIONS.md#7-pola-redis-client)
+- [x] **F0-40** `0,5h` — `middleware/idempotency.ts`: Redis fast path 24 jam + `idempotency_records` (C-22) sebagai jaminan durabel + header `X-Idempotent-Replay`. *acuan:* [04 § 8](04-API-CONTRACT.md#8-idempotency--concurrency)
+- [x] **F0-41** `0,5h` — `GET /healthz`, `GET /readyz` (cek PG + Redis, laporkan `degraded`), `GET /healthz/worker`, `GET /internal/metrics` (header `X-Internal-Token`). *acuan:* [02 § 2](02-INFRASTRUCTURE.md#2-daftar-container--sumber-daya), [02 § 9](02-INFRASTRUCTURE.md#9-observability)
+- [x] **F0-42** `0,5h` — `GET /config/public`: `midtrans_client_key`, `server_time`, `min_supported_mobile_version`, timezone, teks kebijakan, flag fitur. *acuan:* [04 § 9.2](04-API-CONTRACT.md#92-konfigurasi-publik)
 
 ## F0.E — Auth & RBAC · 11h
 

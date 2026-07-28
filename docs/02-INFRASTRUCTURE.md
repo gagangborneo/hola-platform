@@ -633,6 +633,7 @@ Aturan:
 | `SENTRY_TRACES_SAMPLE_RATE` | — | `0.1` | — |
 | `LOG_LEVEL` | — | `info` | pino |
 | `RATE_LIMIT_ENABLED` | — | `true` | `false` hanya untuk test |
+| `INTERNAL_TOKEN` | ✓ | (32+ byte random) | Token khusus header `X-Internal-Token` pada endpoint metrik; tidak boleh memakai ulang secret JWT |
 | `BULLBOARD_USER` / `BULLBOARD_PASSWORD` | ✓ | — | Basic auth dashboard queue |
 | `BACKUP_ENABLED` | — | `true` | — |
 | `BACKUP_RETENTION_DAYS` | — | `30` | — |

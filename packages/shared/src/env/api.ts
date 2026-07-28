@@ -8,7 +8,7 @@
  * kalau ada yang hilang (docs/02 § 8).
  */
 import { z } from 'zod'
-import { booleanFromEnv, csvList, intFromEnv, numberFromEnv } from './shared.ts'
+import { booleanFromEnv, csvList, intFromEnv, numberFromEnv, optionalCsvList } from './shared.ts'
 
 export const apiEnvSchema = z
   .object({
@@ -41,7 +41,7 @@ export const apiEnvSchema = z
     MIDTRANS_CLIENT_KEY: z.string().min(1),
     MIDTRANS_MERCHANT_ID: z.string().min(1),
     MIDTRANS_IS_PRODUCTION: booleanFromEnv,
-    MIDTRANS_WEBHOOK_ALLOWED_IPS: csvList.optional(),
+    MIDTRANS_WEBHOOK_ALLOWED_IPS: optionalCsvList.default([]),
 
     S3_ENDPOINT: z.url(),
     S3_REGION: z.string().min(1),
@@ -72,6 +72,7 @@ export const apiEnvSchema = z
     SENTRY_TRACES_SAMPLE_RATE: numberFromEnv.default(0.1),
     LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
     RATE_LIMIT_ENABLED: booleanFromEnv.default(true),
+    INTERNAL_TOKEN: z.string().min(32),
 
     BULLBOARD_USER: z.string().min(1),
     BULLBOARD_PASSWORD: z.string().min(1),
