@@ -5,11 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "node --watch src/index.ts",
+    "worker": "node --watch src/worker.ts",
+    "bullboard": "node --watch src/bullboard.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
     "test:integration": "vitest run --config vitest.integration.config.ts"
   },
   "dependencies": {
+    "@bull-board/api": "^8.3.0",
+    "@bull-board/hono": "^8.3.0",
     "@hola/db": "workspace:*",
     "@hola/shared": "workspace:*",
     "@hono/node-server": "^2.0.12",
@@ -17,6 +21,7 @@
     "@opentelemetry/api": "^1.9.1",
     "@sentry/node": "^10.68.0",
     "argon2": "^0.45.1",
+    "bullmq": "^5.81.2",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.12.32",
     "ioredis": "^5.11.1",

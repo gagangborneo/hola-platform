@@ -59,6 +59,7 @@ Object.assign(process.env, {
   INTERNAL_TOKEN: 'test-internal-token-minimal-32-bytes',
   BULLBOARD_USER: 'test-admin',
   BULLBOARD_PASSWORD: 'test-password',
+  BULLBOARD_ALLOWED_IPS: '127.0.0.1,::1',
   BACKUP_ENABLED: 'false',
   BACKUP_RETENTION_DAYS: '30',
 })

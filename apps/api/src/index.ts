@@ -8,6 +8,7 @@ import { serve } from '@hono/node-server'
 import { app } from './app.ts'
 import { closeDatabase } from './config/db.ts'
 import { logger } from './config/logger.ts'
+import { closeQueues } from './config/queues.ts'
 import { closeRedis } from './config/redis.ts'
 import { closeSentry } from './config/sentry.ts'
 import { env } from './env.ts'
@@ -24,7 +25,7 @@ const server = serve({ fetch: app.fetch, port: env.PORT }, (info) => {
 async function shutdown(signal: string): Promise<void> {
   logger.info({ signal }, 'shutdown dimulai')
   server.close()
-  await Promise.allSettled([closeDatabase(), closeRedis(), closeSentry()])
+  await Promise.allSettled([closeDatabase(), closeQueues(), closeRedis(), closeSentry()])
   logger.info('shutdown selesai')
   process.exit(0)
 }

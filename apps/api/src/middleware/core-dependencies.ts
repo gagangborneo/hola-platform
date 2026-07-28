@@ -12,6 +12,7 @@ import type { Redis } from 'ioredis'
 import { db } from '../config/db.ts'
 import { type Logger, logger } from '../config/logger.ts'
 import { mail } from '../config/mail.ts'
+import { type QueueProducers, queues } from '../config/queues.ts'
 import { keys, redis, safeRedis } from '../config/redis.ts'
 import { type Env, env } from '../env.ts'
 import type { MailAdapter } from '../providers/mail.ts'
@@ -21,6 +22,7 @@ export interface CoreDependencies {
   redis: Redis
   redisKeys: RedisKeys
   safeRedis: typeof safeRedis
+  queues: QueueProducers
   mail: MailAdapter
   logger: Logger
   env: Env
@@ -30,7 +32,16 @@ export interface CoreDependencyVariables {
   core: CoreDependencies
 }
 
-const core: CoreDependencies = { db, redis, redisKeys: keys, safeRedis, mail, logger, env }
+const core: CoreDependencies = {
+  db,
+  redis,
+  redisKeys: keys,
+  safeRedis,
+  queues,
+  mail,
+  logger,
+  env,
+}
 
 export const coreDependencies: MiddlewareHandler<{
   Variables: CoreDependencyVariables

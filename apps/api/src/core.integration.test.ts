@@ -3,11 +3,20 @@ import {
   appSettings,
   auditLogs,
   idempotencyRecords,
+  notifications,
   passwordResetTokens,
   refreshTokens,
   users,
 } from '@hola/db'
-import { ERROR_CODE, RATE_LIMIT_BUCKET, SETTINGS_KEY, USER_ROLE } from '@hola/shared'
+import {
+  ERROR_CODE,
+  JOB,
+  NOTIFICATION_CHANNEL,
+  RATE_LIMIT_BUCKET,
+  SETTINGS_KEY,
+  TEMPLATE_CODE,
+  USER_ROLE,
+} from '@hola/shared'
 import { eq, inArray, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
@@ -15,6 +24,7 @@ import { app } from './app.ts'
 import { closeDatabase, db } from './config/db.ts'
 import { logger } from './config/logger.ts'
 import { renderMetrics, resetMetrics } from './config/metrics.ts'
+import { queues } from './config/queues.ts'
 import { closeRedis, keys, redis, safeRedis } from './config/redis.ts'
 import { env } from './env.ts'
 import {
@@ -35,9 +45,16 @@ import { rateLimit } from './middleware/rate-limit.ts'
 import { type RequestVariables, requestId } from './middleware/request-id.ts'
 import { createUser, findUserByEmail } from './modules/auth/auth.repository.ts'
 import { login as loginService } from './modules/auth/auth.service.ts'
-import { issueEmailVerificationToken } from './modules/auth/jwt.ts'
+import { issueAccessToken, issueEmailVerificationToken } from './modules/auth/jwt.ts'
 import { hashPassword } from './modules/auth/password.ts'
 import { createOpaqueToken, hashOpaqueToken } from './modules/auth/tokens.ts'
+import {
+  notificationJobId,
+  removeExpiredTokens,
+  retryStuckNotifications,
+  sendQueuedEmail,
+  writeEmailNotification,
+} from './modules/notifications/notification.service.ts'
 
 const IDEMPOTENCY_KEYS = [
   '018f0000-0000-7000-8000-000000000101',
@@ -63,6 +80,7 @@ const AUTH_EMAILS = [
   'weak.auth-test@hola.test',
   'sessions.auth-test@hola.test',
   'rbac-customer.auth-test@hola.test',
+  'notifications.auth-test@hola.test',
 ] as const
 
 async function cleanIntegrationState(): Promise<void> {
@@ -399,12 +417,7 @@ describe('endpoint system', () => {
 describe('Auth & RBAC', () => {
   const password = 'MagentaPaddle2026!'
 
-  function authContext(
-    now: Date = new Date(),
-    mail: {
-      send: (message: { to: string; subject: string; text: string; html: string }) => Promise<void>
-    } = { send: async () => undefined },
-  ) {
+  function authContext(now: Date = new Date()) {
     return {
       db,
       redis,
@@ -412,7 +425,7 @@ describe('Auth & RBAC', () => {
       safeRedis,
       env,
       logger,
-      mail,
+      queues,
       now,
       sleep: async () => undefined,
     }
@@ -490,16 +503,10 @@ describe('Auth & RBAC', () => {
     const email = AUTH_EMAILS[2]
     await register(email)
     const base = new Date()
-    const messages: Array<{ subject: string }> = []
-    const mail = {
-      send: async (message: { subject: string }) => {
-        messages.push(message)
-      },
-    }
     for (let attempt = 0; attempt < 10; attempt++) {
       await expect(
         loginService(
-          authContext(base, mail),
+          authContext(base),
           { identifier: email, password: 'SalahPassword2026!' },
           {
             ipAddress: '127.0.0.1',
@@ -512,7 +519,14 @@ describe('Auth & RBAC', () => {
     const user = await findUserByEmail(db, email)
     expect(user?.failedLoginCount).toBe(10)
     expect(user?.lockedUntil?.getTime()).toBeGreaterThan(base.getTime())
-    expect(messages).toMatchObject([{ subject: 'Akun Hola sementara dikunci' }])
+    const lockNotifications = await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.templateCode, TEMPLATE_CODE.AUTH_ACCOUNT_LOCKED))
+    expect(lockNotifications).toHaveLength(2)
+    expect(lockNotifications.map((row) => row.channel)).toEqual(
+      expect.arrayContaining([NOTIFICATION_CHANNEL.EMAIL, NOTIFICATION_CHANNEL.INAPP]),
+    )
   })
 
   it('F0-46/F0-47: refresh opaque berotasi, reuse mencabut family dan token_version', async () => {
@@ -658,7 +672,7 @@ describe('Auth & RBAC', () => {
     expect(forgotUnknown.status).toBe(200)
     expect(
       await db.select().from(passwordResetTokens).where(eq(passwordResetTokens.userId, user.id)),
-    ).toHaveLength(2)
+    ).toHaveLength(1)
 
     const changed = await app.request('/api/v1/auth/password/change', {
       method: 'POST',
@@ -774,5 +788,148 @@ describe('Auth & RBAC', () => {
         'admin.user_revoke_sessions',
       ]),
     )
+  })
+})
+
+describe('notifikasi, mail, dan cleanup token', () => {
+  const email = AUTH_EMAILS[9]
+  const password = 'AzureRally2026!'
+
+  async function createNotificationUser(): Promise<
+    NonNullable<Awaited<ReturnType<typeof findUserByEmail>>>
+  > {
+    await createUser(db, {
+      role: USER_ROLE.CUSTOMER,
+      email,
+      phone: undefined,
+      passwordHash: await hashPassword(password, env),
+      fullName: 'Pemain Notifikasi',
+    })
+    const user = await findUserByEmail(db, email)
+    if (!user) throw new Error('fixture notification hilang')
+    await db.update(users).set({ emailVerifiedAt: new Date() }).where(eq(users.id, user.id))
+    return user
+  }
+
+  it('F0-60/J-25: email dan inbox dedupe per kanal, inbox dapat dibaca, email tepat sekali', async () => {
+    const user = await createNotificationUser()
+    const now = new Date('2026-07-29T00:00:00.000Z')
+    const emailNotification = await writeEmailNotification(
+      db,
+      {
+        userId: user.id,
+        toEmail: email,
+        templateCode: TEMPLATE_CODE.AUTH_EMAIL_VERIFY,
+        dedupeKey: `test:verify:${user.id}`,
+        relatedType: 'user',
+        relatedId: user.id,
+      },
+      now,
+    )
+    await writeEmailNotification(
+      db,
+      {
+        userId: user.id,
+        toEmail: email,
+        templateCode: TEMPLATE_CODE.AUTH_EMAIL_VERIFY,
+        dedupeKey: `test:verify:${user.id}`,
+        relatedType: 'user',
+        relatedId: user.id,
+      },
+      now,
+    )
+    if (!emailNotification) throw new Error('notifikasi email tidak dibuat')
+
+    const deliveries: Array<{ to: string; subject: string; text: string }> = []
+    const context = {
+      db,
+      env,
+      logger,
+      queues,
+      now,
+      mail: {
+        send: async (message: { to: string; subject: string; text: string; html: string }) => {
+          deliveries.push(message)
+        },
+      },
+    }
+    await sendQueuedEmail(context, emailNotification.id)
+    await sendQueuedEmail(context, emailNotification.id)
+    expect(deliveries).toHaveLength(1)
+    expect(deliveries[0]?.text).toContain('/verify-email?token=')
+
+    const persisted = await db.select().from(notifications).where(eq(notifications.userId, user.id))
+    expect(persisted).toHaveLength(2)
+    expect(persisted.map((row) => row.channel)).toEqual(
+      expect.arrayContaining([NOTIFICATION_CHANNEL.EMAIL, NOTIFICATION_CHANNEL.INAPP]),
+    )
+    expect(JSON.stringify(persisted)).not.toContain('token=')
+
+    const issued = await issueAccessToken(
+      { id: user.id, role: user.role, tokenVersion: user.tokenVersion },
+      env,
+    )
+    const inbox = await app.request('/api/v1/me/notifications', {
+      headers: { authorization: `Bearer ${issued.token}` },
+    })
+    expect(inbox.status).toBe(200)
+    const inboxBody = (await inbox.json()) as {
+      data: Array<{ id: string; read_at: string | null }>
+    }
+    expect(inboxBody.data).toHaveLength(1)
+    const notificationId = inboxBody.data[0]?.id
+    if (!notificationId) throw new Error('inbox fixture hilang')
+    const read = await app.request(`/api/v1/me/notifications/${notificationId}/read`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${issued.token}` },
+    })
+    expect(read.status).toBe(204)
+    const readAll = await app.request('/api/v1/me/notifications/read-all', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${issued.token}` },
+    })
+    expect(readAll.status).toBe(204)
+  })
+
+  it('F0-61/F0-62: sweeper mengantrekan email queued dan J-31 menghapus reset kedaluwarsa', async () => {
+    const user = await createNotificationUser()
+    const now = new Date('2026-07-29T00:00:00.000Z')
+    const notification = await writeEmailNotification(
+      db,
+      {
+        userId: user.id,
+        toEmail: email,
+        templateCode: TEMPLATE_CODE.AUTH_PASSWORD_RESET,
+        dedupeKey: `test:reset:${user.id}`,
+        relatedType: 'user',
+        relatedId: user.id,
+      },
+      new Date(now.getTime() - 6 * 60 * 1000),
+    )
+    if (!notification) throw new Error('notifikasi reset tidak dibuat')
+    await db
+      .update(notifications)
+      .set({ createdAt: new Date(now.getTime() - 6 * 60 * 1000) })
+      .where(eq(notifications.id, notification.id))
+    await retryStuckNotifications({
+      db,
+      env,
+      logger,
+      queues,
+      mail: { send: async () => undefined },
+      now,
+    })
+    const queued = await queues.notification.getJob(notificationJobId(notification.id))
+    expect(queued?.name).toBe(JOB.NOTIFICATION_SEND_EMAIL)
+
+    await db.insert(passwordResetTokens).values({
+      userId: user.id,
+      tokenHash: hashOpaqueToken(createOpaqueToken()),
+      expiresAt: new Date(now.getTime() - 1),
+    })
+    await removeExpiredTokens({ db, now })
+    expect(
+      await db.select().from(passwordResetTokens).where(eq(passwordResetTokens.userId, user.id)),
+    ).toHaveLength(0)
   })
 })

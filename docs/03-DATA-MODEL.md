@@ -1826,6 +1826,11 @@ UNIQUE `(user_id, template_code, dedupe_key)` — **inti aturan dedupe** di
 [02 § 7](02-INFRASTRUCTURE.md#7-notifikasi). Untuk penerima tanpa `user_id`, unique memakai
 `(to_email, template_code, dedupe_key)` sebagai index partial kedua.
 
+Satu event dapat memiliki delivery eksternal dan `inapp`. Karena kedua index tidak menyertakan
+`channel`, aplikasi menambahkan suffix kanal pada `dedupe_key` fisik (mis. base
+`booking:{id}:reminder2h` menjadi `…:email` dan `…:inapp`); base key tetap satu identitas dedupe
+di level pemanggil.
+
 ### `push_tokens`
 `id`, `user_id`, `expo_push_token` (UNIQUE), `device_id`, `platform` (`ios`\|`android`),
 `app_version`, `last_seen_at`, `revoked_at`, `revoked_reason`.

@@ -11,6 +11,7 @@ import {
   type RefreshInput,
   type RegisterInput,
   type ResetPasswordInput,
+  TEMPLATE_CODE,
   USER_ROLE,
   USER_STATUS,
   type UserRole,
@@ -18,11 +19,15 @@ import {
 import { err, UniqueViolationError } from '../../lib/errors.ts'
 import { type Tx, withTransaction } from '../../lib/transaction.ts'
 import type { CoreDependencies } from '../../middleware/core-dependencies.ts'
+import {
+  createAndEnqueueEmailNotification,
+  enqueueEmailNotification,
+  writeEmailNotification,
+} from '../notifications/notification.service.ts'
 import { writeAuditLog } from '../system/audit.repository.ts'
 import {
   consumePasswordResetToken,
   createCustomerProfile,
-  createPasswordResetToken,
   createRefreshToken,
   createUser,
   findPasswordResetToken,
@@ -47,7 +52,6 @@ import {
 import type { AccessTokenClaims, AuthenticatedUserContext, Viewer } from './auth.types.ts'
 import {
   issueAccessToken,
-  issueEmailVerificationToken,
   remainingJwtLifetimeSeconds,
   verifyEmailVerificationToken,
 } from './jwt.ts'
@@ -61,7 +65,7 @@ import { createOpaqueToken, hashOpaqueToken } from './tokens.ts'
 
 type AuthDependencies = Pick<
   CoreDependencies,
-  'db' | 'env' | 'logger' | 'mail' | 'redis' | 'redisKeys' | 'safeRedis'
+  'db' | 'env' | 'logger' | 'queues' | 'redis' | 'redisKeys' | 'safeRedis'
 >
 
 export interface AuthRequestContext {
@@ -93,10 +97,6 @@ function nowPlusDays(now: Date, days: number): Date {
   return new Date(now.getTime() + days * 24 * 60 * 60 * 1000)
 }
 
-function nowPlusHours(now: Date, hours: number): Date {
-  return new Date(now.getTime() + hours * 60 * 60 * 1000)
-}
-
 function sleep(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds))
 }
@@ -117,49 +117,32 @@ function secondsFromClaims(claims: AccessTokenClaims, now: Date): number {
   return Math.max(0, Math.round((claims.expiresAt.getTime() - claims.issuedAt.getTime()) / 1000))
 }
 
-function appUrl(baseUrl: string, path: string, token: string): string {
-  return `${baseUrl.replace(/\/$/, '')}${path}?token=${encodeURIComponent(token)}`
-}
-
-async function sendEmailBestEffort(
+async function queueAuthEmail(
   ctx: AuthServiceContext,
-  message: { to: string; subject: string; text: string; html: string },
+  user: IdentityUser,
+  templateCode: (typeof TEMPLATE_CODE)[keyof typeof TEMPLATE_CODE],
+  dedupeKey: string,
 ): Promise<void> {
+  if (!user.email) return
   try {
-    await ctx.mail.send(message)
+    await createAndEnqueueEmailNotification(ctx, {
+      userId: user.id,
+      toEmail: user.email,
+      templateCode,
+      dedupeKey,
+      relatedType: 'user',
+      relatedId: user.id,
+    })
   } catch (error) {
-    // Token tidak ikut context log; provider akan ditangani retry job F0.F.
     ctx.logger.warn(
-      { err: error, to: message.to, subject: message.subject },
-      'pengiriman email gagal',
+      { err: error, user_id: user.id, template_code: templateCode },
+      'pencatatan notifikasi auth gagal',
     )
   }
 }
 
-async function sendEmailVerification(ctx: AuthServiceContext, user: IdentityUser): Promise<void> {
-  if (!user.email) return
-  const token = await issueEmailVerificationToken({ id: user.id, email: user.email }, ctx.env)
-  const url = appUrl(ctx.env.WEB_BASE_URL, '/verify-email', token)
-  await sendEmailBestEffort(ctx, {
-    to: user.email,
-    subject: 'Verifikasi email akun Hola',
-    text: `Verifikasi email Anda melalui ${url}`,
-    html: `<p>Verifikasi email Anda melalui <a href="${url}">tautan ini</a>.</p>`,
-  })
-}
-
-async function sendLockoutEmail(ctx: AuthServiceContext, user: IdentityUser): Promise<void> {
-  if (!user.email) return
-  await sendEmailBestEffort(ctx, {
-    to: user.email,
-    subject: 'Akun Hola sementara dikunci',
-    text: 'Ada percobaan login gagal berulang. Akun Anda dikunci sementara selama 15 menit.',
-    html: '<p>Ada percobaan login gagal berulang. Akun Anda dikunci sementara selama 15 menit.</p>',
-  })
-}
-
 export async function invalidateUserContext(
-  ctx: AuthServiceContext,
+  ctx: Pick<AuthServiceContext, 'redis' | 'redisKeys' | 'safeRedis'>,
   userId: string,
 ): Promise<void> {
   await ctx.safeRedis(
@@ -231,31 +214,43 @@ export async function registerCustomer(
 
   let registered: IdentityUser | null = null
   try {
-    registered = await withTransaction(ctx.db, async ({ tx }) => {
-      const user = await createUser(tx, {
-        role: USER_ROLE.CUSTOMER,
-        email: input.email,
-        phone: input.phone,
-        passwordHash,
-        fullName: input.full_name,
-      })
-      await createCustomerProfile(tx, { userId: user.id, referralCode: referralCodeFor(user.id) })
-      return user
-    })
+    registered = await withTransaction(
+      ctx.db,
+      async ({ tx, afterCommit }) => {
+        const user = await createUser(tx, {
+          role: USER_ROLE.CUSTOMER,
+          email: input.email,
+          phone: input.phone,
+          passwordHash,
+          fullName: input.full_name,
+        })
+        await createCustomerProfile(tx, { userId: user.id, referralCode: referralCodeFor(user.id) })
+        if (user.email) {
+          const notification = await writeEmailNotification(
+            tx,
+            {
+              userId: user.id,
+              toEmail: user.email,
+              templateCode: TEMPLATE_CODE.AUTH_EMAIL_VERIFY,
+              dedupeKey: `auth:email_verify:${user.id}`,
+              relatedType: 'user',
+              relatedId: user.id,
+            },
+            ctx.now,
+          )
+          if (notification) afterCommit(() => enqueueEmailNotification(ctx, notification.id))
+        }
+        return user
+      },
+      { logger: ctx.logger },
+    )
   } catch (error) {
     if (!isUniqueViolation(error)) throw error
   }
 
-  if (registered) {
-    await sendEmailVerification(ctx, registered)
-  } else if (input.email) {
-    await sendEmailBestEffort(ctx, {
-      to: input.email,
-      subject: 'Akun Hola sudah tersedia',
-      text: `Akun dengan email ini sudah tersedia. Masuk melalui ${ctx.env.WEB_BASE_URL}`,
-      html: `<p>Akun dengan email ini sudah tersedia. Silakan <a href="${ctx.env.WEB_BASE_URL}">masuk</a>.</p>`,
-    })
-  }
+  // Respons generik tidak perlu mengirim email pada pendaftaran duplikat;
+  // ini mencegah alamat korban dipakai untuk memicu email berulang.
+  void registered
 
   // Respons sengaja sama agar alamat email/nomor telepon tidak dapat dienumerasi.
   return { message: 'Cek email untuk melanjutkan.' }
@@ -282,7 +277,12 @@ export async function login(
     if (failure) {
       await applyProgressiveDelay(ctx, failure.failedLoginCount)
       if (failure.failedLoginCount >= LOGIN_MAX_FAILED_ATTEMPTS) {
-        await sendLockoutEmail(ctx, user)
+        await queueAuthEmail(
+          ctx,
+          user,
+          TEMPLATE_CODE.AUTH_ACCOUNT_LOCKED,
+          `auth:account_locked:${user.id}:${failure.lockedUntil?.toISOString() ?? 'unknown'}`,
+        )
         ctx.logger.warn({ user_id: user.id }, 'akun dikunci setelah login gagal berulang')
       }
     }
@@ -467,7 +467,7 @@ export async function revokeSession(
 export async function requestPasswordReset(
   ctx: AuthServiceContext,
   input: ForgotPasswordInput,
-  request: AuthRequestContext,
+  _request: AuthRequestContext,
 ): Promise<{ message: string }> {
   const user = await findUserByEmail(ctx.db, input.email)
   if (
@@ -476,20 +476,12 @@ export async function requestPasswordReset(
     user.emailVerifiedAt !== null &&
     user.email !== null
   ) {
-    const token = createOpaqueToken()
-    await createPasswordResetToken(ctx.db, {
-      userId: user.id,
-      tokenHash: hashOpaqueToken(token),
-      expiresAt: nowPlusHours(ctx.now, 1),
-      ipAddress: request.ipAddress,
-    })
-    const url = appUrl(ctx.env.WEB_BASE_URL, '/reset-password', token)
-    await sendEmailBestEffort(ctx, {
-      to: user.email,
-      subject: 'Atur ulang password Hola',
-      text: `Atur ulang password Anda melalui ${url}`,
-      html: `<p>Atur ulang password Anda melalui <a href="${url}">tautan ini</a>.</p>`,
-    })
+    await queueAuthEmail(
+      ctx,
+      user,
+      TEMPLATE_CODE.AUTH_PASSWORD_RESET,
+      `auth:password_reset:${user.id}:${ctx.now.toISOString()}`,
+    )
   }
   return { message: 'Jika akun tersedia, instruksi akan dikirim ke email Anda.' }
 }
@@ -505,32 +497,51 @@ export async function resetPassword(
   assertPasswordAllowed({ password: input.password, email: user.email, fullName: user.fullName })
   const passwordHash = await hashPassword(input.password, ctx.env)
 
-  const consumed = await withTransaction(ctx.db, async ({ tx, afterCommit }) => {
-    const claimed = await consumePasswordResetToken(tx, reset.id, ctx.now)
-    if (!claimed) return false
-    await updatePassword(tx, user.id, passwordHash)
-    await incrementTokenVersion(tx, user.id)
-    await revokeAllRefreshTokens(tx, {
-      userId: user.id,
-      reason: 'password_reset',
-      now: ctx.now,
-      exceptTokenId: undefined,
-    })
-    await writeAuditLog(tx, {
-      actorUserId: user.id,
-      actorRole: user.role,
-      action: 'auth.password_reset',
-      entityType: 'user',
-      entityId: user.id,
-      before: undefined,
-      after: undefined,
-      ipAddress: undefined,
-      userAgent: undefined,
-      requestId: undefined,
-    })
-    afterCommit(() => invalidateUserContext(ctx, user.id))
-    return true
-  })
+  const consumed = await withTransaction(
+    ctx.db,
+    async ({ tx, afterCommit }) => {
+      const claimed = await consumePasswordResetToken(tx, reset.id, ctx.now)
+      if (!claimed) return false
+      await updatePassword(tx, user.id, passwordHash)
+      await incrementTokenVersion(tx, user.id)
+      await revokeAllRefreshTokens(tx, {
+        userId: user.id,
+        reason: 'password_reset',
+        now: ctx.now,
+        exceptTokenId: undefined,
+      })
+      await writeAuditLog(tx, {
+        actorUserId: user.id,
+        actorRole: user.role,
+        action: 'auth.password_reset',
+        entityType: 'user',
+        entityId: user.id,
+        before: undefined,
+        after: undefined,
+        ipAddress: undefined,
+        userAgent: undefined,
+        requestId: undefined,
+      })
+      if (user.email) {
+        const notification = await writeEmailNotification(
+          tx,
+          {
+            userId: user.id,
+            toEmail: user.email,
+            templateCode: TEMPLATE_CODE.AUTH_PASSWORD_CHANGED,
+            dedupeKey: `auth:password_changed:${user.id}:${reset.id}`,
+            relatedType: 'user',
+            relatedId: user.id,
+          },
+          ctx.now,
+        )
+        if (notification) afterCommit(() => enqueueEmailNotification(ctx, notification.id))
+      }
+      afterCommit(() => invalidateUserContext(ctx, user.id))
+      return true
+    },
+    { logger: ctx.logger },
+  )
   if (!consumed) throw err.tokenExpired()
 }
 
@@ -551,32 +562,51 @@ export async function changePassword(
     fullName: user.fullName,
   })
   const passwordHash = await hashPassword(input.new_password, ctx.env)
-  const updated = await withTransaction(ctx.db, async ({ tx, afterCommit }) => {
-    await updatePassword(tx, user.id, passwordHash)
-    await incrementTokenVersion(tx, user.id)
-    await revokeAllRefreshTokens(tx, {
-      userId: user.id,
-      reason: 'password_change',
-      now: ctx.now,
-      exceptTokenId: undefined,
-    })
-    const refreshedUser = await findUserById(tx, user.id)
-    if (!refreshedUser) throw err.unauthenticated()
-    await writeAuditLog(tx, {
-      actorUserId: user.id,
-      actorRole: viewer.role,
-      action: 'auth.password_change',
-      entityType: 'user',
-      entityId: user.id,
-      before: undefined,
-      after: undefined,
-      ipAddress: undefined,
-      userAgent: undefined,
-      requestId: undefined,
-    })
-    afterCommit(() => invalidateUserContext(ctx, user.id))
-    return createSession({ ...ctx, db: tx }, refreshedUser, request)
-  })
+  const updated = await withTransaction(
+    ctx.db,
+    async ({ tx, afterCommit }) => {
+      await updatePassword(tx, user.id, passwordHash)
+      await incrementTokenVersion(tx, user.id)
+      await revokeAllRefreshTokens(tx, {
+        userId: user.id,
+        reason: 'password_change',
+        now: ctx.now,
+        exceptTokenId: undefined,
+      })
+      const refreshedUser = await findUserById(tx, user.id)
+      if (!refreshedUser) throw err.unauthenticated()
+      await writeAuditLog(tx, {
+        actorUserId: user.id,
+        actorRole: viewer.role,
+        action: 'auth.password_change',
+        entityType: 'user',
+        entityId: user.id,
+        before: undefined,
+        after: undefined,
+        ipAddress: undefined,
+        userAgent: undefined,
+        requestId: undefined,
+      })
+      if (user.email) {
+        const notification = await writeEmailNotification(
+          tx,
+          {
+            userId: user.id,
+            toEmail: user.email,
+            templateCode: TEMPLATE_CODE.AUTH_PASSWORD_CHANGED,
+            dedupeKey: `auth:password_changed:${user.id}:${ctx.now.toISOString()}`,
+            relatedType: 'user',
+            relatedId: user.id,
+          },
+          ctx.now,
+        )
+        if (notification) afterCommit(() => enqueueEmailNotification(ctx, notification.id))
+      }
+      afterCommit(() => invalidateUserContext(ctx, user.id))
+      return createSession({ ...ctx, db: tx }, refreshedUser, request)
+    },
+    { logger: ctx.logger },
+  )
   return { ...updated, expiresIn: secondsFromClaims(updated.accessTokenClaims, ctx.now) }
 }
 
@@ -586,7 +616,7 @@ export async function requestEmailVerification(
 ): Promise<{ message: string }> {
   const user = await findUserById(ctx.db, viewer.userId)
   if (!user || user.email === null) throw err.validation({ email: 'Email tidak tersedia' })
-  await sendEmailVerification(ctx, user)
+  await queueAuthEmail(ctx, user, TEMPLATE_CODE.AUTH_EMAIL_VERIFY, `auth:email_verify:${user.id}`)
   return { message: 'Instruksi verifikasi telah dikirim jika email tersedia.' }
 }
 

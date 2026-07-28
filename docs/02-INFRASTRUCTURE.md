@@ -363,7 +363,7 @@ Kolom:
 | J-22 | `gamification.rebuildLeaderboard` | gamification | `manual` + otomatis saat worker mendeteksi ZSET periode aktif kosong padahal `point_ledger` tidak kosong | 3 × fixed 60 s | Membangun ulang ZSET dari nol: `DEL` lalu `ZADD` batch dari agregat `point_ledger`. Hasil deterministik. | [12 § 6](12-MODULE-GAMIFICATION.md#6-arsitektur-leaderboard) |
 | J-23 | `gamification.closeLeaderboardPeriod` | gamification | `cron:5 0 1 * *` (tanggal 1, 00:05 WITA) | 3 × fixed 300 s | `UPDATE leaderboard_periods SET status='closed' WHERE id=? AND status='active'`; snapshot final memakai idempotency J-21. | [12 § 5](12-MODULE-GAMIFICATION.md#5-periode--reset-leaderboard) |
 | J-24 | `gamification.recalculateTiers` | gamification | `cron:30 0 * * *` | 3 × fixed 60 s | Menghitung tier dari `customer_profiles.lifetime_points`; update hanya jika berbeda (idempoten). | [12 § 7](12-MODULE-GAMIFICATION.md#7-tier--badge) |
-| J-25 | `notification.sendEmail` | notification | `event` | 5 × exp 30 s | `jobId = "notif:{notificationId}"`; baris `notifications` bertransisi `queued → sent`; handler keluar jika sudah `sent`. | semua modul |
+| J-25 | `notification.sendEmail` | notification | `event` | 5 × exp 30 s | `jobId = "notif-{notificationId}"`; baris `notifications` bertransisi `queued → sent`; handler keluar jika sudah `sent`. BullMQ v5 melarang `:` pada custom jobId. | semua modul |
 | J-26 | `notification.sendPush` | notification | `event` | 3 × exp 15 s | idem J-25. Token yang ditolak Expo (`DeviceNotRegistered`) ditandai `revoked_at`. | [15 § 7](15-MOBILE.md#7-push-notification) |
 | J-27 | `notification.sendWhatsapp` | notification | `event` (aktif hanya jika `NOTIF_WHATSAPP_ENABLED=true`) | 5 × exp 60 s | idem J-25. | D-04 |
 | J-28 | `system.postJournalEntries` | system | `repeat:5m` | 5 × exp 60 s | Baca outbox `finance_events` berstatus `pending`; UNIQUE `(source_type, source_id, kind)` di `journal_entries` mencegah jurnal ganda. | [14 § 5](14-MODULE-FINANCE.md#5-sumber-transaksi-otomatis) |
@@ -402,7 +402,7 @@ Dua job sweeper di atas adalah bagian resmi dari daftar job:
 | # | Nama job | Queue | Trigger | Retry | Idempotency |
 |---|---|---|---|---|---|
 | J-35 | `commerce.sweepEventStates` | commerce | `repeat:10m` | 3 × fixed 60 s | Transisi kondisional atas `events` (`registration_open → registration_closed` jika `registration_closes_at < now()`; `published/registration_closed → ongoing` jika `starts_at <= now()`; `ongoing → completed` jika `ends_at + 2h < now()`). Semua `UPDATE ... WHERE status = <status asal>`. |
-| J-36 | `notification.retryStuckNotifications` | notification | `repeat:5m` | 3 × fixed 60 s | Cari `notifications.status='queued' AND created_at < now() - interval '5 minutes'` → enqueue ulang dengan `jobId = "notif:{id}"`, yang ditolak jika job masih ada. |
+| J-36 | `notification.retryStuckNotifications` | notification | `repeat:5m` | 3 × fixed 60 s | Cari `notifications.status='queued' AND created_at < now() - interval '5 minutes'` → enqueue ulang dengan `jobId = "notif-{id}"`, yang ditolak jika job masih ada. |
 
 Satu job HRIS yang berdiri sendiri (dipakai [13 § 6.2](13-MODULE-CRM-HRIS.md#62-absensi)):
 
@@ -565,6 +565,10 @@ UNIQUE `(user_id, template_code, dedupe_key)` — lihat aturan 2 di bawah.
 1. Setiap notifikasi punya `template_code` yang terdaftar di `notification_templates`.
 2. **Dedupe wajib.** `notifications` punya UNIQUE `(user_id, template_code, dedupe_key)`.
    Contoh `dedupe_key`: `booking:{bookingId}:reminder2h`, `invoice:{invoiceId}:due-3d`.
+   Karena constraint saat ini tidak memuat `channel`, implementasi menyimpan suffix kanal pada
+   key fisik (`:email`, `:inapp`, dan seterusnya). Pemanggil tetap memberi base dedupe key yang
+   sama; suffix tersebut memungkinkan satu event menulis delivery eksternal **dan** inbox tanpa
+   menduplikasi masing-masing kanal.
 3. Preferensi user (`customer_profiles.notification_prefs` jsonb) dapat mematikan kanal
    `push`/`email` untuk kategori non-transaksional. **Notifikasi transaksional (konfirmasi
    booking, pembayaran, refund, tagihan) tidak dapat dimatikan.**
@@ -637,6 +641,7 @@ Aturan:
 | `RATE_LIMIT_ENABLED` | — | `true` | `false` hanya untuk test |
 | `INTERNAL_TOKEN` | ✓ | (32+ byte random) | Token khusus header `X-Internal-Token` pada endpoint metrik; tidak boleh memakai ulang secret JWT |
 | `BULLBOARD_USER` / `BULLBOARD_PASSWORD` | ✓ | — | Basic auth dashboard queue |
+| `BULLBOARD_ALLOWED_IPS` | ✓ | — | Allowlist CSV IP dashboard queue. Kosong = tolak seluruh akses (default-deny). Reverse proxy wajib meneruskan IP klien tepercaya. |
 | `BACKUP_ENABLED` | — | `true` | — |
 | `BACKUP_RETENTION_DAYS` | — | `30` | — |
 

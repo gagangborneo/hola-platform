@@ -122,13 +122,13 @@ nominal ini.
 
 ## F0.F — BullMQ, notifikasi, mail · 4,5h
 
-- [ ] **F0-57** `1h` ⚙️🔒 — `config/queues.ts` (6 producer, dibagikan lewat `ctx.queues`), `worker.ts` (registrasi seluruh `Worker` + `upsertJobScheduler` dengan `jobId` tetap + `tz: 'Asia/Makassar'`), graceful shutdown `SIGTERM` maks 30 detik. *acuan:* [16 § 6.1](16-CONVENTIONS.md#61-struktur), [02 § 5.3](02-INFRASTRUCTURE.md#53-ketahanan-job-terhadap-kehilangan-redis)
-- [ ] **F0-58** `0,5h` 🔴 — Test: konstanta `JOB.*` ≡ job yang benar-benar terdaftar di `jobs/index.ts` (BR-BQ-03)
-- [ ] **F0-59** `0,5h` — Provider mail: port `MailAdapter` + implementasi `resend` / `smtp` / `console`. *acuan:* [02 § 7](02-INFRASTRUCTURE.md#7-notifikasi), [16 § 4.2 `providers/`](16-CONVENTIONS.md#42-appsapi)
-- [ ] **F0-60** `1h` — Modul `notifications`: `notification_templates`, penulisan baris `inapp` sinkron untuk setiap kanal, **dedupe wajib** C-19, endpoint inbox (`GET /me/notifications`, `/read`, `/read-all`), quiet hours 22:00–07:00 untuk non-transaksional. *acuan:* [02 § 7 Aturan notifikasi](02-INFRASTRUCTURE.md#aturan-notifikasi)
-- [ ] **F0-61** `0,5h` — J-25 `notification.sendEmail` + J-36 `notification.retryStuckNotifications` (sweeper resmi). *acuan:* [02 § 5.2](02-INFRASTRUCTURE.md#52-tabel-job), [02 § 5.3](02-INFRASTRUCTURE.md#53-ketahanan-job-terhadap-kehilangan-redis)
-- [ ] **F0-62** `0,5h` — J-31 `system.cleanupExpiredTokens` (cron 04:00 WITA)
-- [ ] **F0-63** `0,5h` — `bullboard.ts` + basic auth + IP allowlist (ia bisa melihat payload job, S-8). *acuan:* [05 § 9 S-8](05-AUTH.md#9-keamanan-tambahan)
+- [x] **F0-57** `1h` ⚙️🔒 — `config/queues.ts` (6 producer, dibagikan lewat `ctx.queues`), `worker.ts` (registrasi seluruh `Worker` + `upsertJobScheduler` dengan `jobId` tetap + `tz: 'Asia/Makassar'`), graceful shutdown `SIGTERM` maks 30 detik. *acuan:* [16 § 6.1](16-CONVENTIONS.md#61-struktur), [02 § 5.3](02-INFRASTRUCTURE.md#53-ketahanan-job-terhadap-kehilangan-redis)
+- [x] **F0-58** `0,5h` 🔴 — Test: konstanta `JOB.*` ≡ job yang benar-benar terdaftar di `jobs/index.ts` (BR-BQ-03)
+- [x] **F0-59** `0,5h` — Provider mail: port `MailAdapter` + implementasi `resend` / `smtp` / `console`. *acuan:* [02 § 7](02-INFRASTRUCTURE.md#7-notifikasi), [16 § 4.2 `providers/`](16-CONVENTIONS.md#42-appsapi)
+- [x] **F0-60** `1h` — Modul `notifications`: `notification_templates`, penulisan baris `inapp` sinkron untuk setiap kanal, **dedupe wajib** C-19, endpoint inbox (`GET /me/notifications`, `/read`, `/read-all`), quiet hours 22:00–07:00 untuk non-transaksional. *acuan:* [02 § 7 Aturan notifikasi](02-INFRASTRUCTURE.md#aturan-notifikasi)
+- [x] **F0-61** `0,5h` — J-25 `notification.sendEmail` + J-36 `notification.retryStuckNotifications` (sweeper resmi). *acuan:* [02 § 5.2](02-INFRASTRUCTURE.md#52-tabel-job), [02 § 5.3](02-INFRASTRUCTURE.md#53-ketahanan-job-terhadap-kehilangan-redis)
+- [x] **F0-62** `0,5h` — J-31 `system.cleanupExpiredTokens` (cron 04:00 WITA)
+- [x] **F0-63** `0,5h` — `bullboard.ts` + basic auth + IP allowlist (ia bisa melihat payload job, S-8). *acuan:* [05 § 9 S-8](05-AUTH.md#9-keamanan-tambahan)
 
 ## F0.G — `packages/api-client` · 1,5h
 

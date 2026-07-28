@@ -76,6 +76,8 @@ export const apiEnvSchema = z
 
     BULLBOARD_USER: z.string().min(1),
     BULLBOARD_PASSWORD: z.string().min(1),
+    /** Dashboard queue default-deny bila allowlist IP kosong. */
+    BULLBOARD_ALLOWED_IPS: optionalCsvList.default([]),
 
     BACKUP_ENABLED: booleanFromEnv.default(true),
     BACKUP_RETENTION_DAYS: intFromEnv.default(30),

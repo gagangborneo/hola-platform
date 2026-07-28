@@ -9,3 +9,6 @@ allowBuilds:
   '@biomejs/biome': true
   argon2: true
   esbuild: true
+  # BullMQ tetap bekerja dengan fallback JavaScript; native extractor tidak
+  # diperlukan dan build script pihak ketiga sengaja tetap diblokir.
+  msgpackr-extract: false
