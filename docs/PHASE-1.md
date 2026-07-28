@@ -132,8 +132,8 @@ nominal ini.
 
 ## F0.G — `packages/api-client` · 1,5h
 
-- [ ] **F0-64** `0,5h` — `createHolaClient({ baseUrl, getAccessToken, onUnauthorized })` + `import type { AppType }` (type-only, dijaga `verbatimModuleSyntax`) + pemetaan response error → `HolaApiError`. *acuan:* [01 § 3.7](01-ARCHITECTURE.md#37-packagesapi-client)
-- [ ] **F0-65** `1h` 🔴 — Refresh **single-flight** (T-12) + test: 3 request paralel yang `401` hanya memicu **satu** `POST /auth/refresh`; tanpa ini deteksi reuse memicu false positive (RK-0-03)
+- [x] **F0-64** `0,5h` — `createHolaClient({ baseUrl, getAccessToken, onUnauthorized })` + `import type { AppType }` (type-only, dijaga `verbatimModuleSyntax`) + pemetaan response error → `HolaApiError`. *acuan:* [01 § 3.7](01-ARCHITECTURE.md#37-packagesapi-client)
+- [x] **F0-65** `1h` 🔴 — Refresh **single-flight** (T-12) + test: 3 request paralel yang `401` hanya memicu **satu** `POST /auth/refresh`; tanpa ini deteksi reuse memicu false positive (RK-0-03)
 
 ## F0.H — Media & object storage · 2h
 
