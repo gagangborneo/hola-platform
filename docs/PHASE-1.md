@@ -158,9 +158,9 @@ nominal ini.
 
 ## F0.K — CI · 2h
 
-- [ ] **F0-78** `1h` ⚙️🔒 — `ci.yml`: `pnpm install --frozen-lockfile` → `typecheck` → `lint` (`biome ci`) → `test` → `build`, dengan **service container** postgres + redis untuk test integrasi. *acuan:* [02 § 3 GitHub Actions](02-INFRASTRUCTURE.md#github-actions--workflow-yang-ada)
-- [ ] **F0-79** `0,5h` 🔴 — Job `guard-db-boundary` (`grep -R` pola terlarang di `apps/*/src`) **dan buktikan gagal** dengan commit percobaan di branch throwaway (DoD-0-03). *acuan:* [01 § 2](01-ARCHITECTURE.md#2-aturan-keras-semua-akses-database-lewat-appsapi)
-- [ ] **F0-80** `0,5h` 🔴 — Job `check:env` **dan buktikan gagal** saat satu kunci dihapus dari `.env.example` (DoD-0-04)
+- [x] **F0-78** `1h` ⚙️🔒 — `ci.yml`: `pnpm install --frozen-lockfile` → `typecheck` → `lint` (`biome ci`) → `test` → `build`, dengan **service container** postgres + redis untuk test integrasi. *acuan:* [02 § 3 GitHub Actions](02-INFRASTRUCTURE.md#github-actions--workflow-yang-ada)
+- [x] **F0-79** `0,5h` 🔴 — Job `guard-db-boundary` (`grep -R` pola terlarang di `apps/*/src`) **dan buktikan gagal** dengan commit percobaan di branch throwaway (DoD-0-03). *acuan:* [01 § 2](01-ARCHITECTURE.md#2-aturan-keras-semua-akses-database-lewat-appsapi)
+- [x] **F0-80** `0,5h` 🔴 — Job `check:env` **dan buktikan gagal** saat satu kunci dihapus dari `.env.example` (DoD-0-04)
 
 ## F0.L — Deploy · 4,5h
 
