@@ -14,7 +14,7 @@
     "test": "vitest run --passWithNoTests",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "generate": "drizzle-kit generate",
-    "migrate": "node src/migrate.ts",
+    "migrate": "node --env-file-if-exists=../../.env src/migrate.ts",
     "studio": "drizzle-kit studio",
     "seed": "node --env-file-if-exists=../../.env src/seed.ts"
   },

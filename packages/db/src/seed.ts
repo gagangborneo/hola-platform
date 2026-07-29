@@ -19,6 +19,7 @@ import {
 } from '@hola/db'
 import { NOTIFICATION_CHANNEL, SETTINGS_KEY, TEMPLATE_CODE, USER_ROLE } from '@hola/shared'
 import { argon2id, hash } from 'argon2'
+import { sql } from 'drizzle-orm'
 
 const databaseUrl = process.env.DATABASE_URL
 if (!databaseUrl) throw new Error('DATABASE_URL wajib diisi untuk menjalankan seed.')
@@ -155,7 +156,7 @@ const authTemplates = [
   ],
 ] as const
 
-const { db, sql } = createDb({ url: databaseUrl, onlyOneConnection: true })
+const { db, sql: connection } = createDb({ url: databaseUrl, onlyOneConnection: true })
 
 try {
   const passwordHash = await hash(passwordWithPepper(seedPassword), argon2Options)
@@ -400,7 +401,9 @@ try {
       .values(
         defaultSettings.map(([key, value, description]) => ({
           key,
-          value,
+          // `jsonb NOT NULL` menyimpan default `finance_locked_until_date` sebagai
+          // JSON `null`, bukan SQL NULL yang melanggar constraint.
+          value: value === null ? sql`'null'::jsonb` : value,
           description,
           updatedAt: seedTime,
         })),
@@ -427,5 +430,5 @@ try {
 
   console.log('seed Phase 0 selesai: venue, 3 sport, 7 court, 6 user, setting, dan template auth.')
 } finally {
-  await sql.end()
+  await connection.end()
 }
