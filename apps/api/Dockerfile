@@ -29,6 +29,7 @@ ENV NODE_ENV=production
 COPY --from=build --chown=hola:hola /workspace/node_modules ./node_modules
 COPY --from=build --chown=hola:hola /workspace/package.json ./package.json
 COPY --from=build --chown=hola:hola /workspace/apps/api/package.json ./apps/api/package.json
+COPY --from=build --chown=hola:hola /workspace/apps/api/node_modules ./apps/api/node_modules
 COPY --from=build --chown=hola:hola /workspace/apps/api/dist ./apps/api/dist
 COPY --from=build --chown=hola:hola /workspace/packages/db ./packages/db
 COPY --from=build --chown=hola:hola /workspace/packages/shared ./packages/shared
