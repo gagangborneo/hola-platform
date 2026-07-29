@@ -18,6 +18,7 @@ import { adminUsersRoutes } from './modules/admin/admin-users.routes.ts'
 import { authRoutes } from './modules/auth/auth.routes.ts'
 import { mediaRoutes } from './modules/media/media.routes.ts'
 import { notificationRoutes } from './modules/notifications/notification.routes.ts'
+import { adminSystemRoutes } from './modules/system/admin-system.routes.ts'
 import { configRoutes } from './modules/system/config.routes.ts'
 import { healthRoutes } from './modules/system/health.routes.ts'
 
@@ -102,6 +103,7 @@ export function createApp() {
     .route(API_PREFIX, configRoutes)
     .route(API_PREFIX, authRoutes)
     .route(API_PREFIX, adminUsersRoutes)
+    .route(API_PREFIX, adminSystemRoutes)
     .route(API_PREFIX, notificationRoutes)
     .route(API_PREFIX, mediaRoutes)
 

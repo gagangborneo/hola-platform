@@ -862,7 +862,7 @@ Otorisasi lengkap ada di [05 § 6](05-AUTH.md#6-rbac-matrix-per-endpoint).
 | GET | `/slot-claims` | O | **Read-only.** Filter: `court_id`, `slot_date_from/to`, `claim_type`, `status`. Untuk kalender admin & diagnosis. Tidak ada POST/DELETE — klaim hanya dibuat lewat modulnya |
 | GET | `/admin/settings` | — | `app_settings` |
 | PUT | `/admin/settings/{key}` | — | — |
-| GET | `/admin/audit-logs` | O | Filter: `entity_type`, `entity_id`, `actor_user_id`, `action`, `created_at_from/to` |
+| GET | `/admin/audit-logs` | O | Filter: `entity_type`, `entity_id`, `actor_user_id`, `action`, `created_at_from/to`; sort: `created_at`, `action`, `entity_type` (`-` untuk desc) |
 | GET | `/admin/users` | O | Filter: `role`, `status`, `q` |
 | POST | `/admin/users` | — | Buat user staff/admin/tenant |
 | PATCH | `/admin/users/{id}` | — | Ubah role/status |

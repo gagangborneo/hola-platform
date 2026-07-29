@@ -43,6 +43,8 @@ export const adminEnvSchema = z.object({
   NEXT_PUBLIC_MEDIA_BASE_URL: z.url(),
   NEXT_PUBLIC_SENTRY_DSN: z.string().optional(),
   SENTRY_AUTH_TOKEN: z.string().optional(),
+  SENTRY_ORG: z.string().optional(),
+  SENTRY_PROJECT: z.string().optional(),
 })
 export type AdminEnv = z.infer<typeof adminEnvSchema>
 

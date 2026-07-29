@@ -677,6 +677,7 @@ Aturan:
 | `NEXT_PUBLIC_MEDIA_BASE_URL` | ✓ | `https://media.hola.id` | — |
 | `NEXT_PUBLIC_SENTRY_DSN` | — | — | — |
 | `SENTRY_AUTH_TOKEN` | — | — | build-time |
+| `SENTRY_ORG` / `SENTRY_PROJECT` | — | — | Slug org/project; wajib bersama token agar artifact source map bisa di-upload |
 
 ### 8.4 `apps/mobile`
 

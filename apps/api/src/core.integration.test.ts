@@ -789,6 +789,70 @@ describe('Auth & RBAC', () => {
       ]),
     )
   })
+
+  it('F0-76: hanya admin mengelola app settings dan membaca audit log berhalaman', async () => {
+    const adminEmail = AUTH_EMAILS[4]
+    await createUser(db, {
+      role: USER_ROLE.ADMIN,
+      email: adminEmail,
+      phone: undefined,
+      passwordHash: await hashPassword(password, env),
+      fullName: 'Admin Sistem',
+    })
+    const admin = await mobileLogin(adminEmail)
+    await createUser(db, {
+      role: USER_ROLE.STAFF,
+      email: AUTH_EMAILS[5],
+      phone: undefined,
+      passwordHash: await hashPassword(password, env),
+      fullName: 'Staff Sistem',
+    })
+    const staff = await mobileLogin(AUTH_EMAILS[5])
+    await register(AUTH_EMAILS[7])
+    const customer = await mobileLogin(AUTH_EMAILS[7])
+
+    for (const token of [customer.accessToken, staff.accessToken]) {
+      const denied = await app.request('/api/v1/admin/settings', {
+        headers: { authorization: `Bearer ${token}` },
+      })
+      expect(denied.status).toBe(403)
+    }
+
+    const key = SETTINGS_KEY.BOOKING_HORIZON_DAYS
+    const update = await app.request(`/api/v1/admin/settings/${key}`, {
+      method: 'PUT',
+      headers: { authorization: `Bearer ${admin.accessToken}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ value: 45 }),
+    })
+    expect(update.status).toBe(200)
+    expect(await update.json()).toMatchObject({
+      data: { key, value: 45, updated_by_user_id: expect.any(String) },
+    })
+
+    const settings = await app.request('/api/v1/admin/settings', {
+      headers: { authorization: `Bearer ${admin.accessToken}` },
+    })
+    expect(settings.status).toBe(200)
+    expect(await settings.json()).toMatchObject({
+      data: [expect.objectContaining({ key, value: 45 })],
+    })
+
+    const audit = await app.request(
+      `/api/v1/admin/audit-logs?entity_type=app_setting&entity_id=${key}&action=admin.setting_update&sort=-created_at`,
+      { headers: { authorization: `Bearer ${admin.accessToken}` } },
+    )
+    expect(audit.status).toBe(200)
+    expect(await audit.json()).toMatchObject({
+      data: [
+        expect.objectContaining({
+          action: 'admin.setting_update',
+          entity_type: 'app_setting',
+          entity_id: key,
+        }),
+      ],
+      meta: { pagination: { mode: 'offset', page: 1, per_page: 25 } },
+    })
+  })
 })
 
 describe('notifikasi, mail, dan cleanup token', () => {
