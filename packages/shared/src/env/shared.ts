@@ -46,3 +46,9 @@ export const csvList = z.string().transform(splitCsv).pipe(z.array(z.string()).m
  * dan itu tidak boleh membuat aplikasi gagal boot.
  */
 export const optionalCsvList = z.string().transform(splitCsv)
+
+/** URL opsional: baris kosong pada `.env.example` berarti tidak dikonfigurasi. */
+export const optionalUrl = z.preprocess(
+  (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+  z.url().optional(),
+)

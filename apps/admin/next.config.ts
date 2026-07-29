@@ -24,6 +24,7 @@ if (sentryAuthToken && (!sentryOrg || !sentryProject)) {
 }
 
 const nextConfig: NextConfig = {
+  output: 'standalone',
   experimental: {
     // Monorepo memakai TypeScript 7; Next 16 perlu mode CLI sampai compiler API tersedia lagi.
     useTypeScriptCli: true,

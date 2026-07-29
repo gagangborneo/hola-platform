@@ -53,6 +53,10 @@ Target: dari `git clone` sampai `pnpm dev` berhasil di mesin bersih **< 15 menit
 Bucket dibuat otomatis oleh service `rustfs-init`: `hola-media` (public read),
 `hola-private`, `hola-backup`.
 
+Seed awal membuat 1 venue, 3 olahraga, 7 lapangan, jam operasional 06:00–23:00, aturan harga
+contoh, 6 akun lintas 4 role, setting default, dan template notifikasi auth. Semua password akun
+seed adalah `Hola12345!`; gunakan hanya untuk development lokal.
+
 ---
 
 ## Perintah
@@ -76,6 +80,10 @@ Bucket dibuat otomatis oleh service `rustfs-init`: `hola-media` (public read),
 | `pnpm test` | Unit test |
 | `pnpm test:integration` | Test integrasi (butuh infra jalan) |
 | `pnpm check:env` | Bandingkan `.env.example` ↔ schema zod tiap app |
+
+Panduan deploy, backup, dan restore berada di [`docs/runbooks/deploy.md`](docs/runbooks/deploy.md)
+dan [`docs/runbooks/restore.md`](docs/runbooks/restore.md). Kredensial produksi hanya boleh
+disimpan di secret manager Dokploy/GitHub, bukan di file repo.
 
 ---
 

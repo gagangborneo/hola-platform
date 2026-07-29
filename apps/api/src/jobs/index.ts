@@ -4,6 +4,7 @@ import type { RepeatOptions } from 'bullmq'
 import { JOB_OPTIONS } from './job-options.ts'
 import { retryStuckNotificationsJob } from './notification/retry-stuck-notifications.job.ts'
 import { sendEmailJob } from './notification/send-email.job.ts'
+import { backupDatabaseJob } from './system/backup-database.job.ts'
 import { cleanupExpiredTokensJob } from './system/cleanup-expired-tokens.job.ts'
 import { cleanupOrphanUploadsJob } from './system/cleanup-orphan-uploads.job.ts'
 import type { JobHandler, RegisteredJob, WorkerRuntime } from './types.ts'
@@ -19,6 +20,7 @@ const implementedHandlers = new Map<JobName, JobHandler>([
   [retryStuckNotificationsJob.name, retryStuckNotificationsJob.handler],
   [cleanupExpiredTokensJob.name, cleanupExpiredTokensJob.handler],
   [cleanupOrphanUploadsJob.name, cleanupOrphanUploadsJob.handler],
+  [backupDatabaseJob.name, backupDatabaseJob.handler],
 ])
 
 /**
@@ -42,6 +44,12 @@ export const scheduledJobs: readonly {
   queue: QueueName
   repeat: Omit<RepeatOptions, 'key' | 'prevMillis'>
 }[] = [
+  {
+    id: 'scheduler:system.backupDatabase',
+    name: JOB.SYSTEM_BACKUP_DATABASE,
+    queue: QUEUE.SYSTEM,
+    repeat: { pattern: '0 3 * * *', tz: 'Asia/Makassar' },
+  },
   {
     id: 'scheduler:system.cleanupExpiredTokens',
     name: JOB.SYSTEM_CLEANUP_EXPIRED_TOKENS,

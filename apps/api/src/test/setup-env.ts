@@ -53,6 +53,7 @@ Object.assign(process.env, {
   WHATSAPP_API_KEY: '',
   WHATSAPP_SENDER: '',
   SENTRY_DSN: '',
+  SENTRY_RELEASE: 'test',
   SENTRY_TRACES_SAMPLE_RATE: '0.1',
   LOG_LEVEL: process.env.LOG_LEVEL ?? 'fatal',
   RATE_LIMIT_ENABLED: 'true',
@@ -62,4 +63,7 @@ Object.assign(process.env, {
   BULLBOARD_ALLOWED_IPS: '127.0.0.1,::1',
   BACKUP_ENABLED: 'false',
   BACKUP_RETENTION_DAYS: '30',
+  BACKUP_LOCAL_RETENTION_DAYS: '7',
+  HEALTHCHECKS_BACKUP_PING_URL: '',
+  HEALTHCHECKS_WORKER_PING_URL: '',
 })

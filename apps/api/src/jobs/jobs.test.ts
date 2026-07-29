@@ -12,6 +12,11 @@ describe('registry BullMQ', () => {
     expect(scheduledJobs).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
+          id: 'scheduler:system.backupDatabase',
+          name: JOB.SYSTEM_BACKUP_DATABASE,
+          repeat: expect.objectContaining({ pattern: '0 3 * * *', tz: 'Asia/Makassar' }),
+        }),
+        expect.objectContaining({
           id: 'scheduler:system.cleanupExpiredTokens',
           name: JOB.SYSTEM_CLEANUP_EXPIRED_TOKENS,
           repeat: expect.objectContaining({ tz: 'Asia/Makassar' }),

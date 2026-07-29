@@ -637,6 +637,7 @@ Aturan:
 | `NOTIF_WHATSAPP_ENABLED` | — | `false` | D-04 |
 | `WHATSAPP_PROVIDER` / `WHATSAPP_API_KEY` / `WHATSAPP_SENDER` | — | — | Hanya jika WhatsApp aktif |
 | `SENTRY_DSN` | — | — | Kosong = Sentry mati |
+| `SENTRY_RELEASE` | — | Git SHA | Release agar event API/worker dapat dipetakan ke source map |
 | `SENTRY_TRACES_SAMPLE_RATE` | — | `0.1` | — |
 | `LOG_LEVEL` | — | `info` | pino |
 | `RATE_LIMIT_ENABLED` | — | `true` | `false` hanya untuk test |
@@ -645,6 +646,9 @@ Aturan:
 | `BULLBOARD_ALLOWED_IPS` | ✓ | — | Allowlist CSV IP dashboard queue. Kosong = tolak seluruh akses (default-deny). Reverse proxy wajib meneruskan IP klien tepercaya. |
 | `BACKUP_ENABLED` | — | `true` | — |
 | `BACKUP_RETENTION_DAYS` | — | `30` | — |
+| `BACKUP_LOCAL_RETENTION_DAYS` | — | `7` | Retensi dump lokal `/backups` |
+| `HEALTHCHECKS_BACKUP_PING_URL` | ✓ di prod jika backup aktif | — | URL ping unik setelah J-30 sukses |
+| `HEALTHCHECKS_WORKER_PING_URL` | ✓ di prod | — | URL push monitor worker tiap 60 detik |
 
 ### 8.2 `apps/web`
 

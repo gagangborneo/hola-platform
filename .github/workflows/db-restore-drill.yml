@@ -1,0 +1,91 @@
+name: Database restore drill
+
+on:
+  schedule:
+    - cron: '0 3 1 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  restore-drill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: hola_restore
+          POSTGRES_USER: hola_restore
+          POSTGRES_PASSWORD: hola_restore
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U hola_restore -d hola_restore"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies and PostgreSQL client
+        run: |
+          pnpm install --frozen-lockfile
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+
+      - name: Configure read-only R2 remote
+        env:
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_REGION: ${{ secrets.R2_REGION }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+        run: |
+          mkdir -p ~/.config/rclone
+          {
+            echo '[hola]'
+            echo 'type = s3'
+            echo 'provider = Other'
+            echo "endpoint = $R2_ENDPOINT"
+            echo "region = $R2_REGION"
+            echo "access_key_id = $R2_ACCESS_KEY_ID"
+            echo "secret_access_key = $R2_SECRET_ACCESS_KEY"
+          } > ~/.config/rclone/rclone.conf
+
+      - name: Download latest backup from R2
+        env:
+          R2_BACKUP_BUCKET: ${{ secrets.R2_BACKUP_BUCKET }}
+        run: |
+          latest="$(rclone lsf "hola:${R2_BACKUP_BUCKET}/pg" --recursive --files-only | sort | tail -n 1)"
+          test -n "$latest"
+          rclone copyto "hola:${R2_BACKUP_BUCKET}/pg/$latest" backup.dump
+
+      - name: Restore and verify
+        env:
+          PGPASSWORD: hola_restore
+          PGHOST: localhost
+          PGPORT: '5432'
+          PGUSER: hola_restore
+          PGDATABASE: hola_restore
+        run: |
+          started="$(date +%s)"
+          pg_restore --dbname="$PGDATABASE" --jobs=4 --no-owner --no-privileges backup.dump
+          psql --tuples-only --no-align --command 'SELECT count(*) FROM bookings'
+          psql --tuples-only --no-align --command "SELECT count(*), sum(total_amount) FROM payments WHERE status = 'paid'"
+          psql --tuples-only --no-align --command 'SELECT count(*) FROM journal_entries'
+          psql --tuples-only --no-align --command 'SELECT max(created_at) FROM audit_logs'
+          echo "restore_duration_seconds=$(( $(date +%s) - started ))" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Verify migrations on restored database
+        env:
+          DATABASE_URL: postgres://hola_restore:hola_restore@localhost:5432/hola_restore
+        run: pnpm db:migrate

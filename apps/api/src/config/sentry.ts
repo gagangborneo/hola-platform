@@ -14,6 +14,7 @@ Sentry.init({
   dsn: env.SENTRY_DSN || undefined,
   enabled: Boolean(env.SENTRY_DSN),
   environment: env.APP_ENV,
+  release: env.SENTRY_RELEASE || undefined,
   tracesSampleRate: env.SENTRY_TRACES_SAMPLE_RATE,
   sendDefaultPii: false,
   includeLocalVariables: false,

@@ -16,11 +16,12 @@
     "generate": "drizzle-kit generate",
     "migrate": "node src/migrate.ts",
     "studio": "drizzle-kit studio",
-    "seed": "node src/seed.ts"
+    "seed": "node --env-file-if-exists=../../.env src/seed.ts"
   },
   "dependencies": {
     "@hola/shared": "workspace:*",
     "@opentelemetry/api": "^1.9.1",
+    "argon2": "^0.45.1",
     "drizzle-orm": "^0.45.2",
     "postgres": "^3.4.9"
   },

@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "node --watch src/index.ts",
+    "build": "esbuild src/index.ts src/worker.ts src/bullboard.ts --bundle --packages=external --platform=node --format=esm --target=node24 --outdir=dist --sourcemap",
     "worker": "node --watch src/worker.ts",
     "bullboard": "node --watch src/bullboard.ts",
     "typecheck": "tsc --noEmit",
@@ -36,6 +37,7 @@
   },
   "devDependencies": {
     "@types/nodemailer": "^8.0.1",
+    "esbuild": "^0.27.7",
     "typescript": "^7.0.2",
     "vitest": "^4.1.10"
   }

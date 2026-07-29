@@ -1,6 +1,7 @@
 /** Entry point worker BullMQ; proses HTTP tidak pernah mengimpor file ini. */
 import { JOB, QUEUE, QUEUE_CONCURRENCY, WORKER_HEARTBEAT_TTL_SECONDS } from '@hola/shared'
 import { type Job, Worker } from 'bullmq'
+import { backup } from './config/backup.ts'
 import { closeDatabase, db } from './config/db.ts'
 import { logger } from './config/logger.ts'
 import { mail } from './config/mail.ts'
@@ -13,7 +14,7 @@ import { env } from './env.ts'
 import { JOB_OPTIONS, processRegisteredJob, scheduledJobs } from './jobs/index.ts'
 import { recordEmailDeliveryFailure } from './modules/notifications/notification.service.ts'
 
-const workerRuntime = { db, env, logger, mail, queues, storage }
+const workerRuntime = { backup, db, env, logger, mail, queues, storage }
 
 function logJobStart(job: Job<Record<string, unknown>, unknown, string>): number {
   const started = Date.now()
@@ -104,6 +105,16 @@ async function heartbeat(): Promise<void> {
       ),
     null,
   )
+  if (env.HEALTHCHECKS_WORKER_PING_URL) {
+    try {
+      const response = await fetch(env.HEALTHCHECKS_WORKER_PING_URL, {
+        signal: AbortSignal.timeout(10_000),
+      })
+      if (!response.ok) logger.warn({ status: response.status }, 'ping monitor worker gagal')
+    } catch (error) {
+      logger.warn({ err: error }, 'ping monitor worker gagal')
+    }
+  }
 }
 
 await assertStorageReady()

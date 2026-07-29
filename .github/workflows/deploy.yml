@@ -1,0 +1,38 @@
+name: Deploy production
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # Hanya commit main yang sudah melewati CI yang boleh men-trigger Dokploy.
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy API (release step menjalankan pnpm db:migrate sekali)
+        env:
+          DOKPLOY_WEBHOOK: ${{ secrets.DOKPLOY_WEBHOOK_API }}
+        run: curl --fail-with-body --retry 3 --retry-all-errors --connect-timeout 10 -X POST "$DOKPLOY_WEBHOOK"
+      - name: Deploy worker (image API yang sama)
+        env:
+          DOKPLOY_WEBHOOK: ${{ secrets.DOKPLOY_WEBHOOK_WORKER }}
+        run: curl --fail-with-body --retry 3 --retry-all-errors --connect-timeout 10 -X POST "$DOKPLOY_WEBHOOK"
+      - name: Deploy web
+        env:
+          DOKPLOY_WEBHOOK: ${{ secrets.DOKPLOY_WEBHOOK_WEB }}
+        run: curl --fail-with-body --retry 3 --retry-all-errors --connect-timeout 10 -X POST "$DOKPLOY_WEBHOOK"
+      - name: Deploy admin
+        env:
+          DOKPLOY_WEBHOOK: ${{ secrets.DOKPLOY_WEBHOOK_ADMIN }}
+        run: curl --fail-with-body --retry 3 --retry-all-errors --connect-timeout 10 -X POST "$DOKPLOY_WEBHOOK"

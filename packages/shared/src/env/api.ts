@@ -8,7 +8,14 @@
  * kalau ada yang hilang (docs/02 § 8).
  */
 import { z } from 'zod'
-import { booleanFromEnv, csvList, intFromEnv, numberFromEnv, optionalCsvList } from './shared.ts'
+import {
+  booleanFromEnv,
+  csvList,
+  intFromEnv,
+  numberFromEnv,
+  optionalCsvList,
+  optionalUrl,
+} from './shared.ts'
 
 export const apiEnvSchema = z
   .object({
@@ -69,6 +76,7 @@ export const apiEnvSchema = z
     WHATSAPP_SENDER: z.string().optional(),
 
     SENTRY_DSN: z.string().optional(),
+    SENTRY_RELEASE: z.string().optional(),
     SENTRY_TRACES_SAMPLE_RATE: numberFromEnv.default(0.1),
     LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
     RATE_LIMIT_ENABLED: booleanFromEnv.default(true),
@@ -81,6 +89,9 @@ export const apiEnvSchema = z
 
     BACKUP_ENABLED: booleanFromEnv.default(true),
     BACKUP_RETENTION_DAYS: intFromEnv.default(30),
+    BACKUP_LOCAL_RETENTION_DAYS: intFromEnv.default(7),
+    HEALTHCHECKS_BACKUP_PING_URL: optionalUrl,
+    HEALTHCHECKS_WORKER_PING_URL: optionalUrl,
   })
   .superRefine((env, ctx) => {
     // docs/02 § 8.1: RESEND_API_KEY bertanda ✓* — wajib HANYA bila transport-nya resend.
@@ -104,6 +115,20 @@ export const apiEnvSchema = z
         code: 'custom',
         path: ['WHATSAPP_PROVIDER'],
         message: 'Wajib diisi saat NOTIF_WHATSAPP_ENABLED=true',
+      })
+    }
+    if (env.APP_ENV === 'prod' && env.BACKUP_ENABLED && !env.HEALTHCHECKS_BACKUP_PING_URL) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['HEALTHCHECKS_BACKUP_PING_URL'],
+        message: 'Wajib diisi saat backup produksi aktif.',
+      })
+    }
+    if (env.APP_ENV === 'prod' && !env.HEALTHCHECKS_WORKER_PING_URL) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['HEALTHCHECKS_WORKER_PING_URL'],
+        message: 'Wajib diisi pada worker produksi.',
       })
     }
   })
