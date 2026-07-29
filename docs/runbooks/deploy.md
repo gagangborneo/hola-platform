@@ -34,8 +34,9 @@ hidupkan Redis dan pastikan kembali sehat. Catat hasilnya sebagai bukti DoD-0-08
 
 - Buat delapan monitor Uptime Kuma sesuai tabel `docs/02-INFRASTRUCTURE.md` §9 dan sambungkan ke
   kanal alert yang benar-benar dibaca.
-- Buat dua URL healthchecks.io: worker (push tiap 60 detik) dan backup (ping setelah J-30 sukses).
-  Masukkan keduanya sebagai `HEALTHCHECKS_WORKER_PING_URL` dan
-  `HEALTHCHECKS_BACKUP_PING_URL`.
+- Buat tiga URL healthchecks.io: worker (push tiap 60 detik), backup (ping setelah J-30 sukses),
+  dan VPS/API (container `docker/healthcheck`, cek `/healthz` lalu ping setiap 5 menit). Masukkan
+  dua URL pertama sebagai `HEALTHCHECKS_WORKER_PING_URL` dan
+  `HEALTHCHECKS_BACKUP_PING_URL`; URL ketiga hidup hanya di secret container healthcheck.
 - Siapkan R2 `hola-backup` dengan versioning dan lifecycle 30 harian + 12 bulanan. Jalankan
   restore drill sebelum menerima data bisnis.
