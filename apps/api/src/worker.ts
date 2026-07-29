@@ -8,11 +8,12 @@ import { incrementMetric } from './config/metrics.ts'
 import { BULLMQ_PREFIX, closeQueues, queues } from './config/queues.ts'
 import { bullRedis, closeRedis, keys, redis, safeRedis } from './config/redis.ts'
 import { closeSentry } from './config/sentry.ts'
+import { assertStorageReady, closeStorage, storage } from './config/storage.ts'
 import { env } from './env.ts'
 import { JOB_OPTIONS, processRegisteredJob, scheduledJobs } from './jobs/index.ts'
 import { recordEmailDeliveryFailure } from './modules/notifications/notification.service.ts'
 
-const workerRuntime = { db, env, logger, mail, queues }
+const workerRuntime = { db, env, logger, mail, queues, storage }
 
 function logJobStart(job: Job<Record<string, unknown>, unknown, string>): number {
   const started = Date.now()
@@ -105,6 +106,7 @@ async function heartbeat(): Promise<void> {
   )
 }
 
+await assertStorageReady()
 await installSchedulers()
 await heartbeat()
 const heartbeatTimer = setInterval(() => void heartbeat(), 30_000)
@@ -120,6 +122,7 @@ async function shutdown(signal: string): Promise<void> {
   const deadline = new Promise<void>((resolve) => setTimeout(resolve, 30_000))
   await Promise.race([closeWorkers, deadline])
   await Promise.allSettled([closeQueues(), closeDatabase(), closeRedis(), closeSentry()])
+  closeStorage()
   logger.info('worker shutdown selesai')
   process.exit(0)
 }

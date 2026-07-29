@@ -21,6 +21,11 @@ describe('registry BullMQ', () => {
           name: JOB.NOTIFICATION_RETRY_STUCK_NOTIFICATIONS,
           repeat: expect.objectContaining({ tz: 'Asia/Makassar' }),
         }),
+        expect.objectContaining({
+          id: 'scheduler:system.cleanupOrphanUploads',
+          name: JOB.SYSTEM_CLEANUP_ORPHAN_UPLOADS,
+          repeat: expect.objectContaining({ pattern: '0 5 * * 0', tz: 'Asia/Makassar' }),
+        }),
       ]),
     )
   })

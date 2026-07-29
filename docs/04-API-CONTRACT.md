@@ -877,7 +877,7 @@ Otorisasi lengkap ada di [05 § 6](05-AUTH.md#6-rbac-matrix-per-endpoint).
 | POST | `/media/presign` | Body: `kind`, `content_type`, `size_bytes`. Response: `media_id`, `upload_url`, `object_key` |
 | POST | `/media/{media_id}/confirm` | Verifikasi objek ada di storage → `status='ready'` |
 | GET | `/media/{media_id}` | Metadata + `url` (publik) atau presigned GET (privat, TTL 15 menit) |
-| DELETE | `/media/{media_id}` | Soft delete (`status='deleted'`), objek dihapus J-32 |
+| DELETE | `/media/{media_id}` | Soft delete (`status='deleted'`), API mencoba hapus objek segera; J-32 mengulang bila storage gagal |
 
 ### 9.17 Endpoint khusus development
 

@@ -12,6 +12,8 @@
     "test:integration": "vitest run --config vitest.integration.config.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1096.0",
+    "@aws-sdk/s3-request-presigner": "^3.1096.0",
     "@bull-board/api": "^8.3.0",
     "@bull-board/hono": "^8.3.0",
     "@hola/db": "workspace:*",

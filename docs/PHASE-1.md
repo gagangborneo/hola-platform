@@ -56,7 +56,7 @@ nominal ini.
 - [x] **F0-03** `0,5h` 🔒 — `biome.json`: 10 aturan wajib aktif + format (indent 2, width 100, single quote, semicolon `asNeeded`, trailing comma `all`, import organizing). *acuan:* [16 § 2](16-CONVENTIONS.md#2-biome)
 - [x] **F0-04** `0,5h` 🔒 — Override `noRestrictedImports` per app/package (4 baris tabel: web/admin/mobile, shared, api-client, api). *acuan:* [16 § 2 `noRestrictedImports` per app](16-CONVENTIONS.md#norestrictedimports-per-app)
 - [x] **F0-05** `0,5h` 🔒 — `turbo.json` (pipeline `typecheck`/`lint`/`test`/`build`/`dev`) + seluruh 17 perintah root `package.json`. *acuan:* [02 § 11 Perintah pnpm](02-INFRASTRUCTURE.md#perintah-pnpm-yang-wajib-ada-di-root-packagejson)
-- [x] **F0-06** `1h` ⚙️🔒 — `docker-compose.yml`: `postgres:16-alpine`, `redis:7-alpine` dengan **3 flag wajib** (`appendonly yes`, `appendfsync everysec`, `maxmemory-policy noeviction`), `minio`, `minio-init` (3 bucket), `mailpit`. *acuan:* [02 § 11](02-INFRASTRUCTURE.md#layanan-di-docker-composeyml-root-repo), [02 § 2](02-INFRASTRUCTURE.md#2-daftar-container--sumber-daya)
+- [x] **F0-06** `1h` ⚙️🔒 — `docker-compose.yml`: `postgres:16-alpine`, `redis:7-alpine` dengan **3 flag wajib** (`appendonly yes`, `appendfsync everysec`, `maxmemory-policy noeviction`), `rustfs`, `rustfs-init` (3 bucket), `mailpit`. *acuan:* [02 § 11](02-INFRASTRUCTURE.md#layanan-di-docker-composeyml-root-repo), [02 § 2](02-INFRASTRUCTURE.md#2-daftar-container--sumber-daya)
 - [x] **F0-07** `0,5h` — `.env.example` lokal yang cocok dengan compose + bagian "cara mulai" di README. *acuan:* [02 § 11 `.env.example` lokal](02-INFRASTRUCTURE.md#envexample-lokal-nilai-yang-cocok-dengan-compose)
 
 ## F0.B — `packages/shared` · 8h
@@ -137,7 +137,7 @@ nominal ini.
 
 ## F0.H — Media & object storage · 2h
 
-- [ ] **F0-66** `0,5h` ⚙️ — `config/storage.ts` (klien S3, `S3_FORCE_PATH_STYLE` untuk MinIO) + pemeriksaan keberadaan 3 bucket saat boot. *acuan:* [02 § 6](02-INFRASTRUCTURE.md#6-object-storage)
+- [ ] **F0-66** `0,5h` ⚙️ — `config/storage.ts` (klien S3, `S3_FORCE_PATH_STYLE` untuk RustFS) + pemeriksaan keberadaan 3 bucket saat boot. *acuan:* [02 § 6](02-INFRASTRUCTURE.md#6-object-storage)
 - [ ] **F0-67** `1h` — `POST /media/presign` + `POST /media/{id}/confirm` (HEAD object, verifikasi mime & ukuran) + `GET`/`DELETE /media/{id}`, allowlist mime & batas ukuran per `kind`, RBAC per `kind`. *acuan:* [02 § 6 Alur upload](02-INFRASTRUCTURE.md#alur-upload-presigned), [05 § 6.14](05-AUTH.md#614-sistem--media)
 - [ ] **F0-68** `0,5h` — J-32 `system.cleanupOrphanUploads` (`pending` > 24 jam)
 

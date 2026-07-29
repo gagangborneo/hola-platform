@@ -243,7 +243,7 @@ Ringkasan; alasan lengkap ada di dokumen yang dirujuk.
 | Kebutuhan | Rekomendasi final | Alasan singkat | Detail |
 |---|---|---|---|
 | Payment gateway | **Midtrans (Snap)** | Cakupan QRIS/GoPay/VA terbaik untuk pasar lokal, checkout siap pakai, sandbox mudah. Xendit disiapkan sebagai provider kedua lewat port interface untuk kebutuhan invoicing/disbursement tenant di masa depan. | [07 § Pemilihan Gateway](07-MODULE-PAYMENT.md#2-pemilihan-payment-gateway-keputusan-final) |
-| Object storage | **Cloudflare R2** (produksi), **MinIO** (local dev) | Egress gratis, S3-compatible, tanpa beban ops. MinIO cukup untuk parity lokal di docker-compose. | [02 § Object Storage](02-INFRASTRUCTURE.md#6-object-storage) |
+| Object storage | **Cloudflare R2** (produksi), **RustFS** (local dev) | Egress gratis, S3-compatible, tanpa beban ops. RustFS memberi parity S3 lokal di docker-compose. | [02 § Object Storage](02-INFRASTRUCTURE.md#6-object-storage) |
 | Email | **Resend** (SMTP fallback) | API sederhana, domain verification jelas, murah di volume kecil. | [02 § Notifikasi](02-INFRASTRUCTURE.md#7-notifikasi) |
 | Push mobile | **Expo Push (EAS)** | Sudah menyatu dengan Expo; tidak perlu kelola sertifikat APNs/FCM manual. | [15 § Push Notification](15-MOBILE.md#7-push-notification) |
 | Auth | **JWT access token pendek + refresh token opaque di DB** | Mobile tidak nyaman dengan cookie; API beda origin dari web/admin. Revokasi via tabel refresh token. | [05 § Rekomendasi](05-AUTH.md#3-session-vs-jwt-rekomendasi--alasan) |

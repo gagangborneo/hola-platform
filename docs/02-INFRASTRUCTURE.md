@@ -250,7 +250,7 @@ secara ad-hoc di service.
 | Data tenant, kontrak, invoice | Dokumen komersial | PostgreSQL |
 | Jurnal keuangan | Catatan akuntansi | PostgreSQL |
 | Data absensi/HRIS | Catatan kepegawaian | PostgreSQL |
-| File/gambar (blob) | Bukan fungsi Redis | Object storage (R2/MinIO) |
+| File/gambar (blob) | Bukan fungsi Redis | Object storage (R2/RustFS) |
 | Hasil laporan yang dipakai untuk pengambilan keputusan finansial tanpa jejak | Tidak bisa diaudit | PostgreSQL (`finance_daily_summaries`) — Redis boleh meng-cache **presentasinya** dengan TTL pendek |
 
 ### 4.4 Aturan invalidasi cache ketersediaan
@@ -370,7 +370,7 @@ Kolom:
 | J-29 | `system.buildDailySummary` | system | `cron:30 1 * * *` | 3 × fixed 300 s | UNIQUE `summary_date` di `finance_daily_summaries` + upsert (rekomputasi penuh untuk tanggal tersebut). | [14 § 7](14-MODULE-FINANCE.md#7-laporan) |
 | J-30 | `system.backupDatabase` | system | `cron:0 3 * * *` | 2 × fixed 900 s | Nama objek backup deterministik per tanggal (`hola-YYYYMMDD-HHmm.dump`); upload menimpa objek yang sama jika retry di hari yang sama. | [§ 10](#10-backup--restore) |
 | J-31 | `system.cleanupExpiredTokens` | system | `cron:0 4 * * *` | 3 × fixed 60 s | `DELETE FROM refresh_tokens WHERE expires_at < now() - interval '30 days' OR revoked_at < now() - interval '30 days'`. | [05 § 5](05-AUTH.md#5-siklus-hidup-token) |
-| J-32 | `system.cleanupOrphanUploads` | system | `cron:0 5 * * 0` (Minggu 05:00) | 3 × fixed 300 s | `media_files` berstatus `pending` & `created_at < now() - interval '24 hours'` → hapus objek storage lalu hapus baris. Penghapusan objek yang sudah tidak ada tidak dianggap error. | [§ 6](#6-object-storage) |
+| J-32 | `system.cleanupOrphanUploads` | system | `cron:0 5 * * 0` (Minggu 05:00) | 3 × fixed 300 s | `media_files` berstatus `pending` & `created_at < now() - interval '24 hours'`, serta baris soft-delete, → hapus objek storage lalu hapus baris. Penghapusan objek yang sudah tidak ada tidak dianggap error. | [§ 6](#6-object-storage) |
 | J-33 | `system.pruneAuditLogs` | system | `cron:0 5 1 * *` | 3 × fixed 300 s | `DELETE FROM audit_logs WHERE created_at < now() - interval '24 months'`. | [13](13-MODULE-CRM-HRIS.md) |
 | J-34 | `system.reindexActivityVerification` | system | `repeat:1h` | 3 × fixed 60 s | Menandai `activities.verified=true` jika ada booking `completed` yang cocok (user, court, rentang waktu). Kondisional & idempoten. | [15 § 4](15-MOBILE.md#4-modul-aktivitas-olahraga) |
 
@@ -433,9 +433,9 @@ Satu job HRIS yang berdiri sendiri (dipakai [13 § 6.2](13-MODULE-CRM-HRIS.md#62
 
 ## 6. Object Storage
 
-### Keputusan: Cloudflare R2 untuk produksi, MinIO untuk local dev
+### Keputusan: Cloudflare R2 untuk produksi, RustFS untuk local dev
 
-| Kriteria | Cloudflare R2 | MinIO self-host di VPS |
+| Kriteria | Cloudflare R2 | RustFS self-host lokal |
 |---|---|---|
 | Biaya egress | **Gratis** | Terpakai bandwidth VPS (kuota terbatas, biaya overage) |
 | Biaya storage | ~$0.015/GB/bulan | Termasuk disk VPS (tapi disk VPS mahal per GB dan ikut menekan pgdata) |
@@ -446,14 +446,14 @@ Satu job HRIS yang berdiri sendiri (dipakai [13 § 6.2](13-MODULE-CRM-HRIS.md#62
 
 **Rekomendasi final: Cloudflare R2.** Alasan penentu: media publik (foto lapangan, poster
 event, thumbnail tutorial) akan dibaca jauh lebih sering daripada ditulis, dan egress gratis
-membuat biaya dapat diprediksi tanpa membebani bandwidth VPS. MinIO tetap dipakai di
-docker-compose lokal agar developer tidak butuh kredensial cloud.
+membuat biaya dapat diprediksi tanpa membebani bandwidth VPS. RustFS tetap dipakai di
+docker-compose lokal agar developer tidak butuh kredensial cloud dan memperoleh parity S3.
 
 ### Bucket & struktur prefix
 
 | Bucket | Akses | Isi |
 |---|---|---|
-| `hola-media` | public read via `media.hola.id`, write hanya via presigned URL | `courts/{courtId}/{mediaId}.{ext}`, `events/{eventId}/poster-{mediaId}.{ext}`, `tutorials/{tutorialId}/thumb-{mediaId}.{ext}`, `sports/{sportCode}/icon.{ext}` |
+| `hola-media` | public read via `media.hola.id`, write hanya via presigned URL | F0 generic: `uploads/{kind}/{mediaId}.{ext}`; modul domain menyimpan relasi akhir media dan dapat memakai prefix semantiknya sendiri |
 | `hola-private` | private (akses hanya lewat presigned GET, TTL 15 menit) | `contracts/{contractId}/{mediaId}.pdf`, `invoices/{invoiceId}.pdf`, `payment-proofs/{invoiceId}/{mediaId}.{ext}`, `employees/{employeeId}/{mediaId}.{ext}` |
 | `hola-backup` | private, versioning aktif, lifecycle rule | `pg/YYYY/MM/hola-YYYYMMDD-HHmm.dump`, `redis/…` (opsional) |
 
@@ -464,7 +464,7 @@ sequenceDiagram
     autonumber
     participant C as Client (web/admin)
     participant A as apps/api
-    participant S as R2 / MinIO
+    participant S as R2 / RustFS
     C->>A: POST /media/presign {kind, contentType, sizeBytes}
     A->>A: validasi kind, mime allowlist, batas ukuran, RBAC
     A->>A: INSERT media_files (status='pending', key, expected_mime, expected_size)
@@ -475,7 +475,7 @@ sequenceDiagram
     A->>S: HEAD object (verifikasi ada, mime, ukuran)
     A->>A: UPDATE media_files SET status='ready', size_bytes, content_type
     A-->>C: {mediaId, url}
-    Note over A: media_files status 'pending' > 24 jam<br/>dibersihkan job J-32 system.cleanupOrphanUploads
+    Note over A: media_files status 'pending' > 24 jam atau 'deleted'<br/>dibersihkan job J-32 system.cleanupOrphanUploads
 ```
 
 Batas & validasi:
@@ -488,6 +488,7 @@ Batas & validasi:
 | `avatar` | `image/jpeg`, `image/png`, `image/webp` | 2 MB | `hola-media` |
 | `contract_document` | `application/pdf` | 10 MB | `hola-private` |
 | `payment_proof` | `image/jpeg`, `image/png`, `application/pdf` | 5 MB | `hola-private` |
+| `expense_receipt` | `image/jpeg`, `image/png`, `application/pdf` | 5 MB | `hola-private` |
 
 Aturan: API **tidak** melakukan resize/transcode di v1. Client wajib mengompres gambar
 sebelum upload (web: canvas; mobile: `expo-image-manipulator`). Varian ukuran gambar
@@ -619,14 +620,14 @@ Aturan:
 | `MIDTRANS_MERCHANT_ID` | ✓ | — | — |
 | `MIDTRANS_IS_PRODUCTION` | ✓ | `true` | `false` untuk sandbox |
 | `MIDTRANS_WEBHOOK_ALLOWED_IPS` | — | (kosong) | Opsional allowlist tambahan |
-| `S3_ENDPOINT` | ✓ | `https://<acct>.r2.cloudflarestorage.com` | MinIO lokal: `http://minio:9000` |
+| `S3_ENDPOINT` | ✓ | `https://<acct>.r2.cloudflarestorage.com` | RustFS lokal: `http://rustfs:9000` (container) atau `http://localhost:9000` (host) |
 | `S3_REGION` | ✓ | `auto` | — |
 | `S3_ACCESS_KEY_ID` | ✓ | — | — |
 | `S3_SECRET_ACCESS_KEY` | ✓ | — | — |
 | `S3_BUCKET_MEDIA` | ✓ | `hola-media` | — |
 | `S3_BUCKET_PRIVATE` | ✓ | `hola-private` | — |
 | `S3_BUCKET_BACKUP` | ✓ | `hola-backup` | — |
-| `S3_FORCE_PATH_STYLE` | — | `false` | `true` untuk MinIO |
+| `S3_FORCE_PATH_STYLE` | — | `false` | `true` untuk RustFS lokal |
 | `MEDIA_PUBLIC_BASE_URL` | ✓ | `https://media.hola.id` | Basis URL publik objek `hola-media` |
 | `RESEND_API_KEY` | ✓* | — | *Wajib jika `MAIL_TRANSPORT=resend` |
 | `MAIL_TRANSPORT` | — | `resend` | `resend` \| `smtp` \| `console` |
@@ -859,8 +860,8 @@ Tujuan: developer bisa `pnpm dev` setelah satu perintah, tanpa kredensial cloud.
 |---|---|---|---|---|
 | `postgres` | `postgres:16-alpine` | `5432:5432` | `hola_pgdata` | `POSTGRES_DB=hola`, `POSTGRES_USER=hola`, `POSTGRES_PASSWORD=hola` |
 | `redis` | `redis:7-alpine` | `6379:6379` | `hola_redisdata` | command: `redis-server --appendonly yes --appendfsync everysec --maxmemory-policy noeviction` — **ketiga flag** wajib, lihat [§ 2](#2-daftar-container--sumber-daya) |
-| `minio` | `minio/minio` | `9000:9000`, `9001:9001` | `hola_miniodata` | console di 9001, root user/pass `hola`/`hola12345` |
-| `minio-init` | `minio/mc` | — | — | Job sekali jalan: buat bucket `hola-media` (public read), `hola-private`, `hola-backup`; keluar setelah selesai |
+| `rustfs` | `rustfs/rustfs` | `9000:9000`, `9001:9001` | `hola_rustfsdata`, `hola_rustfslogs` | Console di 9001; root credential hanya hidup di `.env`/secret manager |
+| `rustfs-init` | `minio/mc` | — | — | Job sekali jalan dengan klien S3: buat bucket `hola-media` (public read), `hola-private`, `hola-backup`; keluar setelah selesai |
 | `mailpit` | `axllent/mailpit` | `1025:1025` (SMTP), `8025:8025` (UI) | — | Menangkap email lokal. `MAIL_TRANSPORT=smtp`, `SMTP_HOST=localhost`, `SMTP_PORT=1025` |
 
 Yang **tidak** ada di compose lokal: `hola-api`, `hola-web`, `hola-admin`, `hola-worker`.
@@ -925,6 +926,11 @@ S3_ENDPOINT=http://localhost:9000
 S3_FORCE_PATH_STYLE=true
 S3_ACCESS_KEY_ID=hola
 S3_SECRET_ACCESS_KEY=hola12345
+S3_BUCKET_MEDIA=hola-media
+S3_BUCKET_PRIVATE=hola-private
+S3_BUCKET_BACKUP=hola-backup
+S3_RUSTFS_ACCESS=hola
+S3_RUSTFS_SECRET=hola12345
 MEDIA_PUBLIC_BASE_URL=http://localhost:9000/hola-media
 MAIL_TRANSPORT=smtp
 SMTP_HOST=localhost

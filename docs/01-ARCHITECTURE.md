@@ -38,7 +38,7 @@ graph TB
     subgraph datastores["Datastores"]
         PG[("PostgreSQL<br/>SOURCE OF TRUTH")]
         RD[("Redis<br/>ephemeral only")]
-        S3[("Object Storage<br/>R2 / MinIO")]
+        S3[("Object Storage<br/>R2 / RustFS")]
     end
 
     subgraph external["External Services"]

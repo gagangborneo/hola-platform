@@ -139,7 +139,7 @@ hola-platform/
 │   ├── shared/
 │   └── api-client/
 ├── docs/                      ← dokumen ini
-├── docker-compose.yml         ← infra lokal (postgres, redis, minio, mailpit)
+├── docker-compose.yml         ← infra lokal (postgres, redis, RustFS, mailpit)
 ├── biome.json
 ├── turbo.json
 ├── pnpm-workspace.yaml

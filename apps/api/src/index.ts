@@ -11,7 +11,10 @@ import { logger } from './config/logger.ts'
 import { closeQueues } from './config/queues.ts'
 import { closeRedis } from './config/redis.ts'
 import { closeSentry } from './config/sentry.ts'
+import { assertStorageReady, closeStorage } from './config/storage.ts'
 import { env } from './env.ts'
+
+await assertStorageReady()
 
 const server = serve({ fetch: app.fetch, port: env.PORT }, (info) => {
   logger.info({ port: info.port, app_env: env.APP_ENV }, 'hola-api siap')
@@ -26,6 +29,7 @@ async function shutdown(signal: string): Promise<void> {
   logger.info({ signal }, 'shutdown dimulai')
   server.close()
   await Promise.allSettled([closeDatabase(), closeQueues(), closeRedis(), closeSentry()])
+  closeStorage()
   logger.info('shutdown selesai')
   process.exit(0)
 }

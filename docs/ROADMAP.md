@@ -30,7 +30,7 @@ teknis nyata, bukan preferensi. Dicatat eksplisit agar tidak tampak sebagai scop
 
 | # | Penyesuaian | Alasan |
 |---|---|---|
-| A-1 | **Pipeline media (presign/confirm, bucket, J-32) naik ke Phase 1** — bukan Phase 3 | Landing page dan halaman lapangan butuh foto lapangan (`kind='court_photo'`). Yang tetap ditunda ke Phase 3 adalah `tutorial_thumbnail` dan kurasi kontennya; `event_poster` menyusul di Phase 2 bersama modul event. Bucket `hola-media`/`hola-private` tetap berdiri sejak Phase 0 (MinIO lokal + R2 produksi) |
+| A-1 | **Pipeline media (presign/confirm, bucket, J-32) naik ke Phase 1** — bukan Phase 3 | Landing page dan halaman lapangan butuh foto lapangan (`kind='court_photo'`). Yang tetap ditunda ke Phase 3 adalah `tutorial_thumbnail` dan kurasi kontennya; `event_poster` menyusul di Phase 2 bersama modul event. Bucket `hola-media`/`hola-private` tetap berdiri sejak Phase 0 (RustFS lokal + R2 produksi) |
 | A-2 | **`finance_events` (outbox) ditulis sejak Phase 1**, meskipun jurnal baru diproses Phase 2 | Menulis satu baris outbox di dalam transaksi `markPaid()` berbiaya hampir nol. Merekonstruksi riwayat jurnal dari `payments` di Phase 2 adalah backfill job + risiko selisih. J-28 (pemroses) baru dibuat Phase 2; baris outbox menunggu berstatus `pending` — itu perilaku normal outbox |
 | A-3 | **`point_events` TIDAK ditulis sebelum Phase 3** | Kebalikan dari A-2. Jika outbox poin diisi sejak Phase 1, hidupnya J-19 di Phase 3 akan mengguyurkan poin retroaktif berbulan-bulan sekaligus dan merusak leaderboard periode pertama. Pemberian poin retroaktif adalah keputusan bisnis, bukan efek samping |
 | A-4 | **Refund via API gateway ditunda ke Phase 2; Phase 1 hanya `manual_transfer` & `cash`** | [07 § 7.2](07-MODULE-PAYMENT.md#72-dukungan-refund-per-metode-pembayaran): VA tidak mendukung refund API dan QRIS "anggap tidak kecuali diverifikasi". Untuk mayoritas transaksi launch, jalur `manual_transfer` memang yang dipakai. Membangun `createRefund()` gateway di Phase 1 berarti menulis kode yang tidak bisa diuji sampai Midtrans mengonfirmasi kemampuan merchant |
@@ -184,7 +184,7 @@ Phase 0 **selesai** hanya jika **kedua belas** butir di bawah dapat didemokan:
 | **PostgreSQL** | Container produksi + volume `pgdata`; migration forward-only sebagai release step |
 | **Redis** | Container produksi dengan `appendonly yes`, `appendfsync everysec`, `maxmemory-policy noeviction` ([02 § 2](02-INFRASTRUCTURE.md#2-daftar-container--sumber-daya)). Dipakai Phase 0 untuk: **rate limit** (Lua, fail-open), **cache user context 60 s**, **denylist `jti`** |
 | **BullMQ** | 6 queue terdaftar, `worker.ts` hidup, `upsertJobScheduler` untuk cron, bull-board di balik basic auth + IP allowlist. Job aktif: **J-25** `notification.sendEmail`, **J-31** `system.cleanupExpiredTokens`, **J-36** `notification.retryStuckNotifications`, **J-30** `system.backupDatabase` |
-| **Object storage** | Bucket `hola-media`, `hola-private`, `hola-backup` (R2 produksi, MinIO lokal); `POST /media/presign` + `/confirm`; **J-32** `system.cleanupOrphanUploads` |
+| **Object storage** | Bucket `hola-media`, `hola-private`, `hola-backup` (R2 produksi, RustFS lokal); `POST /media/presign` + `/confirm`; **J-32** `system.cleanupOrphanUploads` |
 | **Monitoring** | Sentry di api/web/admin; Uptime Kuma (8 monitor wajib, [02 § 9](02-INFRASTRUCTURE.md#9-observability)); healthchecks.io dead-man's switch; `GET /internal/metrics` |
 | **Backup** | Container `hola-backup`, J-30 harian 03:00 WITA → R2, verifikasi `pg_restore --list`, retensi 7 lokal / 30+12 offsite, workflow `db-restore-drill.yml`, runbook `docs/runbooks/restore.md`, **drill manual pertama sudah dijalankan** |
 | **CI/CD** | `ci.yml` (typecheck, lint, test, build, `guard-db-boundary`, `check:env`, service container pg+redis), `deploy.yml` (webhook Dokploy per app, urutan `api → worker → web → admin`) |
@@ -196,7 +196,7 @@ Phase 0 **selesai** hanya jika **kedua belas** butir di bawah dapat didemokan:
 ```mermaid
 flowchart TD
     A["⚙️ 1. Repo, pnpm workspace, Turborepo,<br/>tsconfig.base, biome"] --> B
-    B["⚙️ 2. docker-compose lokal<br/>postgres + redis + minio + mailpit"] --> C
+    B["⚙️ 2. docker-compose lokal<br/>postgres + redis + RustFS + mailpit"] --> C
     C["3. packages/shared — konstanta, enum,<br/>redis-keys, format, utils, env schema"] --> D
     C --> E
     D["4. packages/db — 53 enum + tabel fondasi<br/>+ sequence + migration 0001"] --> E

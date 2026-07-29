@@ -16,6 +16,7 @@ import { type RequestVariables, requestId } from './middleware/request-id.ts'
 import { assertRouteGuards } from './middleware/require-role.ts'
 import { adminUsersRoutes } from './modules/admin/admin-users.routes.ts'
 import { authRoutes } from './modules/auth/auth.routes.ts'
+import { mediaRoutes } from './modules/media/media.routes.ts'
 import { notificationRoutes } from './modules/notifications/notification.routes.ts'
 import { configRoutes } from './modules/system/config.routes.ts'
 import { healthRoutes } from './modules/system/health.routes.ts'
@@ -102,6 +103,7 @@ export function createApp() {
     .route(API_PREFIX, authRoutes)
     .route(API_PREFIX, adminUsersRoutes)
     .route(API_PREFIX, notificationRoutes)
+    .route(API_PREFIX, mediaRoutes)
 
   assertRouteGuards(routes.routes, PUBLIC_ROUTE_ALLOWLIST)
 

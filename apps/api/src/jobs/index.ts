@@ -5,6 +5,7 @@ import { JOB_OPTIONS } from './job-options.ts'
 import { retryStuckNotificationsJob } from './notification/retry-stuck-notifications.job.ts'
 import { sendEmailJob } from './notification/send-email.job.ts'
 import { cleanupExpiredTokensJob } from './system/cleanup-expired-tokens.job.ts'
+import { cleanupOrphanUploadsJob } from './system/cleanup-orphan-uploads.job.ts'
 import type { JobHandler, RegisteredJob, WorkerRuntime } from './types.ts'
 
 interface RegisteredJobDefinition {
@@ -17,6 +18,7 @@ const implementedHandlers = new Map<JobName, JobHandler>([
   [sendEmailJob.name, sendEmailJob.handler],
   [retryStuckNotificationsJob.name, retryStuckNotificationsJob.handler],
   [cleanupExpiredTokensJob.name, cleanupExpiredTokensJob.handler],
+  [cleanupOrphanUploadsJob.name, cleanupOrphanUploadsJob.handler],
 ])
 
 /**
@@ -51,6 +53,12 @@ export const scheduledJobs: readonly {
     name: JOB.NOTIFICATION_RETRY_STUCK_NOTIFICATIONS,
     queue: QUEUE.NOTIFICATION,
     repeat: { pattern: '*/5 * * * *', tz: 'Asia/Makassar' },
+  },
+  {
+    id: 'scheduler:system.cleanupOrphanUploads',
+    name: JOB.SYSTEM_CLEANUP_ORPHAN_UPLOADS,
+    queue: QUEUE.SYSTEM,
+    repeat: { pattern: '0 5 * * 0', tz: 'Asia/Makassar' },
   },
 ]
 

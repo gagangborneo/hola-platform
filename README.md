@@ -23,7 +23,7 @@ kalau keduanya berbeda, **dokumen yang menang** dan kodenya diperbaiki.
 |---|---|---|
 | Node.js | ≥ 20 (lihat [`.nvmrc`](.nvmrc)) | `nvm use` |
 | pnpm | 11.x | `corepack enable && corepack use pnpm@11.9.0` |
-| Docker + Compose v2 | — | Menjalankan postgres, redis, minio, mailpit |
+| Docker + Compose v2 | — | Menjalankan postgres, redis, RustFS, mailpit |
 
 Tidak ada kredensial cloud yang dibutuhkan untuk pengembangan lokal.
 
@@ -45,12 +45,12 @@ Target: dari `git clone` sampai `pnpm dev` berhasil di mesin bersih **< 15 menit
 |---|---|---|
 | PostgreSQL | `localhost:5432` | `hola` / `hola`, database `hola` (+ `hola_test`) |
 | Redis | `localhost:6379` | — |
-| MinIO (S3) | `localhost:9000` | `hola` / `hola12345` |
-| MinIO Console | http://localhost:9001 | `hola` / `hola12345` |
+| RustFS (S3) | `localhost:9000` | `hola` / `hola12345` |
+| RustFS Console | http://localhost:9001 | `hola` / `hola12345` |
 | Mailpit (SMTP) | `localhost:1025` | — |
 | Mailpit (UI) | http://localhost:8025 | — |
 
-Bucket dibuat otomatis oleh service `minio-init`: `hola-media` (public read),
+Bucket dibuat otomatis oleh service `rustfs-init`: `hola-media` (public read),
 `hola-private`, `hola-backup`.
 
 ---

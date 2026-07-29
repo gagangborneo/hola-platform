@@ -517,6 +517,11 @@ melihat pengeluaran yang ia catat sendiri, dengan batas nilai dari `app_settings
 | `payment_proof` | `tenant` (untuk invoicenya), `staff`, `admin` |
 | `expense_receipt` | `staff`, `admin` |
 
+Pada endpoint media generik F0, pemilik hanya dapat mengelola baris dengan
+`uploaded_by_user_id` miliknya (non-owner customer menerima `404`; tenant menerima `403`).
+Endpoint invoice tenant pada fase domain kemudian memverifikasi relasi invoice sebelum
+`media_id` bukti pembayaran dipasang ke invoice tersebut.
+
 `GET /internal/metrics` tidak memakai role sama sekali — hanya header `X-Internal-Token`.
 
 ---
