@@ -22,8 +22,17 @@ if (( ${#directories[@]} == 0 )); then
   exit 1
 fi
 
-matches="$(grep -RInE --include='*.ts' --include='*.tsx' --include='*.js' --include='*.jsx' \
-  "$FORBIDDEN_IMPORT_PATTERN" "${directories[@]}" || true)"
+matches="$(grep -RInE \
+  --include='*.ts' \
+  --include='*.tsx' \
+  --include='*.mts' \
+  --include='*.cts' \
+  --include='*.js' \
+  --include='*.jsx' \
+  --include='*.mjs' \
+  --include='*.cjs' \
+  "$FORBIDDEN_IMPORT_PATTERN" \
+  "${directories[@]}" || true)"
 
 if [[ -n "$matches" ]]; then
   echo 'guard-db-boundary GAGAL: import server-only ditemukan di frontend:' >&2
