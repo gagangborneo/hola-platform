@@ -137,9 +137,9 @@ nominal ini.
 
 ## F0.H — Media & object storage · 2h
 
-- [ ] **F0-66** `0,5h` ⚙️ — `config/storage.ts` (klien S3, `S3_FORCE_PATH_STYLE` untuk RustFS) + pemeriksaan keberadaan 3 bucket saat boot. *acuan:* [02 § 6](02-INFRASTRUCTURE.md#6-object-storage)
-- [ ] **F0-67** `1h` — `POST /media/presign` + `POST /media/{id}/confirm` (HEAD object, verifikasi mime & ukuran) + `GET`/`DELETE /media/{id}`, allowlist mime & batas ukuran per `kind`, RBAC per `kind`. *acuan:* [02 § 6 Alur upload](02-INFRASTRUCTURE.md#alur-upload-presigned), [05 § 6.14](05-AUTH.md#614-sistem--media)
-- [ ] **F0-68** `0,5h` — J-32 `system.cleanupOrphanUploads` (`pending` > 24 jam)
+- [x] **F0-66** `0,5h` ⚙️ — `config/storage.ts` (klien S3, `S3_FORCE_PATH_STYLE` untuk RustFS) + pemeriksaan keberadaan 3 bucket saat boot. *acuan:* [02 § 6](02-INFRASTRUCTURE.md#6-object-storage)
+- [x] **F0-67** `1h` — `POST /media/presign` + `POST /media/{id}/confirm` (HEAD object, verifikasi mime & ukuran) + `GET`/`DELETE /media/{id}`, allowlist mime & batas ukuran per `kind`, RBAC per `kind`. *acuan:* [02 § 6 Alur upload](02-INFRASTRUCTURE.md#alur-upload-presigned), [05 § 6.14](05-AUTH.md#614-sistem--media)
+- [x] **F0-68** `0,5h` — J-32 `system.cleanupOrphanUploads` (`pending` > 24 jam)
 
 ## F0.I — `apps/web` shell · 2,5h
 
