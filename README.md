@@ -9,8 +9,8 @@ kalau keduanya berbeda, **dokumen yang menang** dan kodenya diperbaiki.
 | Mulai dari | Isi |
 |---|---|
 | [docs/00-OVERVIEW.md](docs/00-OVERVIEW.md) | Ruang lingkup v1, daftar modul, definisi selesai |
-| [docs/ROADMAP.md](docs/ROADMAP.md) | Urutan phase, Definition of Done, risiko |
-| [docs/PHASE-1.md](docs/PHASE-1.md) | Daftar task Phase 0 & 1 (dicentang saat selesai) |
+| [tasks/ROADMAP.md](tasks/ROADMAP.md) | Urutan phase, Definition of Done, risiko |
+| [tasks/PHASE-1.md](tasks/PHASE-1.md) | Daftar task Phase 0 & 1 (dicentang saat selesai) |
 | [docs/16-CONVENTIONS.md](docs/16-CONVENTIONS.md) | Konvensi kode — **baca sebelum menulis file pertama** |
 
 ---
@@ -37,7 +37,7 @@ pnpm dev       # api + worker + web + admin paralel
 ```
 
 Target: dari `git clone` sampai `pnpm dev` berhasil di mesin bersih **< 15 menit**
-(DoD-0-01, [ROADMAP § 3.1](docs/ROADMAP.md#31-definition-of-done-phase-0-terukur-semuanya-wajib)).
+(DoD-0-01, [ROADMAP § 3.1](tasks/ROADMAP.md#31-definition-of-done-phase-0-sebelum-publish-terukur-semuanya-wajib)).
 
 ### Layanan lokal setelah `pnpm dev:infra`
 
@@ -104,4 +104,5 @@ lihat [00 § 8](docs/00-OVERVIEW.md#8-definisi-selesai-untuk-v1).
 
 ## Status
 
-Phase 0 (Fondasi) sedang berjalan. Progres per task: [docs/PHASE-1.md](docs/PHASE-1.md).
+Pengembangan local-first sedang berjalan. Progres per task: [tasks/PHASE-1.md](tasks/PHASE-1.md).
+Deploy/publish produksi masih ditunda sampai ada instruksi eksplisit.

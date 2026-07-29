@@ -10,7 +10,7 @@ Sebelum mengubah kode:
 
 1. Jalankan `git status --short` dan baca diff yang belum di-commit. Perubahan yang sudah ada
    adalah milik user atau agent sebelumnya; jangan membuang atau menimpanya.
-2. Baca task aktif di `docs/PHASE-1.md`, termasuk acuan yang ditunjuk task tersebut.
+2. Baca task aktif di `tasks/PHASE-1.md`, termasuk acuan yang ditunjuk task tersebut.
 3. Baca dokumen domain yang relevan:
    - `docs/00-OVERVIEW.md` untuk prinsip, keputusan client, dan Definition of Done.
    - `docs/01-ARCHITECTURE.md` untuk batas app/package dan alur dependensi.
@@ -22,7 +22,7 @@ Sebelum mengubah kode:
    - `docs/16-CONVENTIONS.md` untuk TypeScript, struktur folder, service/repository, Redis,
      BullMQ, testing, dan aturan AI.
    - `docs/17-NON-GOALS.md` sebelum menambah kemampuan baru.
-4. `docs/PHASE-1.md` adalah checklist kerja, bukan pengganti business rule. Bila checklist
+4. `tasks/PHASE-1.md` adalah checklist kerja, bukan pengganti business rule. Bila checklist
    ringkas dan dokumen modul lebih rinci, implementasikan kontrak modul yang relevan.
 5. Jika dua dokumen bertentangan, laporkan kontradiksinya. Jangan memilih atau mengubah
    kontrak secara diam-diam.
@@ -135,7 +135,7 @@ pnpm test:integration
 // [D-xx] default sementara — lihat docs/00-OVERVIEW.md § 6
 ```
 
-- Centang task di `docs/PHASE-1.md` hanya setelah implementasi lengkap, test relevan hijau,
+- Centang task di `tasks/PHASE-1.md` hanya setelah implementasi lengkap, test relevan hijau,
   dan perubahan sudah di-commit.
 - Commit menggunakan Conventional Commits dan satu tujuan yang jelas.
 - Jangan push, force-push, rebase, menghapus branch, atau mengubah history tanpa permintaan
