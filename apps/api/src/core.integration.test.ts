@@ -843,13 +843,15 @@ describe('Auth & RBAC', () => {
     )
     expect(audit.status).toBe(200)
     expect(await audit.json()).toMatchObject({
-      data: [
+      // Audit append-only dapat memuat hasil eksekusi suite sebelumnya; yang
+      // dikontrak adalah entri update ini tersedia, bukan hanya satu baris.
+      data: expect.arrayContaining([
         expect.objectContaining({
           action: 'admin.setting_update',
           entity_type: 'app_setting',
           entity_id: key,
         }),
-      ],
+      ]),
       meta: { pagination: { mode: 'offset', page: 1, per_page: 25 } },
     })
   })
