@@ -168,16 +168,16 @@ nominal ini.
 - [ ] **F0-82** `1h` ⚙️ — `Dockerfile` untuk `apps/api` (multi-stage; container worker memakai image yang sama dengan `CMD ["node","dist/worker.js"]`), `apps/web`, `apps/admin`. *acuan:* [02 § 2](02-INFRASTRUCTURE.md#2-daftar-container--sumber-daya)
 - [ ] **F0-83** `1h` ⚙️ ⛔ K-01 — Traefik: routing 6 host, TLS Let's Encrypt, HSTS `max-age=31536000; includeSubDomains`. *acuan:* [02 § 1 Domain & routing](02-INFRASTRUCTURE.md#domain--routing)
 - [ ] **F0-84** `0,5h` ⚙️ — Env & secret di Dokploy per container + **release step** `pnpm db:migrate` (sekali per deploy, **bukan** di `CMD`). *acuan:* [02 § 3 Aturan deployment](02-INFRASTRUCTURE.md#aturan-deployment)
-- [ ] **F0-85** `0,5h` ⚙️ — `deploy.yml`: trigger `workflow_run` setelah CI hijau, 4 webhook, urutan `api → worker → web → admin`
+- [x] **F0-85** `0,5h` ⚙️ — `deploy.yml`: trigger `workflow_run` setelah CI hijau, 4 webhook, urutan `api → worker → web → admin`
 - [ ] **F0-86** `0,5h` 🔴 — Deploy pertama ke produksi + verifikasi `/healthz`, `/readyz`, dan `readyz = degraded` saat container redis dimatikan lalu dihidupkan lagi (DoD-0-08)
 
 ## F0.M — Backup & restore · 3,5h
 
 - [ ] **F0-87** `1h` ⚙️ — Container `hola-backup` (`postgresql-client` + `rclone`), kredensial R2, bucket `hola-backup` + lifecycle rule (30 harian + 12 bulanan). *acuan:* [02 § 10 Strategi backup](02-INFRASTRUCTURE.md#strategi-backup)
-- [ ] **F0-88** `0,5h` — J-30 `system.backupDatabase`: `pg_dump --format=custom --compress=9`, verifikasi `pg_restore --list`, upload dengan nama deterministik, ping dead-man's switch setelah sukses
-- [ ] **F0-89** `0,5h` — Runbook `docs/runbooks/restore.md`: 5 langkah konkret + **post-restore checklist Z1–Z7**. *acuan:* [02 § 10 Prosedur restore](02-INFRASTRUCTURE.md#prosedur-restore-wajib-terdokumentasi--pernah-diuji)
+- [x] **F0-88** `0,5h` — J-30 `system.backupDatabase`: `pg_dump --format=custom --compress=9`, verifikasi `pg_restore --list`, upload dengan nama deterministik, ping dead-man's switch setelah sukses
+- [x] **F0-89** `0,5h` — Runbook `docs/runbooks/restore.md`: 5 langkah konkret + **post-restore checklist Z1–Z7**. *acuan:* [02 § 10 Prosedur restore](02-INFRASTRUCTURE.md#prosedur-restore-wajib-terdokumentasi--pernah-diuji)
 - [ ] **F0-90** `1h` 🔴 — **JALANKAN DRILL RESTORE SUNGGUHAN**: ambil dump dari R2 → `createdb` → `pg_restore` → 4 query verifikasi → `pnpm db:migrate` di atasnya → catat durasi aktual & masalah di `docs/runbooks/restore-drill-log.md` (DoD-0-10). Backup yang belum diuji **dianggap tidak ada**
-- [ ] **F0-91** `0,5h` — `db-restore-drill.yml`: `schedule` bulanan + `workflow_dispatch`, kriteria lulus tercatat
+- [x] **F0-91** `0,5h` — `db-restore-drill.yml`: `schedule` bulanan + `workflow_dispatch`, kriteria lulus tercatat
 
 ## F0.N — Monitoring · 1,5h
 
@@ -191,7 +191,7 @@ nominal ini.
 - [ ] **F0-96** `0,5h` — Seed bagian 2: 6 user (4 role, password `Hola12345!`), `app_settings` default, `notification_templates`
 - [ ] **F0-97** `0,5h` 🔴 — `git clone` → `pnpm setup` → `pnpm dev` di mesin/VM **bersih**, catat waktu (< 15 menit, DoD-0-01)
 - [ ] **F0-98** `1h` 🔴 — Verifikasi **12 butir DoD Phase 0** + kumpulkan bukti (log, tangkapan layar, isi `restore-drill-log.md`). *acuan:* [ROADMAP § 3.1](ROADMAP.md#31-definition-of-done-phase-0-terukur-semuanya-wajib)
-- [ ] **F0-99** `0,5h` — `docs/runbooks/deploy.md` + bagian pengembangan di README
+- [x] **F0-99** `0,5h` — `docs/runbooks/deploy.md` + bagian pengembangan di README
 
 > **Gerbang Phase 0 → Phase 1:** jangan mulai P1-01 sebelum **seluruh** 12 butir DoD Phase 0
 > tercentang. Melanjutkan dengan backup yang belum diuji atau CI yang belum menegakkan batas
