@@ -143,10 +143,10 @@ nominal ini.
 
 ## F0.I — `apps/web` shell · 2,5h
 
-- [ ] **F0-69** `0,5h` — Scaffold Next.js App Router, layout, styling dasar, security headers S-4 (CSP, nosniff, Referrer-Policy, X-Frame-Options). *acuan:* [16 § 4.4](16-CONVENTIONS.md#44-appsweb--appsadmin), [05 § 9](05-AUTH.md#9-keamanan-tambahan)
-- [ ] **F0-70** `0,5h` — `lib/api-client.ts`, `lib/auth.ts` (access token **hanya di memori**, refresh via cookie saat reload — S-5), `lib/query-client.ts`
-- [ ] **F0-71** `1h` — Halaman `login`, `daftar`, `lupa-password`, `reset-password`, `verifikasi-email` memakai zod schema yang **sama** dengan API (A-09)
-- [ ] **F0-72** `0,5h` — Sentry web + upload source map saat build, `release` = git SHA
+- [x] **F0-69** `0,5h` — Scaffold Next.js App Router, layout, styling dasar, security headers S-4 (CSP, nosniff, Referrer-Policy, X-Frame-Options). *acuan:* [16 § 4.4](16-CONVENTIONS.md#44-appsweb--appsadmin), [05 § 9](05-AUTH.md#9-keamanan-tambahan)
+- [x] **F0-70** `0,5h` — `lib/api-client.ts`, `lib/auth.ts` (access token **hanya di memori**, refresh via cookie saat reload — S-5), `lib/query-client.ts`
+- [x] **F0-71** `1h` — Halaman `login`, `daftar`, `lupa-password`, `reset-password`, `verifikasi-email` memakai zod schema yang **sama** dengan API (A-09)
+- [x] **F0-72** `0,5h` — Sentry web + upload source map saat build, `release` = git SHA
 
 ## F0.J — `apps/admin` shell · 3h
 
