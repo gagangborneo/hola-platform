@@ -7,8 +7,12 @@ packages:
 # menyeluruh — build script adalah jalur eksekusi kode saat `pnpm install`.
 allowBuilds:
   '@biomejs/biome': true
+  # Dipakai @sentry/nextjs untuk upload source map build ketika token tersedia.
+  '@sentry/cli': true
   argon2: true
   esbuild: true
   # BullMQ tetap bekerja dengan fallback JavaScript; native extractor tidak
   # diperlukan dan build script pihak ketiga sengaja tetap diblokir.
   msgpackr-extract: false
+  # F0 web belum memakai next/image; binary sharp tidak diperlukan.
+  sharp: false

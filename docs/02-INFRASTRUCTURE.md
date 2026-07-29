@@ -658,6 +658,7 @@ Aturan:
 | `NEXT_PUBLIC_MEDIA_BASE_URL` | ✓ | `https://media.hola.id` | — |
 | `NEXT_PUBLIC_SENTRY_DSN` | — | — | — |
 | `SENTRY_AUTH_TOKEN` | — | — | Upload source map saat build (build-time saja) |
+| `SENTRY_ORG` / `SENTRY_PROJECT` | — | — | Slug org/project; wajib bersama token agar artifact source map bisa di-upload |
 | `NEXT_PUBLIC_GA_ID` | — | — | Opsional analytics |
 
 > Tidak ada `DATABASE_URL`, `REDIS_URL`, `MIDTRANS_SERVER_KEY`, atau `JWT_*` di sini.

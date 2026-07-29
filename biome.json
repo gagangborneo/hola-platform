@@ -15,6 +15,7 @@
       "!**/.turbo",
       "!**/.expo",
       "!**/coverage",
+      "!apps/*/next-env.d.ts",
       "!**/*.gen.ts",
       "!packages/db/drizzle"
     ]

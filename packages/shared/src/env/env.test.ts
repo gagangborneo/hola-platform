@@ -127,7 +127,13 @@ describe('schema env (docs/02 § 8)', () => {
 
   it('setiap kunci yang sampai ke client berprefiks NEXT_PUBLIC_ / EXPO_PUBLIC_', () => {
     // Kunci build-time/server-side yang sah tanpa prefiks publik.
-    const serverSide = new Set(['NODE_ENV', 'API_BASE_URL_INTERNAL', 'SENTRY_AUTH_TOKEN'])
+    const serverSide = new Set([
+      'NODE_ENV',
+      'API_BASE_URL_INTERNAL',
+      'SENTRY_AUTH_TOKEN',
+      'SENTRY_ORG',
+      'SENTRY_PROJECT',
+    ])
     for (const [app, prefix] of [
       ['web', 'NEXT_PUBLIC_'],
       ['admin', 'NEXT_PUBLIC_'],

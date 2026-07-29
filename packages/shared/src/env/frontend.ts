@@ -26,6 +26,9 @@ export const webEnvSchema = z.object({
   NEXT_PUBLIC_SENTRY_DSN: z.string().optional(),
   /** Build-time saja: upload source map. */
   SENTRY_AUTH_TOKEN: z.string().optional(),
+  /** Slug organisasi dan project diperlukan Sentry saat upload source map. */
+  SENTRY_ORG: z.string().optional(),
+  SENTRY_PROJECT: z.string().optional(),
   NEXT_PUBLIC_GA_ID: z.string().optional(),
 })
 export type WebEnv = z.infer<typeof webEnvSchema>
