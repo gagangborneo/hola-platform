@@ -17,9 +17,9 @@ RUN pnpm --filter @hola/api build
 
 FROM node:24-alpine AS runtime
 
-# `pg_dump` dan `pg_restore` dibutuhkan J-30. Rclone dipakai oleh container
-# hola-backup; menyediakannya di image bersama membuat recovery manual tetap
-# mungkin tanpa menyalin credential ke image lain.
+# `pg_dump`, `pg_restore`, dan rclone dibutuhkan J-30. Menyediakannya di image
+# worker juga membuat recovery manual tetap mungkin tanpa menyalin credential
+# ke image lain.
 RUN apk add --no-cache curl postgresql16-client rclone \
   && addgroup -S hola \
   && adduser -S -G hola hola
