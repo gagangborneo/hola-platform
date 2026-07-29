@@ -165,7 +165,7 @@ nominal ini.
 ## F0.L — Deploy · 4,5h
 
 - [ ] **F0-81** `1h` ⚙️ ⛔ K-02 — Provisioning VPS: Docker, Dokploy, firewall, swap, monitor disk (alert di 80% — E-6)
-- [ ] **F0-82** `1h` ⚙️ — `Dockerfile` untuk `apps/api` (multi-stage; container worker memakai image yang sama dengan `CMD ["node","dist/worker.js"]`), `apps/web`, `apps/admin`. *acuan:* [02 § 2](02-INFRASTRUCTURE.md#2-daftar-container--sumber-daya)
+- [x] **F0-82** `1h` ⚙️ — `Dockerfile` untuk `apps/api` (multi-stage; container worker memakai image yang sama dengan `CMD ["node","dist/worker.js"]`), `apps/web`, `apps/admin`. *acuan:* [02 § 2](02-INFRASTRUCTURE.md#2-daftar-container--sumber-daya)
 - [ ] **F0-83** `1h` ⚙️ ⛔ K-01 — Traefik: routing 6 host, TLS Let's Encrypt, HSTS `max-age=31536000; includeSubDomains`. *acuan:* [02 § 1 Domain & routing](02-INFRASTRUCTURE.md#domain--routing)
 - [ ] **F0-84** `0,5h` ⚙️ — Env & secret di Dokploy per container + **release step** `pnpm db:migrate` (sekali per deploy, **bukan** di `CMD`). *acuan:* [02 § 3 Aturan deployment](02-INFRASTRUCTURE.md#aturan-deployment)
 - [x] **F0-85** `0,5h` ⚙️ — `deploy.yml`: trigger `workflow_run` setelah CI hijau, 4 webhook, urutan `api → worker → web → admin`
@@ -187,8 +187,8 @@ nominal ini.
 
 ## F0.O — Seed & penutup Phase 0 · 3,5h
 
-- [ ] **F0-95** `1h` — Seed bagian 1 (**deterministik**, ID tetap, tanpa random): venue, 3 sports, 7 courts, `court_operating_hours` 06:00–23:00, `price_rules` contoh, `addons`. *acuan:* [02 § 11 Isi seed data dev](02-INFRASTRUCTURE.md#isi-seed-data-dev-pnpm-dbseed)
-- [ ] **F0-96** `0,5h` — Seed bagian 2: 6 user (4 role, password `Hola12345!`), `app_settings` default, `notification_templates`
+- [x] **F0-95** `1h` — Seed bagian 1 (**deterministik**, ID tetap, tanpa random): venue, 3 sports, 7 courts, `court_operating_hours` 06:00–23:00, `price_rules` contoh, `addons`. *acuan:* [02 § 11 Isi seed data dev](02-INFRASTRUCTURE.md#isi-seed-data-dev-pnpm-dbseed)
+- [x] **F0-96** `0,5h` — Seed bagian 2: 6 user (4 role, password `Hola12345!`), `app_settings` default, `notification_templates`
 - [ ] **F0-97** `0,5h` 🔴 — `git clone` → `pnpm setup` → `pnpm dev` di mesin/VM **bersih**, catat waktu (< 15 menit, DoD-0-01)
 - [ ] **F0-98** `1h` 🔴 — Verifikasi **12 butir DoD Phase 0** + kumpulkan bukti (log, tangkapan layar, isi `restore-drill-log.md`). *acuan:* [ROADMAP § 3.1](ROADMAP.md#31-definition-of-done-phase-0-terukur-semuanya-wajib)
 - [x] **F0-99** `0,5h` — `docs/runbooks/deploy.md` + bagian pengembangan di README
