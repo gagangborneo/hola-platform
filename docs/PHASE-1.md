@@ -150,11 +150,11 @@ nominal ini.
 
 ## F0.J — `apps/admin` shell · 3h
 
-- [ ] **F0-73** `0,5h` — Scaffold + layout + navigasi yang berubah per role (`admin` / `staff` / `tenant`). *acuan:* [01 § 3.3](01-ARCHITECTURE.md#33-appsadmin--nextjs-app-router-back-office)
-- [ ] **F0-74** `0,5h` — Halaman login + guard rute per role (UX saja; keamanan tetap di API — [05 § 1](05-AUTH.md#1-prinsip))
-- [ ] **F0-75** `1h` 🔒 — Komponen tabel data generik yang dipakai seluruh modul admin: offset pagination, filter, sort, pencarian `q`, keadaan kosong/error. *acuan:* [04 § 6.2](04-API-CONTRACT.md#62-offset-untuk-tabel-admin)
-- [ ] **F0-76** `0,5h` — Halaman `app_settings` (`GET /admin/settings`, `PUT /admin/settings/{key}`) + `audit_logs`
-- [ ] **F0-77** `0,5h` — Sentry admin + source map
+- [x] **F0-73** `0,5h` — Scaffold + layout + navigasi yang berubah per role (`admin` / `staff` / `tenant`). *acuan:* [01 § 3.3](01-ARCHITECTURE.md#33-appsadmin--nextjs-app-router-back-office)
+- [x] **F0-74** `0,5h` — Halaman login + guard rute per role (UX saja; keamanan tetap di API — [05 § 1](05-AUTH.md#1-prinsip))
+- [x] **F0-75** `1h` 🔒 — Komponen tabel data generik yang dipakai seluruh modul admin: offset pagination, filter, sort, pencarian `q`, keadaan kosong/error. *acuan:* [04 § 6.2](04-API-CONTRACT.md#62-offset-untuk-tabel-admin)
+- [x] **F0-76** `0,5h` — Halaman `app_settings` (`GET /admin/settings`, `PUT /admin/settings/{key}`) + `audit_logs`
+- [x] **F0-77** `0,5h` — Sentry admin + source map
 
 ## F0.K — CI · 2h
 
