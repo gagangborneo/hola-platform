@@ -1,0 +1,121 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: 'true'
+  # Nilai non-rahasia agar build Next.js dapat memvalidasi kontrak env.
+  NEXT_PUBLIC_APP_ENV: local
+  NEXT_PUBLIC_API_BASE_URL: http://localhost:4000
+  API_BASE_URL_INTERNAL: http://localhost:4000
+  NEXT_PUBLIC_WEB_BASE_URL: http://localhost:3000
+  NEXT_PUBLIC_ADMIN_BASE_URL: http://localhost:3001
+  NEXT_PUBLIC_MEDIA_BASE_URL: http://localhost:9000/hola-media
+
+jobs:
+  quality:
+    name: Quality, test, dan build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: hola_test
+          POSTGRES_USER: hola
+          POSTGRES_PASSWORD: hola
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U hola -d hola_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm exec biome ci .
+
+      - name: Unit test
+        run: pnpm test
+
+      - name: Integration test
+        env:
+          TEST_DATABASE_URL: postgres://hola:hola@localhost:5432/hola_test
+          TEST_REDIS_URL: redis://localhost:6379
+        run: pnpm test:integration
+
+      - name: Build
+        env:
+          NODE_ENV: production
+        run: pnpm build
+
+  guard-db-boundary:
+    name: Guard frontend database boundary
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Reject frontend database and server-only imports
+        run: bash scripts/guard-db-boundary.sh
+
+  check-env:
+    name: Check environment contract
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check .env.example against Zod schemas
+        run: pnpm check:env

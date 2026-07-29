@@ -191,7 +191,7 @@ sequenceDiagram
 
 | Workflow | Trigger | Isi |
 |---|---|---|
-| `ci.yml` | `pull_request`, `push` ke `main` | install → `typecheck`, `lint`, `test`, `build`, `guard-db-boundary`. Service container: postgres + redis untuk integration test. |
+| `ci.yml` | `pull_request`, `push` ke `main` | `pnpm install --frozen-lockfile` → `typecheck` → `biome ci` → unit + integration test → build; job terpisah `guard-db-boundary` dan `check:env`. Service container: PostgreSQL + Redis untuk integration test. |
 | `deploy.yml` | `push` ke `main` (setelah `ci.yml` sukses, `workflow_run`) | Panggil Dokploy webhook per app. Secret: `DOKPLOY_WEBHOOK_API`, `DOKPLOY_WEBHOOK_WORKER`, `DOKPLOY_WEBHOOK_WEB`, `DOKPLOY_WEBHOOK_ADMIN`. |
 | `mobile-preview.yml` | manual (`workflow_dispatch`) | EAS build profile `preview`. |
 | `db-restore-drill.yml` | `schedule` bulanan + manual | Uji restore backup ke database sementara, jalankan smoke query, laporkan hasil. Lihat [§ 10](#10-backup--restore). |
