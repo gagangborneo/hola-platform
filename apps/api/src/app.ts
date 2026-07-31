@@ -17,6 +17,7 @@ import { assertRouteGuards } from './middleware/require-role.ts'
 import { adminUsersRoutes } from './modules/admin/admin-users.routes.ts'
 import { authRoutes } from './modules/auth/auth.routes.ts'
 import { availabilityRoutes } from './modules/availability/availability.routes.ts'
+import { courtsRoutes } from './modules/courts/courts.routes.ts'
 import { mediaRoutes } from './modules/media/media.routes.ts'
 import { notificationRoutes } from './modules/notifications/notification.routes.ts'
 import { adminSystemRoutes } from './modules/system/admin-system.routes.ts'
@@ -104,6 +105,7 @@ export function createApp() {
     .route('/', healthRoutes)
     .route(API_PREFIX, configRoutes)
     .route(API_PREFIX, availabilityRoutes)
+    .route(API_PREFIX, courtsRoutes)
     .route(API_PREFIX, authRoutes)
     .route(API_PREFIX, adminUsersRoutes)
     .route(API_PREFIX, adminSystemRoutes)
