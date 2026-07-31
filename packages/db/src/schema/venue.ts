@@ -70,6 +70,8 @@ export const courts = pgTable(
     maxSlotsPerBooking: integer('max_slots_per_booking').notNull().default(4),
     maxPlayers: integer('max_players'),
     status: courtStatusEnum('status').notNull().default('active'),
+    /** Optimistic locking untuk PATCH admin (docs/04 § Optimistic locking). */
+    version: integer('version').notNull().default(1),
     sortOrder: integer('sort_order').notNull().default(0),
     ...timestamps,
   },

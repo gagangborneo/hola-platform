@@ -296,6 +296,7 @@ erDiagram
         int slot_duration_minutes
         int max_players
         court_status status
+        int version
         int sort_order
     }
     court_operating_hours {
@@ -1115,6 +1116,7 @@ Satu baris di v1. Kolom: `id`, `name`, `address`, `city`, `timezone` (default `A
 | `max_slots_per_booking` | int | ✗ | Default 4 |
 | `max_players` | int | ✓ | Padel = 4 |
 | `status` | `court_status` | ✗ | Default `active` |
+| `version` | int | ✗ | Default 1. Naik pada setiap PATCH untuk optimistic locking (`If-Match`) |
 | `sort_order` | int | ✗ | — |
 
 ### `court_operating_hours`
