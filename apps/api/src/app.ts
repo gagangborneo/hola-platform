@@ -17,6 +17,7 @@ import { assertRouteGuards } from './middleware/require-role.ts'
 import { adminUsersRoutes } from './modules/admin/admin-users.routes.ts'
 import { authRoutes } from './modules/auth/auth.routes.ts'
 import { availabilityRoutes } from './modules/availability/availability.routes.ts'
+import { courtMaintenanceRoutes } from './modules/courts/court-maintenance.routes.ts'
 import { courtsRoutes } from './modules/courts/courts.routes.ts'
 import { specialDatesRoutes } from './modules/courts/special-dates.routes.ts'
 import { mediaRoutes } from './modules/media/media.routes.ts'
@@ -110,6 +111,7 @@ export function createApp() {
     .route(API_PREFIX, configRoutes)
     .route(API_PREFIX, availabilityRoutes)
     .route(API_PREFIX, courtsRoutes)
+    .route(API_PREFIX, courtMaintenanceRoutes)
     .route(API_PREFIX, specialDatesRoutes)
     .route(API_PREFIX, priceRulesRoutes)
     .route(API_PREFIX, slotClaimsRoutes)

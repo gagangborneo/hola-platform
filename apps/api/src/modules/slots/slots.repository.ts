@@ -170,3 +170,25 @@ export async function releaseClaims(
     )
     .returning()
 }
+
+/** Pelepasan owner maintenance tetap melalui modul slots, bukan courts. */
+export async function releaseClaimsByMaintenance(
+  tx: Tx,
+  input: { courtMaintenanceId: string; reason: string; now: Date },
+): Promise<SlotClaimRow[]> {
+  return tx
+    .update(slotClaims)
+    .set({
+      status: 'released',
+      holdExpiresAt: null,
+      releasedAt: input.now,
+      releaseReason: input.reason,
+    })
+    .where(
+      and(
+        eq(slotClaims.courtMaintenanceId, input.courtMaintenanceId),
+        inArray(slotClaims.status, ['held', 'confirmed']),
+      ),
+    )
+    .returning()
+}

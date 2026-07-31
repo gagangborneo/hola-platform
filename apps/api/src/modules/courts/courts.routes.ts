@@ -30,7 +30,7 @@ const PREFIX = '/api/v1/courts'
 function validationHook(result: { success: boolean; error?: unknown }): void {
   if (!result.success) throw result.error
 }
-function serviceContext(c: {
+export function serviceContext(c: {
   get: (key: 'core' | 'now' | 'requestId' | 'userId' | 'role') => unknown
   req: { header: (name: string) => string | undefined }
 }) {

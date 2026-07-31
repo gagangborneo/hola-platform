@@ -1,8 +1,11 @@
 import {
+  courtMaintenances,
+  courtOperatingHours,
   courtPhotos,
   courts,
   mediaFiles,
   priceRules,
+  slotClaims,
   specialDates,
   sports,
   users,
@@ -19,6 +22,10 @@ import {
   deleteAdminPriceRule,
   patchAdminPriceRule,
 } from '../pricing/price-rules.service.ts'
+import {
+  cancelAdminCourtMaintenance,
+  createAdminCourtMaintenance,
+} from './court-maintenance.service.ts'
 import { patchAdminCourt, replaceAdminCourtPhotos } from './courts.service.ts'
 import { createAdminSpecialDate, deleteAdminSpecialDate } from './special-dates.service.ts'
 
@@ -43,11 +50,14 @@ const audit = { actor, requestId: 'court-test', ipAddress: undefined, userAgent:
 const redisContext = { db, redis, redisKeys, safeRedis, logger }
 
 async function cleanFixtures(): Promise<void> {
+  await db.delete(slotClaims).where(eq(slotClaims.courtId, ids.court))
+  await db.delete(courtMaintenances).where(eq(courtMaintenances.courtId, ids.court))
   await db.delete(courtPhotos).where(eq(courtPhotos.courtId, ids.court))
   await db.delete(priceRules).where(eq(priceRules.courtId, ids.court))
   await db.delete(specialDates).where(eq(specialDates.date, '2026-08-01'))
   await db.delete(mediaFiles).where(eq(mediaFiles.id, ids.mediaOne))
   await db.delete(mediaFiles).where(eq(mediaFiles.id, ids.mediaTwo))
+  await db.delete(courtOperatingHours).where(eq(courtOperatingHours.courtId, ids.court))
   await db.delete(courts).where(eq(courts.id, ids.court))
   await db.delete(sports).where(eq(sports.id, ids.sport))
   await db.delete(venues).where(eq(venues.id, ids.venue))
@@ -70,6 +80,12 @@ async function insertFixtures(): Promise<void> {
     sportId: ids.sport,
     code: 'COURT-01',
     name: 'Court fixture',
+  })
+  await db.insert(courtOperatingHours).values({
+    courtId: ids.court,
+    dayOfWeek: 6,
+    opensTime: '08:00',
+    closesTime: '10:00',
   })
   await db.insert(mediaFiles).values([
     {
@@ -166,5 +182,31 @@ describe('admin court, harga, dan special dates dengan PostgreSQL/Redis nyata', 
     await redis.set(redisKeys.availability(ids.court, '2026-08-01'), 'cache', 'EX', 60)
     await deleteAdminSpecialDate({ ...redisContext, ...audit }, specialDate.id)
     expect(await redis.get(redisKeys.availability(ids.court, '2026-08-01'))).toBeNull()
+  })
+
+  it('P1-30 / I-6: maintenance dan klaimnya dibuat lalu dibatalkan atomik', async () => {
+    const maintenance = await createAdminCourtMaintenance(
+      { ...redisContext, now, ...audit },
+      {
+        court_id: ids.court,
+        starts_at: '2026-08-01T00:00:00.000Z',
+        ends_at: '2026-08-01T02:00:00.000Z',
+        reason: 'Perawatan fixture',
+        force: false,
+      },
+    )
+    const createdClaims = await db
+      .select()
+      .from(slotClaims)
+      .where(eq(slotClaims.courtMaintenanceId, maintenance.id))
+    expect(createdClaims).toHaveLength(2)
+    expect(createdClaims.every((claim) => claim.status === 'confirmed')).toBe(true)
+
+    await cancelAdminCourtMaintenance({ ...redisContext, now, ...audit }, maintenance.id)
+    const releasedClaims = await db
+      .select()
+      .from(slotClaims)
+      .where(eq(slotClaims.courtMaintenanceId, maintenance.id))
+    expect(releasedClaims.every((claim) => claim.status === 'released')).toBe(true)
   })
 })

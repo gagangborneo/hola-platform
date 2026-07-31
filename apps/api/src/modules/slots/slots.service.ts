@@ -4,7 +4,7 @@ import { uuidv7 } from '@hola/db'
 import { CLAIM_STATUS, ERROR_CODE, type RedisKeys, type UserRole, witaDateYmd } from '@hola/shared'
 import { err, UniqueViolationError } from '../../lib/errors.ts'
 import { addSeconds, isPast, isSlotAligned, slotEndsAt, toWitaParts } from '../../lib/time.ts'
-import { withTransaction } from '../../lib/transaction.ts'
+import { type TransactionScope, withTransaction } from '../../lib/transaction.ts'
 import type { CoreDependencies } from '../../middleware/core-dependencies.ts'
 import {
   findActiveConflicts,
@@ -14,6 +14,7 @@ import {
   insertSlotClaims,
   lockCourtForShare,
   releaseClaims,
+  releaseClaimsByMaintenance,
   releaseExpiredHolds,
   type SlotClaimRow,
 } from './slots.repository.ts'
@@ -259,6 +260,85 @@ export async function claimSlots(
   }
 }
 
+/**
+ * Jalur komposisi untuk owner internal yang baru dibuat dalam transaksi yang
+ * sama, misalnya `court_maintenances`. Mode hold sengaja dilarang di sini karena
+ * reservasi Redis harus dimulai sebelum transaksi dan hanya flow booking publik
+ * yang melakukannya.
+ */
+export async function claimDirectSlotsInTransaction(
+  ctx: SlotsServiceContext,
+  input: ClaimSlotsInput,
+  scope: TransactionScope,
+): Promise<ClaimedSlot[]> {
+  if (input.mode !== 'direct') throw err.validation({ field: 'mode' })
+  const startsAtList = duplicateFreeSlots(input.startsAtList)
+  if (startsAtList.length === 0 || !slotOwnerIsValid(input, startsAtList.length)) {
+    throw err.validation({ field: 'owner' })
+  }
+  const [court, operatingHours] = await Promise.all([
+    findSlotCourt(ctx.db, input.courtId),
+    findCourtOperatingHours(ctx.db, input.courtId),
+  ])
+  if (!court) throw err.notFound('Lapangan tidak ditemukan.')
+  if (input.claimType === 'booking' && court.status !== 'active') {
+    throw err.of(ERROR_CODE.COURT_NOT_BOOKABLE)
+  }
+  const closedDates = new Set(
+    await findClosedSpecialDates(
+      ctx.db,
+      startsAtList.map((startsAt) => witaDateYmd(startsAt)),
+    ),
+  )
+  for (const startsAt of startsAtList) {
+    const hours = operatingHours.find(
+      (candidate) => candidate.dayOfWeek === toWitaParts(startsAt).weekday,
+    )
+    if (!hours) throw err.of(ERROR_CODE.SLOT_OUTSIDE_OPERATING_HOURS)
+    if (!isSlotAligned(startsAt, { ...hours, slotDurationMinutes: court.slotDurationMinutes })) {
+      throw err.of(ERROR_CODE.SLOT_NOT_ALIGNED)
+    }
+    if (input.claimType === 'booking' && isPast(startsAt, ctx.now)) {
+      throw err.of(ERROR_CODE.SLOT_IN_PAST)
+    }
+    if (input.claimType === 'booking' && closedDates.has(witaDateYmd(startsAt))) {
+      throw err.of(ERROR_CODE.VENUE_CLOSED)
+    }
+  }
+  try {
+    if (!(await lockCourtForShare(scope.tx, input.courtId))) {
+      throw err.notFound('Lapangan tidak ditemukan.')
+    }
+    await releaseExpiredHolds(scope.tx, { courtId: input.courtId, startsAtList, now: ctx.now })
+    const claims = await insertSlotClaims(
+      scope.tx,
+      startsAtList.map((startsAt, index) => ({
+        id: ctx.createId?.(new Date(ctx.now.getTime() + index)) ?? uuidv7(ctx.now.getTime()),
+        courtId: input.courtId,
+        startsAt,
+        endsAt: slotEndsAt(startsAt, court.slotDurationMinutes),
+        slotDate: witaDateYmd(startsAt),
+        claimType: input.claimType,
+        status: 'confirmed',
+        holdExpiresAt: null,
+        bookingItemId:
+          input.owner.kind === 'booking' ? (input.owner.bookingItemIds[index] ?? null) : null,
+        courtMaintenanceId:
+          input.owner.kind === 'maintenance' ? input.owner.courtMaintenanceId : null,
+        createdByUserId: input.actor.userId ?? null,
+      })),
+    )
+    scope.afterCommit(() => invalidateAvailability(ctx, claims))
+    return claims.map(toClaimedSlot)
+  } catch (error) {
+    if (error instanceof UniqueViolationError && error.constraintName === 'uq_slot_claims_active') {
+      const conflicts = await findActiveConflicts(ctx.db, { courtId: input.courtId, startsAtList })
+      throw err.of(ERROR_CODE.SLOT_ALREADY_CLAIMED, { details: conflictDetails(conflicts) })
+    }
+    throw error
+  }
+}
+
 /** Idempoten: claim yang sudah `released` tidak berubah untuk kedua kalinya. */
 export async function releaseSlots(
   ctx: SlotsServiceContext,
@@ -286,4 +366,29 @@ export async function releaseSlots(
     },
     { logger: ctx.logger },
   )
+}
+
+/** Dipakai pembatalan maintenance agar klaim dan owner berubah atomik. */
+export async function releaseMaintenanceSlotsInTransaction(
+  ctx: SlotsServiceContext,
+  courtMaintenanceId: string,
+  scope: TransactionScope,
+): Promise<ClaimedSlot[]> {
+  const released = await releaseClaimsByMaintenance(scope.tx, {
+    courtMaintenanceId,
+    reason: 'maintenance_cancelled',
+    now: ctx.now,
+  })
+  scope.afterCommit(async () => {
+    await Promise.all([
+      invalidateAvailability(ctx, released),
+      deleteHoldKeys(
+        ctx,
+        released.map((claim) =>
+          ctx.redisKeys.holdSlot(claim.courtId, claim.startsAt.toISOString()),
+        ),
+      ),
+    ])
+  })
+  return released.map(toClaimedSlot)
 }
