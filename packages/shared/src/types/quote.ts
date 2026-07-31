@@ -12,13 +12,60 @@
  * F0-19 menetapkan bentuknya; P1-07 mengunci `QuoteInput` bersama implementasi
  * pipeline-nya.
  */
-import type { PromoType, RateClass } from '../constants/enums.ts'
+import type { PromoType, RateClass, UserRole } from '../constants/enums.ts'
 
 /** Dinaikkan setiap kali logika pipeline berubah (docs/07 § 3.1). */
 export const QUOTE_PIPELINE_VERSION = 1
 
 /** Apa yang sedang dihargai — menentukan cabang step P1. */
 export type QuoteKind = 'booking' | 'event_registration' | 'tournament_registration'
+
+/** Aktor dipakai evaluator promo dan penyesuaian tier di masa depan. */
+export type QuoteActor = {
+  user_id?: string
+  role: UserRole
+  tier_code?: string
+}
+
+export type QuoteBookingItemInput = {
+  court_id: string
+  starts_at: string
+}
+
+export type QuoteAddonInput = {
+  addon_id: string
+  quantity: number
+}
+
+/** Input kanonik untuk satu evaluasi pipeline harga (docs/07 § 3.1). */
+export type QuoteInput =
+  | {
+      kind: 'booking'
+      at: string
+      actor: QuoteActor
+      booking: { items: readonly QuoteBookingItemInput[]; addons: readonly QuoteAddonInput[] }
+      promo_code?: string
+      apply_auto_promo?: boolean
+      reserve_promo?: boolean
+    }
+  | {
+      kind: 'event_registration'
+      at: string
+      actor: QuoteActor
+      event: { event_id: string }
+      promo_code?: string
+      apply_auto_promo?: boolean
+      reserve_promo?: boolean
+    }
+  | {
+      kind: 'tournament_registration'
+      at: string
+      actor: QuoteActor
+      tournament: { tournament_id: string }
+      promo_code?: string
+      apply_auto_promo?: boolean
+      reserve_promo?: boolean
+    }
 
 /** Jenis baris. `subtotal_amount` menjumlahkan `slot` + `fee`; `addon` terpisah. */
 export type QuoteLineType = 'slot' | 'addon' | 'fee' | 'discount'
