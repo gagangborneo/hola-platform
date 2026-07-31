@@ -1,4 +1,4 @@
-import { courts, type HolaDb, slotClaims } from '@hola/db'
+import { courtOperatingHours, courts, type HolaDb, slotClaims } from '@hola/db'
 import { and, eq, gte, inArray, sql } from 'drizzle-orm'
 import type { Tx } from '../../lib/transaction.ts'
 import type { CreateCourtInput, PatchCourtInput } from './courts.schema.ts'
@@ -87,4 +87,22 @@ export async function patchCourt(
     )
     .returning()
   return court ?? null
+}
+
+export async function replaceCourtOperatingHours(
+  tx: Tx,
+  input: {
+    courtId: string
+    hours: readonly { day_of_week: number; opens_time: string; closes_time: string }[]
+  },
+): Promise<void> {
+  await tx.delete(courtOperatingHours).where(eq(courtOperatingHours.courtId, input.courtId))
+  await tx.insert(courtOperatingHours).values(
+    input.hours.map((hour) => ({
+      courtId: input.courtId,
+      dayOfWeek: hour.day_of_week,
+      opensTime: hour.opens_time,
+      closesTime: hour.closes_time,
+    })),
+  )
 }

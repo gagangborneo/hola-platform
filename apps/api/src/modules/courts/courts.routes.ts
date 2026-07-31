@@ -9,8 +9,17 @@ import type { AuthVariables } from '../../middleware/logger.ts'
 import type { RequestVariables } from '../../middleware/request-id.ts'
 import { registerGuardedRoute, requireRole } from '../../middleware/require-role.ts'
 import type { Viewer } from '../auth/auth.types.ts'
-import { courtIdParam, createCourtSchema, patchCourtSchema } from './courts.schema.ts'
-import { createAdminCourt, patchAdminCourt } from './courts.service.ts'
+import {
+  courtIdParam,
+  createCourtSchema,
+  patchCourtSchema,
+  replaceOperatingHoursSchema,
+} from './courts.schema.ts'
+import {
+  createAdminCourt,
+  patchAdminCourt,
+  replaceAdminCourtOperatingHours,
+} from './courts.service.ts'
 
 type Variables = RequestVariables & CoreDependencyVariables & AuthVariables
 const PREFIX = '/api/v1/courts'
@@ -48,6 +57,7 @@ function ifMatch(value: string | undefined): number | undefined {
 
 registerGuardedRoute('POST', PREFIX)
 registerGuardedRoute('PATCH', `${PREFIX}/:id`)
+registerGuardedRoute('PUT', `${PREFIX}/:id/operating-hours`)
 
 export const courtsRoutes = new Hono<{ Variables: Variables }>()
   .post(
@@ -73,4 +83,19 @@ export const courtsRoutes = new Hono<{ Variables: Variables }>()
           }),
         ),
       ),
+  )
+  .put(
+    '/courts/:id/operating-hours',
+    authenticate,
+    requireRole([USER_ROLE.ADMIN]),
+    zValidator('param', courtIdParam, validationHook),
+    zValidator('json', replaceOperatingHoursSchema, validationHook),
+    async (c) => {
+      await replaceAdminCourtOperatingHours(
+        serviceContext(c),
+        c.req.valid('param').id,
+        c.req.valid('json'),
+      )
+      return c.body(null, 204)
+    },
   )

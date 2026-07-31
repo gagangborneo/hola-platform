@@ -14,8 +14,13 @@ import {
   findCourt,
   hasFutureActiveClaims,
   patchCourt,
+  replaceCourtOperatingHours,
 } from './courts.repository.ts'
-import type { CreateCourtInput, PatchCourtInput } from './courts.schema.ts'
+import type {
+  CreateCourtInput,
+  PatchCourtInput,
+  ReplaceOperatingHoursInput,
+} from './courts.schema.ts'
 
 export interface CourtsServiceContext
   extends Pick<CoreDependencies, 'db' | 'redis' | 'redisKeys' | 'safeRedis' | 'logger'> {
@@ -106,4 +111,30 @@ export async function patchAdminCourt(
     { logger: ctx.logger },
   )
   return updated
+}
+
+export async function replaceAdminCourtOperatingHours(
+  ctx: CourtsServiceContext,
+  courtId: string,
+  input: ReplaceOperatingHoursInput,
+): Promise<void> {
+  if (!(await findCourt(ctx.db, courtId))) throw err.notFound('Lapangan tidak ditemukan.')
+  await withTransaction(
+    ctx.db,
+    async ({ tx, afterCommit }) => {
+      await replaceCourtOperatingHours(tx, { courtId, hours: input.hours })
+      await writeAuditLog(tx, {
+        ...audit(ctx),
+        action: 'court.operating_hours_replace',
+        entityType: 'court',
+        entityId: courtId,
+        before: undefined,
+        after: input.hours,
+      })
+      afterCommit(() =>
+        invalidateAvailabilityPattern(ctx, availabilityPattern(ctx.redisKeys, `${courtId}:*`)),
+      )
+    },
+    { logger: ctx.logger },
+  )
 }
