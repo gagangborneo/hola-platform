@@ -231,13 +231,13 @@ nominal ini.
 
 ## P1.B — `pricing/` — pipeline harga · 5,5h
 
-- [ ] **P1-07** `0,5h` 🔒 — Tipe `QuoteInput` & `Quote` di `packages/shared/types/quote.ts`, `pipeline_version = 1`. *acuan:* [07 § 3.1](../docs/07-MODULE-PAYMENT.md#31-kontrak-fungsi)
-- [ ] **P1-08** `0,5h` — **P0** normalisasi & validasi: konversi WITA, deduplikasi `(court_id, starts_at)`, validasi keberadaan payable, batas keras 8 slot / 10 addon, **tanpa `Date.now()`** (memakai `input.at`)
-- [ ] **P1-09** `0,5h` — **P1** ekspansi line item per `kind` (`booking` → per slot; `event_registration` / `tournament_registration` → satu baris `fee`)
-- [ ] **P1-10** `1,5h` 🔒 — **P2** resolusi `price_rules`: 5 kondisi cocok + penentuan tipe hari 4 tingkat + **tie-break 6 tingkat** + `422 PRICE_RULE_NOT_FOUND` (tidak ada harga default). *acuan:* [07 § 3.3 P2](../docs/07-MODULE-PAYMENT.md#33-detail-per-step)
-- [ ] **P1-11** `0,5h` — **P3** proporsi durasi (`roundTo100`) + **P4** subtotal + **P5** addon (validasi `is_active`, quantity 1..20)
-- [ ] **P1-12** `0,5h` ⛔ D-06, D-07 — **P6** tier = 0, **P8** pajak (`tax_rate` dibaca dari `app_settings`, default 0), **P9** `fee_amount` = 0, **P10** pembulatan & total (floor 0, `rounding_adjustment_amount`)
-- [ ] **P1-13** `1h` 🔴 — Test `pricing/`: seluruh step P0–P10, seluruh tie-break P2, kedua contoh perhitungan, E-11, E-12 — **coverage wajib 100%**. *acuan:* [07 § 3.4](../docs/07-MODULE-PAYMENT.md#34-contoh-perhitungan-lengkap), [16 BR-TT-15](../docs/16-CONVENTIONS.md#82-aturan-test)
+- [x] **P1-07** `0,5h` 🔒 — Tipe `QuoteInput` & `Quote` di `packages/shared/types/quote.ts`, `pipeline_version = 1`. *acuan:* [07 § 3.1](../docs/07-MODULE-PAYMENT.md#31-kontrak-fungsi)
+- [x] **P1-08** `0,5h` — **P0** normalisasi & validasi: konversi WITA, deduplikasi `(court_id, starts_at)`, validasi keberadaan payable, batas keras 8 slot / 10 addon, **tanpa `Date.now()`** (memakai `input.at`)
+- [x] **P1-09** `0,5h` — **P1** ekspansi line item per `kind` (`booking` → per slot; `event_registration` / `tournament_registration` → satu baris `fee`)
+- [x] **P1-10** `1,5h` 🔒 — **P2** resolusi `price_rules`: 5 kondisi cocok + penentuan tipe hari 4 tingkat + **tie-break 6 tingkat** + `422 PRICE_RULE_NOT_FOUND` (tidak ada harga default). *acuan:* [07 § 3.3 P2](../docs/07-MODULE-PAYMENT.md#33-detail-per-step)
+- [x] **P1-11** `0,5h` — **P3** proporsi durasi (`roundTo100`) + **P4** subtotal + **P5** addon (validasi `is_active`, quantity 1..20)
+- [x] **P1-12** `0,5h` ⛔ D-06, D-07 — **P6** tier = 0, **P8** pajak (`tax_rate` dibaca dari `app_settings`, default 0), **P9** `fee_amount` = 0, **P10** pembulatan & total (floor 0, `rounding_adjustment_amount`)
+- [x] **P1-13** `1h` 🔴 — Test `pricing/`: seluruh step P0–P10, seluruh tie-break P2, kedua contoh perhitungan, E-11, E-12 — **coverage wajib 100%**. *acuan:* [07 § 3.4](../docs/07-MODULE-PAYMENT.md#34-contoh-perhitungan-lengkap), [16 BR-TT-15](../docs/16-CONVENTIONS.md#82-aturan-test)
 - [ ] **P1-14** `0,5h` — `GET /pricing/preview` + `POST /bookings/quote` (selalu `reserve_promo: false`, BR-P-06). *acuan:* [04 § 9.3](../docs/04-API-CONTRACT.md#93-katalog-lapangan--ketersediaan-publik), [04 § 9.4](../docs/04-API-CONTRACT.md#94-booking)
 
 ## P1.C — `slots/` — klaim slot · 5,5h
