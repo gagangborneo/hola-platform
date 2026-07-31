@@ -18,7 +18,7 @@ import { logger } from '../../config/logger.ts'
 import { redis, safeRedis } from '../../config/redis.ts'
 import { AppError } from '../../lib/errors.ts'
 import type { BookingsServiceContext } from './bookings.service.ts'
-import { createBooking } from './bookings.service.ts'
+import { checkInBooking, createBooking, markBookingAsNoShow } from './bookings.service.ts'
 
 const ids = {
   venue: '01930000-0000-7000-8000-000000000101',
@@ -51,6 +51,19 @@ function context(): BookingsServiceContext {
       employeeId: undefined,
     },
     clientPlatform: 'web',
+  }
+}
+
+function staffContext(at: Date): BookingsServiceContext {
+  return {
+    ...context(),
+    now: at,
+    actor: {
+      userId: ids.customer,
+      role: 'staff',
+      cafeTenantId: undefined,
+      employeeId: undefined,
+    },
   }
 }
 
@@ -193,5 +206,54 @@ describe('booking create dengan PostgreSQL dan Redis nyata', () => {
     await expect(createBooking(context(), input([12, 14]))).rejects.toMatchObject({
       code: 'SLOTS_NOT_CONTIGUOUS',
     })
+  })
+
+  it('BR-B-80 / BR-B-81 / BR-B-82: check-in hanya confirmed dan pada jendela waktu yang benar', async () => {
+    const created = await createBooking(context(), input([8]))
+    await db
+      .update(bookings)
+      .set({ status: 'confirmed', holdExpiresAt: null })
+      .where(eq(bookings.id, created.booking.id))
+
+    await expect(
+      checkInBooking(staffContext(new Date('2026-07-31T23:00:00.000Z')), {
+        bookingId: created.booking.id,
+        force: false,
+      }),
+    ).rejects.toMatchObject({ code: 'CONFLICT' })
+    const checkedIn = await checkInBooking(staffContext(new Date('2026-08-01T00:00:00.000Z')), {
+      bookingId: created.booking.id,
+      force: false,
+    })
+    expect(checkedIn.checkedInAt).toEqual(new Date('2026-08-01T00:00:00.000Z'))
+    await expect(
+      checkInBooking(staffContext(new Date('2026-08-01T00:00:00.000Z')), {
+        bookingId: created.booking.id,
+        force: false,
+      }),
+    ).rejects.toMatchObject({ code: 'BOOKING_ALREADY_CHECKED_IN' })
+  })
+
+  it('BR-B-84: no-show mengubah confirmed tanpa melepas slot claim', async () => {
+    const created = await createBooking(context(), input([9]))
+    await db
+      .update(bookings)
+      .set({ status: 'confirmed', holdExpiresAt: null })
+      .where(eq(bookings.id, created.booking.id))
+    await db
+      .update(slotClaims)
+      .set({ status: 'confirmed', holdExpiresAt: null })
+      .where(eq(slotClaims.bookingItemId, created.items[0]?.id ?? ''))
+
+    const noShow = await markBookingAsNoShow(
+      staffContext(new Date('2026-08-01T01:00:00.000Z')),
+      created.booking.id,
+    )
+    const [claim] = await db
+      .select()
+      .from(slotClaims)
+      .where(eq(slotClaims.bookingItemId, created.items[0]?.id ?? ''))
+    expect(noShow.status).toBe('no_show')
+    expect(claim?.status).toBe('confirmed')
   })
 })

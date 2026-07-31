@@ -157,3 +157,37 @@ export async function insertBookingAddons(
     })),
   )
 }
+
+export async function findBookingWithItems(
+  db: DbExecutor,
+  bookingId: string,
+): Promise<{ booking: BookingRow; items: BookingItemRow[] } | null> {
+  const [booking] = await db.select().from(bookings).where(eq(bookings.id, bookingId)).limit(1)
+  if (!booking) return null
+  const items = await db.select().from(bookingItems).where(eq(bookingItems.bookingId, bookingId))
+  return { booking, items }
+}
+
+export async function markBookingCheckedIn(
+  tx: Tx,
+  input: { bookingId: string; now: Date },
+): Promise<BookingRow | null> {
+  const [booking] = await tx
+    .update(bookings)
+    .set({ checkedInAt: input.now, updatedAt: input.now })
+    .where(and(eq(bookings.id, input.bookingId), eq(bookings.status, 'confirmed')))
+    .returning()
+  return booking ?? null
+}
+
+export async function markBookingNoShow(
+  tx: Tx,
+  input: { bookingId: string; now: Date },
+): Promise<BookingRow | null> {
+  const [booking] = await tx
+    .update(bookings)
+    .set({ status: 'no_show', updatedAt: input.now })
+    .where(and(eq(bookings.id, input.bookingId), eq(bookings.status, 'confirmed')))
+    .returning()
+  return booking ?? null
+}

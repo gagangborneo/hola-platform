@@ -24,10 +24,13 @@ import {
   type BookingRow,
   countCustomerBookings,
   findBookingSettings,
+  findBookingWithItems,
   insertBooking,
   insertBookingAddons,
   insertBookingItems,
   lockCustomerBookingLimits,
+  markBookingCheckedIn,
+  markBookingNoShow,
   type PersistedAddonQuoteLine,
   type PersistedSlotQuoteLine,
 } from './bookings.repository.ts'
@@ -271,4 +274,62 @@ export async function createBooking(
     await releaseReservedHoldKeys(ctx, reservedKeys)
     throw error
   }
+}
+
+function bookingWindow(items: readonly BookingItemRow[]): { startsAt: Date; endsAt: Date } {
+  const startsAt = items.reduce<Date | null>(
+    (earliest, item) => (!earliest || item.startsAt < earliest ? item.startsAt : earliest),
+    null,
+  )
+  const endsAt = items.reduce<Date | null>(
+    (latest, item) => (!latest || item.endsAt > latest ? item.endsAt : latest),
+    null,
+  )
+  if (!startsAt || !endsAt) throw err.internal()
+  return { startsAt, endsAt }
+}
+
+export async function checkInBooking(
+  ctx: BookingsServiceContext,
+  input: { bookingId: string; force: boolean },
+): Promise<BookingRow> {
+  const found = await findBookingWithItems(ctx.db, input.bookingId)
+  if (!found) throw err.notFound('Booking tidak ditemukan.')
+  if (found.booking.status !== 'confirmed')
+    throw err.conflict('Hanya booking confirmed yang dapat check-in.')
+  if (found.booking.checkedInAt) throw err.of(ERROR_CODE.BOOKING_ALREADY_CHECKED_IN)
+  const { startsAt, endsAt } = bookingWindow(found.items)
+  const opensAt = new Date(startsAt.getTime() - 30 * 60_000)
+  if (!input.force && (ctx.now < opensAt || ctx.now > endsAt)) {
+    throw err.conflict('Check-in hanya dapat dilakukan 30 menit sebelum sampai akhir jadwal.')
+  }
+  if (input.force && ctx.actor.role !== 'admin') throw err.forbidden()
+  return withTransaction(
+    ctx.db,
+    async ({ tx }) => {
+      const updated = await markBookingCheckedIn(tx, { bookingId: input.bookingId, now: ctx.now })
+      if (!updated) throw err.conflict('Status booking berubah. Muat ulang lalu coba lagi.')
+      return updated
+    },
+    { logger: ctx.logger },
+  )
+}
+
+export async function markBookingAsNoShow(
+  ctx: BookingsServiceContext,
+  bookingId: string,
+): Promise<BookingRow> {
+  const found = await findBookingWithItems(ctx.db, bookingId)
+  if (!found) throw err.notFound('Booking tidak ditemukan.')
+  if (found.booking.status !== 'confirmed')
+    throw err.conflict('Hanya booking confirmed yang dapat no-show.')
+  return withTransaction(
+    ctx.db,
+    async ({ tx }) => {
+      const updated = await markBookingNoShow(tx, { bookingId, now: ctx.now })
+      if (!updated) throw err.conflict('Status booking berubah. Muat ulang lalu coba lagi.')
+      return updated
+    },
+    { logger: ctx.logger },
+  )
 }

@@ -36,6 +36,11 @@ export const bookingQuoteSchema = bookingBody.pick({
 })
 
 export const createBookingSchema = bookingBody
+export const bookingIdParam = z.object({ id: idSchema })
+export const checkInBookingSchema = z
+  .object({ force: z.boolean().optional().default(false) })
+  .strict()
 
 export type BookingQuoteInput = z.infer<typeof bookingQuoteSchema>
 export type CreateBookingInput = z.infer<typeof createBookingSchema>
+export type CheckInBookingInput = z.infer<typeof checkInBookingSchema>

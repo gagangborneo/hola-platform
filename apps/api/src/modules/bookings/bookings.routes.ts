@@ -11,8 +11,19 @@ import { rateLimit } from '../../middleware/rate-limit.ts'
 import type { RequestVariables } from '../../middleware/request-id.ts'
 import { registerGuardedRoute, requireRole } from '../../middleware/require-role.ts'
 import type { Viewer } from '../auth/auth.types.ts'
-import { bookingQuoteSchema, createBookingSchema } from './bookings.schema.ts'
-import { type CreatedBooking, createBooking, quoteBooking } from './bookings.service.ts'
+import {
+  bookingIdParam,
+  bookingQuoteSchema,
+  checkInBookingSchema,
+  createBookingSchema,
+} from './bookings.schema.ts'
+import {
+  type CreatedBooking,
+  checkInBooking,
+  createBooking,
+  markBookingAsNoShow,
+  quoteBooking,
+} from './bookings.service.ts'
 
 type Variables = RequestVariables & CoreDependencyVariables & AuthVariables
 const PREFIX = '/api/v1/bookings'
@@ -64,6 +75,8 @@ function serializeCreated(result: CreatedBooking) {
 }
 
 registerGuardedRoute('POST', PREFIX)
+registerGuardedRoute('POST', `${PREFIX}/:id/check-in`)
+registerGuardedRoute('POST', `${PREFIX}/:id/no-show`)
 
 export const bookingsRoutes = new Hono<{ Variables: Variables }>()
   .use('/bookings/quote', rateLimit(RATE_LIMIT_BUCKET.BOOKING_QUOTE))
@@ -84,5 +97,35 @@ export const bookingsRoutes = new Hono<{ Variables: Variables }>()
     async (c) => {
       const booking = await createBooking(context(c), c.req.valid('json'))
       return c.json(ok(serializeCreated(booking)), 201)
+    },
+  )
+  .post(
+    '/bookings/:id/check-in',
+    authenticate,
+    requireRole([USER_ROLE.STAFF, USER_ROLE.ADMIN]),
+    zValidator('param', bookingIdParam, validationHook),
+    zValidator('json', checkInBookingSchema, validationHook),
+    async (c) => {
+      const booking = await checkInBooking(context(c), {
+        bookingId: c.req.valid('param').id,
+        force: c.req.valid('json').force,
+      })
+      return c.json(
+        ok({
+          id: booking.id,
+          status: booking.status,
+          checked_in_at: booking.checkedInAt?.toISOString() ?? null,
+        }),
+      )
+    },
+  )
+  .post(
+    '/bookings/:id/no-show',
+    authenticate,
+    requireRole([USER_ROLE.STAFF, USER_ROLE.ADMIN]),
+    zValidator('param', bookingIdParam, validationHook),
+    async (c) => {
+      const booking = await markBookingAsNoShow(context(c), c.req.valid('param').id)
+      return c.json(ok({ id: booking.id, status: booking.status }))
     },
   )
