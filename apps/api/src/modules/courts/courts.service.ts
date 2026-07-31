@@ -1,5 +1,5 @@
 import { ERROR_CODE, witaDateYmd, witaToInstant } from '@hola/shared'
-import { err } from '../../lib/errors.ts'
+import { err, UniqueViolationError } from '../../lib/errors.ts'
 import { withTransaction } from '../../lib/transaction.ts'
 import type { CoreDependencies } from '../../middleware/core-dependencies.ts'
 import type { Viewer } from '../auth/auth.types.ts'
@@ -12,13 +12,16 @@ import {
   type CourtRow,
   createCourt,
   findCourt,
+  findReadyCourtPhotos,
   hasFutureActiveClaims,
   patchCourt,
   replaceCourtOperatingHours,
+  replaceCourtPhotos,
 } from './courts.repository.ts'
 import type {
   CreateCourtInput,
   PatchCourtInput,
+  ReplaceCourtPhotosInput,
   ReplaceOperatingHoursInput,
 } from './courts.schema.ts'
 
@@ -45,33 +48,46 @@ export async function createAdminCourt(
   ctx: CourtsServiceContext,
   input: CreateCourtInput,
 ): Promise<CourtRow> {
-  return withTransaction(
-    ctx.db,
-    async ({ tx, afterCommit }) => {
-      const court = await createCourt(tx, input)
-      await writeAuditLog(tx, {
-        ...audit(ctx),
-        action: 'court.create',
-        entityType: 'court',
-        entityId: court.id,
-        before: undefined,
-        after: court,
-      })
-      afterCommit(() =>
-        invalidateAvailabilityPattern(ctx, availabilityPattern(ctx.redisKeys, `${court.id}:*`)),
-      )
-      return court
-    },
-    { logger: ctx.logger },
-  )
+  try {
+    return await withTransaction(
+      ctx.db,
+      async ({ tx, afterCommit }) => {
+        const court = await createCourt(tx, input)
+        await writeAuditLog(tx, {
+          ...audit(ctx),
+          action: 'court.create',
+          entityType: 'court',
+          entityId: court.id,
+          before: undefined,
+          after: court,
+        })
+        afterCommit(() =>
+          invalidateAvailabilityPattern(ctx, availabilityPattern(ctx.redisKeys, `${court.id}:*`)),
+        )
+        return court
+      },
+      { logger: ctx.logger },
+    )
+  } catch (error) {
+    if (error instanceof UniqueViolationError) throw err.conflict('Kode lapangan sudah digunakan.')
+    throw error
+  }
 }
 
 export async function patchAdminCourt(
   ctx: CourtsServiceContext,
-  input: { courtId: string; version: number | undefined; patch: PatchCourtInput },
+  input: { courtId: string; version: number; patch: PatchCourtInput },
 ): Promise<CourtRow> {
   const before = await findCourt(ctx.db, input.courtId)
   if (!before) throw err.notFound('Lapangan tidak ditemukan.')
+  const nextMinSlots = input.patch.min_slots_per_booking ?? before.minSlotsPerBooking
+  const nextMaxSlots = input.patch.max_slots_per_booking ?? before.maxSlotsPerBooking
+  if (nextMinSlots > nextMaxSlots) {
+    throw err.validation(
+      { field: 'min_slots_per_booking' },
+      'min_slots_per_booking tidak boleh melebihi max_slots_per_booking.',
+    )
+  }
   if (
     input.patch.slot_duration_minutes !== undefined &&
     input.patch.slot_duration_minutes !== before.slotDurationMinutes
@@ -134,6 +150,39 @@ export async function replaceAdminCourtOperatingHours(
       afterCommit(() =>
         invalidateAvailabilityPattern(ctx, availabilityPattern(ctx.redisKeys, `${courtId}:*`)),
       )
+    },
+    { logger: ctx.logger },
+  )
+}
+
+export async function replaceAdminCourtPhotos(
+  ctx: CourtsServiceContext,
+  courtId: string,
+  input: ReplaceCourtPhotosInput,
+): Promise<void> {
+  if (!(await findCourt(ctx.db, courtId))) throw err.notFound('Lapangan tidak ditemukan.')
+  const media = await findReadyCourtPhotos(ctx.db, input.media_ids)
+  const validMedia =
+    media.length === input.media_ids.length &&
+    media.every((item) => item.kind === 'court_photo' && item.status === 'ready')
+  if (!validMedia) {
+    throw err.validation(
+      { field: 'media_ids' },
+      'Setiap foto harus berupa media court_photo yang sudah siap digunakan.',
+    )
+  }
+  await withTransaction(
+    ctx.db,
+    async ({ tx }) => {
+      await replaceCourtPhotos(tx, { courtId, mediaIds: input.media_ids })
+      await writeAuditLog(tx, {
+        ...audit(ctx),
+        action: 'court.photos_replace',
+        entityType: 'court',
+        entityId: courtId,
+        before: undefined,
+        after: { media_ids: input.media_ids },
+      })
     },
     { logger: ctx.logger },
   )

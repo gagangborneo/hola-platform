@@ -234,6 +234,7 @@ erDiagram
     venues ||--o{ courts : "berisi"
     sports ||--o{ courts : "mengelompokkan"
     courts ||--o{ court_operating_hours : "punya"
+    courts ||--o{ court_photos : "menampilkan"
     courts ||--o{ court_maintenances : "punya"
     courts ||--o{ price_rules : "punya"
     sports ||--o{ price_rules : "default untuk"
@@ -1123,6 +1124,14 @@ Satu baris di v1. Kolom: `id`, `name`, `address`, `city`, `timezone` (default `A
 `id`, `court_id`, `day_of_week` (smallint 0–6), `opens_time`, `closes_time`.
 UNIQUE `(court_id, day_of_week)` — satu rentang per hari di v1. Rentang terpisah (mis. tutup
 siang) **tidak** didukung v1; gunakan `court_maintenances` untuk penutupan berulang.
+
+### `court_photos`
+`id`, `court_id` FK, `media_id` FK, `position`, `created_at`.
+
+Relasi ini menyimpan daftar dan urutan foto lapangan yang sudah siap pakai (`media_files.kind =
+'court_photo'`, `status = 'ready'`). `position` dimulai dari 0; UNIQUE `(court_id, position)` dan
+`(court_id, media_id)` mencegah urutan atau foto ganda. Daftar diganti secara atomik oleh
+`PUT /courts/{id}/photos`; tidak disimpan sebagai JSON pada tabel `courts`.
 
 ### `court_maintenances`
 `id`, `court_id`, `starts_at`, `ends_at`, `reason`, `created_by_user_id`, `cancelled_at`.

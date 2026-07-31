@@ -242,32 +242,37 @@ flowchart TD
 
 ### 5.2 Bentuk response
 
-`GET /courts/{court_id}/availability?date=2026-07-28`
+`GET /courts/{court_id}/availability?date=2026-07-28` atau
+`GET /courts/{court_id}/availability?date_from=2026-07-28&date_to=2026-07-30`
 
 ```json
 {
   "data": {
     "court_id": "018f...",
-    "court_code": "PDL-01",
-    "date": "2026-07-28",
-    "slot_duration_minutes": 60,
-    "day_type": "weekday",
-    "slots": [
+    "days": [
       {
-        "starts_at": "2026-07-28T06:00:00+08:00",
-        "ends_at": "2026-07-28T07:00:00+08:00",
-        "is_available": true,
-        "unavailable_reason": null,
-        "rate_class": "offpeak",
-        "price_amount": 150000
-      },
-      {
-        "starts_at": "2026-07-28T19:00:00+08:00",
-        "ends_at": "2026-07-28T20:00:00+08:00",
-        "is_available": false,
-        "unavailable_reason": "booking",
-        "rate_class": "peak",
-        "price_amount": 250000
+        "court_code": "PDL-01",
+        "date": "2026-07-28",
+        "slot_duration_minutes": 60,
+        "day_type": "weekday",
+        "slots": [
+          {
+            "starts_at": "2026-07-28T06:00:00+08:00",
+            "ends_at": "2026-07-28T07:00:00+08:00",
+            "is_available": true,
+            "unavailable_reason": null,
+            "rate_class": "offpeak",
+            "price_amount": 150000
+          },
+          {
+            "starts_at": "2026-07-28T19:00:00+08:00",
+            "ends_at": "2026-07-28T20:00:00+08:00",
+            "is_available": false,
+            "unavailable_reason": "booking",
+            "rate_class": "peak",
+            "price_amount": 250000
+          }
+        ]
       }
     ]
   },
@@ -275,7 +280,12 @@ flowchart TD
 }
 ```
 
-`unavailable_reason` ∈ `booking` | `event` | `match` | `maintenance` | `past` | `closed`.
+`days` selalu berupa array, termasuk ketika hanya satu `date` diminta. `date` tidak boleh dipakai
+bersama `date_from`/`date_to`; range wajib lengkap dan maksimal 14 hari inklusif.
+
+`unavailable_reason` ∈ `booking` | `event` | `match` | `maintenance` | `past` | `closed` |
+`beyond_horizon`. Nilai terakhir membedakan tanggal yang memang tidak dapat dipesan karena
+horizon dari lapangan yang tutup atau di luar jam operasional.
 
 Aturan privasi: response ketersediaan **tidak** memuat identitas pemesan. Nama customer hanya
 terlihat di endpoint booking (butuh role staff/admin).

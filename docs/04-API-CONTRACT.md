@@ -614,7 +614,7 @@ Otorisasi lengkap ada di [05 § 6](05-AUTH.md#6-rbac-matrix-per-endpoint).
 | GET | `/sports` | — | Daftar olahraga aktif |
 | GET | `/courts` | O | Filter: `sport_id`, `status`, `is_indoor`. Sort: `sort_order`, `code` |
 | GET | `/courts/{court_id}` | — | Detail + foto + jam operasional |
-| GET | `/courts/{court_id}/availability` | — | **Endpoint inti booking.** Query: `date` (wajib), atau `date_from`+`date_to` (maks 14 hari). Response: grid slot + `is_available` + `rate_class` + `price_amount`. Memakai cache Redis (`X-Cache`) |
+| GET | `/courts/{court_id}/availability` | — | **Endpoint inti booking.** Query tepat salah satu: `date`, atau `date_from`+`date_to` (maks 14 hari). Response stabil `data.days[]`: grid slot + `is_available` + `rate_class` + `price_amount`. Memakai cache Redis per hari (`X-Cache`) |
 | GET | `/availability` | — | Ketersediaan lintas court. Query: `date` (wajib), `sport_id`, `starts_time`, `ends_time`, `slot_count`. Untuk halaman "cari lapangan kosong" |
 | GET | `/addons` | — | Daftar addon aktif |
 | GET | `/pricing/preview` | — | Harga per rate class untuk satu court & tanggal (tanpa membuat quote) |

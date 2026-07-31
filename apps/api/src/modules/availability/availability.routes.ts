@@ -8,7 +8,7 @@ import type { AuthVariables } from '../../middleware/logger.ts'
 import { rateLimit } from '../../middleware/rate-limit.ts'
 import type { RequestVariables } from '../../middleware/request-id.ts'
 import { availabilityCourtParam, availabilityQuery } from './availability.schema.ts'
-import { getCourtAvailability } from './availability.service.ts'
+import { getCourtAvailabilityRange } from './availability.service.ts'
 
 type Variables = RequestVariables & CoreDependencyVariables & AuthVariables
 
@@ -26,9 +26,16 @@ export const availabilityRoutes = new Hono<{ Variables: Variables }>()
       const core = c.get('core')
       const params = c.req.valid('param')
       const query = c.req.valid('query')
-      const result = await getCourtAvailability(
+      const dateRange =
+        'date' in query
+          ? { dateFrom: query.date, dateTo: query.date }
+          : { dateFrom: query.date_from, dateTo: query.date_to }
+      const result = await getCourtAvailabilityRange(
         { ...core, now: c.get('now') },
-        { courtId: params.court_id, date: query.date },
+        {
+          courtId: params.court_id,
+          ...dateRange,
+        },
       )
       c.header(HEADER.CACHE, result.cache)
       return c.json(

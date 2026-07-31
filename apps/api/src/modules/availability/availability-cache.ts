@@ -15,7 +15,7 @@ export const availabilitySlotSchema = z.object({
   ends_at: z.string(),
   is_available: z.boolean(),
   unavailable_reason: z
-    .enum(['booking', 'event', 'match', 'maintenance', 'past', 'closed'])
+    .enum(['booking', 'event', 'match', 'maintenance', 'past', 'closed', 'beyond_horizon'])
     .nullable(),
   rate_class: z.enum(['peak', 'offpeak', 'special']).nullable(),
   price_amount: z.number().int().nullable(),

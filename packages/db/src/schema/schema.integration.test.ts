@@ -88,6 +88,7 @@ describe('F0-31 + P1.A — tabel schema yang sudah dijadwalkan', () => {
     'bookings',
     'court_maintenances',
     'court_operating_hours',
+    'court_photos',
     'courts',
     'customer_profiles',
     'finance_events',
@@ -137,6 +138,7 @@ describe('F0-31 — constraint yang menjaga invariant (docs/03 § 18)', () => {
     'ck_bookings_customer_or_guest',
     'ck_court_operating_hours_dow',
     'ck_court_operating_hours_range',
+    'ck_court_photos_position',
     'ck_courts_slot_duration', // C-24
     'ck_payments_single_payable', // C-5
     'ck_price_rules_scope',
@@ -158,6 +160,8 @@ describe('F0-31 — constraint yang menjaga invariant (docs/03 § 18)', () => {
     'uq_booking_items_booking_court_starts',
     'uq_bookings_booking_code',
     'uq_court_operating_hours_court_day',
+    'uq_court_photos_court_media',
+    'uq_court_photos_court_position',
     'uq_finance_events_source_kind',
     'uq_idempotency_records_key', // C-22
     'uq_media_files_object_key',

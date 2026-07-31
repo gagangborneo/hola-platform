@@ -1,4 +1,5 @@
 import {
+  appSettings,
   bookingItems,
   bookings,
   courtMaintenances,
@@ -9,13 +10,13 @@ import {
   sports,
   venues,
 } from '@hola/db'
-import { createRedisKeys } from '@hola/shared'
+import { createRedisKeys, SETTINGS_KEY } from '@hola/shared'
 import { eq } from 'drizzle-orm'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { db } from '../../config/db.ts'
 import { redis, safeRedis } from '../../config/redis.ts'
 import type { AvailabilityServiceContext } from './availability.service.ts'
-import { getCourtAvailability } from './availability.service.ts'
+import { getCourtAvailability, getCourtAvailabilityRange } from './availability.service.ts'
 import type { AvailabilityRedisClient } from './availability-cache.ts'
 
 const ids = {
@@ -30,6 +31,7 @@ const ids = {
 } as const
 
 const date = '2026-08-01'
+const futureDate = '2026-10-01'
 const startsAt = new Date('2026-08-01T00:00:00.000Z')
 const now = new Date('2026-07-31T00:00:00.000Z')
 const redisKeys = createRedisKeys('local')
@@ -60,6 +62,7 @@ async function cleanFixtures(): Promise<void> {
   await db.delete(bookings).where(eq(bookings.id, ids.booking))
   await db.delete(courtMaintenances).where(eq(courtMaintenances.id, ids.maintenance))
   await db.delete(priceRules).where(eq(priceRules.id, ids.priceRule))
+  await db.delete(appSettings).where(eq(appSettings.key, SETTINGS_KEY.BOOKING_HORIZON_DAYS))
   await db.delete(courtOperatingHours).where(eq(courtOperatingHours.courtId, ids.court))
   await db.delete(courts).where(eq(courts.id, ids.court))
   await db.delete(sports).where(eq(sports.id, ids.sport))
@@ -80,6 +83,18 @@ async function insertFixtures(): Promise<void> {
   await db.insert(courtOperatingHours).values({
     courtId: ids.court,
     dayOfWeek: 6,
+    opensTime: '08:00',
+    closesTime: '10:00',
+  })
+  await db.insert(courtOperatingHours).values({
+    courtId: ids.court,
+    dayOfWeek: 0,
+    opensTime: '08:00',
+    closesTime: '10:00',
+  })
+  await db.insert(courtOperatingHours).values({
+    courtId: ids.court,
+    dayOfWeek: 4,
     opensTime: '08:00',
     closesTime: '10:00',
   })
@@ -208,5 +223,31 @@ describe('availability dengan PostgreSQL dan Redis nyata', () => {
     expect(malformedCache.cache).toBe('MISS')
     expect(redisUnavailable.cache).toBe('MISS')
     expect(redisUnavailable.data.slots).toEqual(malformedCache.data.slots)
+  })
+
+  it('BR-B-47: range inklusif maksimal 14 hari selalu mengembalikan data.days[]', async () => {
+    const result = await getCourtAvailabilityRange(context(), {
+      courtId: ids.court,
+      dateFrom: '2026-08-01',
+      dateTo: '2026-08-02',
+    })
+
+    expect(result.data).toMatchObject({ court_id: ids.court })
+    expect(result.data.days.map((day) => day.date)).toEqual(['2026-08-01', '2026-08-02'])
+  })
+
+  it('E-19 / BR-B-47: tanggal di luar horizon tetap 200-style dengan alasan beyond_horizon', async () => {
+    await db.insert(appSettings).values({ key: SETTINGS_KEY.BOOKING_HORIZON_DAYS, value: 60 })
+
+    const result = await getCourtAvailability(context(), { courtId: ids.court, date: futureDate })
+
+    expect(result.warnings).toEqual([
+      { code: 'BEYOND_BOOKING_HORIZON', message: 'Tanggal melampaui horizon booking.' },
+    ])
+    expect(result.data.slots).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ is_available: false, unavailable_reason: 'beyond_horizon' }),
+      ]),
+    )
   })
 })

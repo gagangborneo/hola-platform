@@ -16,6 +16,7 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 import { db } from '../../config/db.ts'
 import { logger } from '../../config/logger.ts'
 import { redis, safeRedis } from '../../config/redis.ts'
+import { listAdminSlotClaims } from './slot-claims.service.ts'
 import {
   claimSlots,
   releaseSlots,
@@ -232,6 +233,23 @@ describe('slots.claim dengan PostgreSQL dan Redis nyata', () => {
     expect(await redis.get(redisKeys.holdSlot(ids.court, startsAt.toISOString()))).toBeNull()
     const [stored] = await db.select().from(slotClaims).where(eq(slotClaims.id, claimId))
     expect(stored).toMatchObject({ status: 'released', releaseReason: 'booking_cancelled' })
+  })
+
+  it('P1-31: kalender admin membaca klaim dengan filter court tanpa jalur mutasi kedua', async () => {
+    await claimSlots(context(now), bookingInput(ids.itemOne))
+
+    const result = await listAdminSlotClaims(db, {
+      court_id: ids.court,
+      page: 1,
+      per_page: 25,
+    })
+
+    expect(result.totalCount).toBe(1)
+    expect(result.rows[0]).toMatchObject({
+      courtId: ids.court,
+      claimType: 'booking',
+      status: 'held',
+    })
   })
 
   it('S-10 dan S-11: booking masa lalu atau hari tutup ditolak, klaim maintenance internal diizinkan', async () => {

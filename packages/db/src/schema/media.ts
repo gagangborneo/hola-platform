@@ -6,7 +6,9 @@ import { sql } from 'drizzle-orm'
 import {
   bigint,
   boolean,
+  check,
   index,
+  integer,
   jsonb,
   pgTable,
   text,
@@ -21,6 +23,7 @@ import {
   notificationStatusEnum,
 } from './enums.ts'
 import { users } from './identity.ts'
+import { courts } from './venue.ts'
 
 /**
  * Berkas di object storage. Baris dibuat berstatus `pending` saat presign, lalu
@@ -53,6 +56,31 @@ export const mediaFiles = pgTable(
     // J-32 menyapu baris pending yang menua.
     index('idx_media_files_status_created').on(t.status, t.createdAt),
     index('idx_media_files_related').on(t.relatedType, t.relatedId),
+  ],
+)
+
+/**
+ * Urutan foto publik sebuah lapangan. Relasi eksplisit menjaga referential
+ * integrity dan membuat `PUT /courts/{id}/photos` dapat mengganti set lengkap
+ * secara atomik tanpa menyimpan daftar ID di JSON.
+ */
+export const courtPhotos = pgTable(
+  'court_photos',
+  {
+    id: pkId(),
+    courtId: uuid('court_id')
+      .notNull()
+      .references(() => courts.id, { onDelete: 'cascade' }),
+    mediaId: uuid('media_id')
+      .notNull()
+      .references(() => mediaFiles.id, { onDelete: 'cascade' }),
+    position: integer('position').notNull(),
+    ...createdAtOnly,
+  },
+  (t) => [
+    uniqueIndex('uq_court_photos_court_position').on(t.courtId, t.position),
+    uniqueIndex('uq_court_photos_court_media').on(t.courtId, t.mediaId),
+    check('ck_court_photos_position', sql`${t.position} >= 0`),
   ],
 )
 

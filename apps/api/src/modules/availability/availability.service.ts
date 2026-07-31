@@ -35,6 +35,13 @@ export interface AvailabilityResult {
   warnings: AvailabilityWarning[]
 }
 
+export interface AvailabilityRangeResult {
+  data: { court_id: string; days: AvailabilityData[] }
+  generatedAt: string
+  cache: 'HIT' | 'MISS'
+  warnings: AvailabilityWarning[]
+}
+
 function positiveInteger(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isInteger(value) && value > 0 ? value : fallback
 }
@@ -131,7 +138,14 @@ export async function getCourtAvailability(
       slotDate: input.date,
       now: ctx.now,
     }),
-    pricesForGrid(ctx, { courtId: input.courtId, startsAtList: grid.map((slot) => slot.startsAt) }),
+    beyondHorizon
+      ? Promise.resolve(
+          new Map<string, { priceAmount: number; rateClass: 'peak' | 'offpeak' | 'special' }>(),
+        )
+      : pricesForGrid(ctx, {
+          courtId: input.courtId,
+          startsAtList: grid.map((slot) => slot.startsAt),
+        }),
   ])
   const claimsByStart = new Map(
     claims.map((claim) => [claim.startsAt.toISOString(), claim.claimType]),
@@ -148,7 +162,7 @@ export async function getCourtAvailability(
       const claimType = claimsByStart.get(startsAt)
       const unavailableReason = isPast(slot.startsAt, ctx.now)
         ? 'past'
-        : (claimType ?? (beyondHorizon ? 'closed' : null))
+        : (claimType ?? (beyondHorizon ? 'beyond_horizon' : null))
       return {
         starts_at: startsAt,
         ends_at: slot.endsAt.toISOString(),
@@ -169,5 +183,52 @@ export function assertAvailabilityRange(dateFrom: string, dateTo: string): void 
   )
   if (days < 0 || days + 1 > AVAILABILITY_MAX_RANGE_DAYS) {
     throw err.validation({ field: 'date_range', max_days: AVAILABILITY_MAX_RANGE_DAYS })
+  }
+}
+
+function datesInRange(dateFrom: string, dateTo: string): string[] {
+  const dates: string[] = []
+  const last = witaToInstant(dateTo, 0).getTime()
+  for (
+    let timestamp = witaToInstant(dateFrom, 0).getTime();
+    timestamp <= last;
+    timestamp += 86_400_000
+  ) {
+    dates.push(witaDateYmd(new Date(timestamp)))
+  }
+  return dates
+}
+
+/**
+ * Cache tetap per hari (BR-B-41); range hanya menggabungkan pembacaan harian
+ * sehingga invalidasi satu court/tanggal tidak pernah membiarkan data gabungan basi.
+ */
+export async function getCourtAvailabilityRange(
+  ctx: AvailabilityServiceContext,
+  input: { courtId: string; dateFrom: string; dateTo: string },
+): Promise<AvailabilityRangeResult> {
+  assertAvailabilityRange(input.dateFrom, input.dateTo)
+  const results = await Promise.all(
+    datesInRange(input.dateFrom, input.dateTo).map((date) =>
+      getCourtAvailability(ctx, { courtId: input.courtId, date }),
+    ),
+  )
+  const first = results[0]
+  if (!first) throw err.validation({ field: 'date_range' })
+  const warnings = results
+    .flatMap((result) => result.warnings)
+    .filter(
+      (warning, index, all) =>
+        all.findIndex((candidate) => candidate.code === warning.code) === index,
+    )
+  return {
+    data: { court_id: input.courtId, days: results.map((result) => result.data) },
+    generatedAt:
+      results
+        .map((result) => result.generatedAt)
+        .sort()
+        .at(-1) ?? ctx.now.toISOString(),
+    cache: results.every((result) => result.cache === 'HIT') ? 'HIT' : 'MISS',
+    warnings,
   }
 }

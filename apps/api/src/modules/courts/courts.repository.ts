@@ -1,5 +1,13 @@
-import { courtOperatingHours, courts, type HolaDb, slotClaims } from '@hola/db'
+import {
+  courtOperatingHours,
+  courtPhotos,
+  courts,
+  type HolaDb,
+  mediaFiles,
+  slotClaims,
+} from '@hola/db'
 import { and, eq, gte, inArray, sql } from 'drizzle-orm'
+import { translateDbError } from '../../lib/errors.ts'
 import type { Tx } from '../../lib/transaction.ts'
 import type { CreateCourtInput, PatchCourtInput } from './courts.schema.ts'
 
@@ -12,26 +20,30 @@ export async function findCourt(db: DbExecutor, id: string): Promise<CourtRow | 
 }
 
 export async function createCourt(db: Tx, input: CreateCourtInput): Promise<CourtRow> {
-  const [court] = await db
-    .insert(courts)
-    .values({
-      venueId: input.venue_id,
-      sportId: input.sport_id,
-      code: input.code,
-      name: input.name,
-      ...(input.description === undefined ? {} : { description: input.description }),
-      ...(input.surface === undefined ? {} : { surface: input.surface }),
-      isIndoor: input.is_indoor,
-      slotDurationMinutes: input.slot_duration_minutes,
-      minSlotsPerBooking: input.min_slots_per_booking,
-      maxSlotsPerBooking: input.max_slots_per_booking,
-      ...(input.max_players === undefined ? {} : { maxPlayers: input.max_players }),
-      status: input.status,
-      sortOrder: input.sort_order,
-    })
-    .returning()
-  if (!court) throw new Error('Court insert tidak mengembalikan baris')
-  return court
+  try {
+    const [court] = await db
+      .insert(courts)
+      .values({
+        venueId: input.venue_id,
+        sportId: input.sport_id,
+        code: input.code,
+        name: input.name,
+        ...(input.description === undefined ? {} : { description: input.description }),
+        ...(input.surface === undefined ? {} : { surface: input.surface }),
+        isIndoor: input.is_indoor,
+        slotDurationMinutes: input.slot_duration_minutes,
+        minSlotsPerBooking: input.min_slots_per_booking,
+        maxSlotsPerBooking: input.max_slots_per_booking,
+        ...(input.max_players === undefined ? {} : { maxPlayers: input.max_players }),
+        status: input.status,
+        sortOrder: input.sort_order,
+      })
+      .returning()
+    if (!court) throw new Error('Court insert tidak mengembalikan baris')
+    return court
+  } catch (error) {
+    throw translateDbError(error)
+  }
 }
 
 export async function hasFutureActiveClaims(
@@ -55,7 +67,7 @@ export async function hasFutureActiveClaims(
 
 export async function patchCourt(
   db: Tx,
-  input: { id: string; version: number | undefined; patch: PatchCourtInput },
+  input: { id: string; version: number; patch: PatchCourtInput },
 ): Promise<CourtRow | null> {
   const [court] = await db
     .update(courts)
@@ -79,12 +91,7 @@ export async function patchCourt(
       ...(input.patch.sort_order === undefined ? {} : { sortOrder: input.patch.sort_order }),
       version: sql`${courts.version} + 1`,
     })
-    .where(
-      and(
-        eq(courts.id, input.id),
-        ...(input.version === undefined ? [] : [eq(courts.version, input.version)]),
-      ),
-    )
+    .where(and(eq(courts.id, input.id), eq(courts.version, input.version)))
     .returning()
   return court ?? null
 }
@@ -103,6 +110,32 @@ export async function replaceCourtOperatingHours(
       dayOfWeek: hour.day_of_week,
       opensTime: hour.opens_time,
       closesTime: hour.closes_time,
+    })),
+  )
+}
+
+export async function findReadyCourtPhotos(
+  db: DbExecutor,
+  mediaIds: readonly string[],
+): Promise<Array<Pick<typeof mediaFiles.$inferSelect, 'id' | 'kind' | 'status'>>> {
+  if (mediaIds.length === 0) return []
+  return db
+    .select({ id: mediaFiles.id, kind: mediaFiles.kind, status: mediaFiles.status })
+    .from(mediaFiles)
+    .where(inArray(mediaFiles.id, [...mediaIds]))
+}
+
+export async function replaceCourtPhotos(
+  tx: Tx,
+  input: { courtId: string; mediaIds: readonly string[] },
+): Promise<void> {
+  await tx.delete(courtPhotos).where(eq(courtPhotos.courtId, input.courtId))
+  if (input.mediaIds.length === 0) return
+  await tx.insert(courtPhotos).values(
+    input.mediaIds.map((mediaId, position) => ({
+      courtId: input.courtId,
+      mediaId,
+      position,
     })),
   )
 }

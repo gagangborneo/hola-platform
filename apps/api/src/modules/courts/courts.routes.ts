@@ -13,12 +13,15 @@ import {
   courtIdParam,
   createCourtSchema,
   patchCourtSchema,
+  replaceCourtPhotosSchema,
   replaceOperatingHoursSchema,
 } from './courts.schema.ts'
+import { serializeCourt } from './courts.serializer.ts'
 import {
   createAdminCourt,
   patchAdminCourt,
   replaceAdminCourtOperatingHours,
+  replaceAdminCourtPhotos,
 } from './courts.service.ts'
 
 type Variables = RequestVariables & CoreDependencyVariables & AuthVariables
@@ -48,8 +51,8 @@ function serviceContext(c: {
     userAgent: c.req.header('user-agent'),
   }
 }
-function ifMatch(value: string | undefined): number | undefined {
-  if (value === undefined) return undefined
+function ifMatch(value: string | undefined): number {
+  if (value === undefined) throw err.validation({ field: 'If-Match' })
   const n = Number(value)
   if (!Number.isInteger(n) || n < 1) throw err.validation({ field: 'If-Match' })
   return n
@@ -58,6 +61,7 @@ function ifMatch(value: string | undefined): number | undefined {
 registerGuardedRoute('POST', PREFIX)
 registerGuardedRoute('PATCH', `${PREFIX}/:id`)
 registerGuardedRoute('PUT', `${PREFIX}/:id/operating-hours`)
+registerGuardedRoute('PUT', `${PREFIX}/:id/photos`)
 
 export const courtsRoutes = new Hono<{ Variables: Variables }>()
   .post(
@@ -65,7 +69,10 @@ export const courtsRoutes = new Hono<{ Variables: Variables }>()
     authenticate,
     requireRole([USER_ROLE.ADMIN]),
     zValidator('json', createCourtSchema, validationHook),
-    async (c) => c.json(ok(await createAdminCourt(serviceContext(c), c.req.valid('json'))), 201),
+    async (c) => {
+      const court = await createAdminCourt(serviceContext(c), c.req.valid('json'))
+      return c.json(ok(serializeCourt(court)), 201)
+    },
   )
   .patch(
     '/courts/:id',
@@ -73,16 +80,14 @@ export const courtsRoutes = new Hono<{ Variables: Variables }>()
     requireRole([USER_ROLE.ADMIN]),
     zValidator('param', courtIdParam, validationHook),
     zValidator('json', patchCourtSchema, validationHook),
-    async (c) =>
-      c.json(
-        ok(
-          await patchAdminCourt(serviceContext(c), {
-            courtId: c.req.valid('param').id,
-            version: ifMatch(c.req.header('if-match')),
-            patch: c.req.valid('json'),
-          }),
-        ),
-      ),
+    async (c) => {
+      const court = await patchAdminCourt(serviceContext(c), {
+        courtId: c.req.valid('param').id,
+        version: ifMatch(c.req.header('if-match')),
+        patch: c.req.valid('json'),
+      })
+      return c.json(ok(serializeCourt(court)))
+    },
   )
   .put(
     '/courts/:id/operating-hours',
@@ -96,6 +101,17 @@ export const courtsRoutes = new Hono<{ Variables: Variables }>()
         c.req.valid('param').id,
         c.req.valid('json'),
       )
+      return c.body(null, 204)
+    },
+  )
+  .put(
+    '/courts/:id/photos',
+    authenticate,
+    requireRole([USER_ROLE.ADMIN]),
+    zValidator('param', courtIdParam, validationHook),
+    zValidator('json', replaceCourtPhotosSchema, validationHook),
+    async (c) => {
+      await replaceAdminCourtPhotos(serviceContext(c), c.req.valid('param').id, c.req.valid('json'))
       return c.body(null, 204)
     },
   )

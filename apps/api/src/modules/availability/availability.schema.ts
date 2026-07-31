@@ -3,5 +3,8 @@ import { z } from 'zod'
 
 export const availabilityCourtParam = z.object({ court_id: idSchema })
 
-/** Respons multi-tanggal belum dikontrak; jalur publik v1 memakai satu tanggal. */
-export const availabilityQuery = z.object({ date: isoDate })
+/** Satu tanggal atau range inklusif; bentuk response selalu `days[]`. */
+export const availabilityQuery = z.union([
+  z.object({ date: isoDate }).strict(),
+  z.object({ date_from: isoDate, date_to: isoDate }).strict(),
+])
