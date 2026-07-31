@@ -13,7 +13,7 @@ import { enumValues, PG_ENUMS } from '@hola/shared'
 import { eq, sql } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createDb, type HolaDb } from '../client.ts'
-import { uuidv7Timestamp } from '../uuid.ts'
+import { uuidv7, uuidv7Timestamp } from '../uuid.ts'
 import { ALL_SEQUENCES } from './sequences.ts'
 import { addons } from './venue.ts'
 
@@ -77,31 +77,44 @@ describe('F0-31 — enum PostgreSQL ≡ PG_ENUMS di @hola/shared', () => {
   })
 })
 
-describe('F0-31 — tabel fondasi Phase 0 (ROADMAP § 3.2)', () => {
-  /** Persis daftar di ROADMAP § 3.2, kolom `packages/db`. */
+describe('F0-31 + P1.A — tabel schema yang sudah dijadwalkan', () => {
+  /** Persis tabel Foundation + P1.A yang sudah menjadi migration. */
   const EXPECTED_TABLES = [
     'addons',
     'app_settings',
     'audit_logs',
+    'booking_addons',
+    'booking_items',
+    'bookings',
+    'court_maintenances',
     'court_operating_hours',
     'courts',
     'customer_profiles',
+    'finance_events',
     'idempotency_records',
     'media_files',
     'notification_templates',
     'notifications',
     'otp_challenges',
     'password_reset_tokens',
+    'payment_webhook_events',
+    'payments',
     'price_rules',
+    'promo_courts',
+    'promo_redemptions',
+    'promo_sports',
+    'promos',
     'push_tokens',
     'refresh_tokens',
+    'refunds',
+    'slot_claims',
     'special_dates',
     'sports',
     'users',
     'venues',
   ]
 
-  it('seluruh tabel fondasi ada, tidak kurang tidak lebih', async () => {
+  it('seluruh tabel yang dijadwalkan ada, tidak kurang tidak lebih', async () => {
     const rows = await db.execute<{ table_name: string }>(sql`
       SELECT table_name FROM information_schema.tables
        WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
@@ -121,24 +134,47 @@ describe('F0-31 — tabel fondasi Phase 0 (ROADMAP § 3.2)', () => {
 
 describe('F0-31 — constraint yang menjaga invariant (docs/03 § 18)', () => {
   const EXPECTED_CHECKS = [
+    'ck_bookings_customer_or_guest',
     'ck_court_operating_hours_dow',
     'ck_court_operating_hours_range',
     'ck_courts_slot_duration', // C-24
+    'ck_payments_single_payable', // C-5
     'ck_price_rules_scope',
     'ck_price_rules_specific_date',
     'ck_price_rules_time_range',
+    'ck_promo_redemptions_single_target',
+    'ck_promos_code_or_auto',
+    'ck_promos_validity',
+    'ck_promos_value',
+    'ck_refunds_amount_positive',
+    'ck_slot_claims_hold_expiry', // C-3
+    'ck_slot_claims_owner_matches_type', // C-2
+    'ck_slot_claims_single_owner', // C-2
     'ck_users_identifier',
   ]
 
   const EXPECTED_UNIQUE_INDEXES = [
+    'uq_booking_addons_booking_addon',
+    'uq_booking_items_booking_court_starts',
+    'uq_bookings_booking_code',
     'uq_court_operating_hours_court_day',
+    'uq_finance_events_source_kind',
     'uq_idempotency_records_key', // C-22
     'uq_media_files_object_key',
     'uq_notifications_dedupe_email', // C-19
     'uq_notifications_dedupe_user', // C-19
     'uq_password_reset_tokens_hash',
+    'uq_payment_webhook_events_provider_event', // C-6
+    'uq_payments_idempotency_key',
+    'uq_payments_payment_code',
+    'uq_payments_provider_order_id', // C-7
     'uq_push_tokens_expo_token',
+    'uq_promo_redemptions_booking', // C-20
+    'uq_promos_code',
     'uq_refresh_tokens_token_hash', // C-23
+    'uq_refunds_refund_code',
+    'uq_slot_claims_active', // C-1
+    'uq_slot_claims_booking_item', // C-4
     'uq_users_email_lower',
     'uq_users_phone',
   ]
@@ -194,6 +230,215 @@ describe('F0-31 — constraint yang menjaga invariant (docs/03 § 18)', () => {
       db.execute(sql`
         INSERT INTO courts (id, venue_id, sport_id, code, name, slot_duration_minutes)
         VALUES (gen_random_uuid(), gen_random_uuid(), gen_random_uuid(), 'PROBE', 'Probe', 45)
+      `),
+    ).rejects.toThrow()
+  })
+})
+
+type SlotFixture = {
+  bookingId: string
+  bookingItemId: string
+  courtId: string
+}
+
+async function createSlotFixture(): Promise<SlotFixture> {
+  const userId = uuidv7()
+  const venueId = uuidv7()
+  const sportId = uuidv7()
+  const courtId = uuidv7()
+  const bookingId = uuidv7()
+  const bookingItemId = uuidv7()
+  const suffix = bookingId.slice(-12)
+
+  await db.execute(sql`
+    INSERT INTO users (id, role, email, full_name)
+    VALUES (${userId}, 'customer', ${`schema-${suffix}@hola.test`}, 'Schema fixture')
+  `)
+  await db.execute(sql`INSERT INTO venues (id, name) VALUES (${venueId}, ${`Venue ${suffix}`})`)
+  await db.execute(sql`
+    INSERT INTO sports (id, code, name) VALUES (${sportId}, ${`S${suffix}`}, 'Schema sport')
+  `)
+  await db.execute(sql`
+    INSERT INTO courts (id, venue_id, sport_id, code, name)
+    VALUES (${courtId}, ${venueId}, ${sportId}, ${`C${suffix}`}, 'Schema court')
+  `)
+  await db.execute(sql`
+    INSERT INTO bookings (
+      id, booking_code, customer_user_id, channel, status, booking_date, slot_count,
+      quote_snapshot, subtotal_amount, total_amount
+    ) VALUES (
+      ${bookingId}, ${`HB-${suffix}`}, ${userId}, 'web', 'pending_payment', '2026-08-01', 1,
+      '{}'::jsonb, 100000, 100000
+    )
+  `)
+  await db.execute(sql`
+    INSERT INTO booking_items (
+      id, booking_id, court_id, starts_at, ends_at, rate_class, unit_price_amount, line_total_amount
+    ) VALUES (
+      ${bookingItemId}, ${bookingId}, ${courtId}, '2026-08-01T01:00:00Z',
+      '2026-08-01T02:00:00Z', 'offpeak', 100000, 100000
+    )
+  `)
+
+  return { bookingId, bookingItemId, courtId }
+}
+
+async function createBookingItem(
+  courtId: string,
+): Promise<{ bookingId: string; bookingItemId: string }> {
+  const userId = uuidv7()
+  const bookingId = uuidv7()
+  const bookingItemId = uuidv7()
+  const suffix = bookingId.slice(-12)
+
+  await db.execute(sql`
+    INSERT INTO users (id, role, email, full_name)
+    VALUES (${userId}, 'customer', ${`schema-${suffix}@hola.test`}, 'Schema fixture')
+  `)
+  await db.execute(sql`
+    INSERT INTO bookings (
+      id, booking_code, customer_user_id, channel, status, booking_date, slot_count,
+      quote_snapshot, subtotal_amount, total_amount
+    ) VALUES (
+      ${bookingId}, ${`HB-${suffix}`}, ${userId}, 'web', 'pending_payment', '2026-08-01', 1,
+      '{}'::jsonb, 100000, 100000
+    )
+  `)
+  await db.execute(sql`
+    INSERT INTO booking_items (
+      id, booking_id, court_id, starts_at, ends_at, rate_class, unit_price_amount, line_total_amount
+    ) VALUES (
+      ${bookingItemId}, ${bookingId}, ${courtId}, '2026-08-01T01:00:00Z',
+      '2026-08-01T02:00:00Z', 'offpeak', 100000, 100000
+    )
+  `)
+
+  return { bookingId, bookingItemId }
+}
+
+async function createPayment(bookingId: string, providerOrderId: string): Promise<string> {
+  const paymentId = uuidv7()
+  const suffix = paymentId.slice(-12)
+  await db.execute(sql`
+    INSERT INTO payments (id, payment_code, provider, booking_id, amount, status, provider_order_id)
+    VALUES (${paymentId}, ${`HP-${suffix}`}, 'midtrans', ${bookingId}, 100000, 'pending', ${providerOrderId})
+  `)
+  return paymentId
+}
+
+describe('P1.A — invariant constraint transaksional', () => {
+  it('C-1 menolak dua slot claim aktif untuk court dan starts_at yang sama', async () => {
+    const fixture = await createSlotFixture()
+    await db.execute(sql`
+      INSERT INTO slot_claims (
+        id, court_id, starts_at, ends_at, slot_date, claim_type, status, hold_expires_at, booking_item_id
+      ) VALUES (
+        ${uuidv7()}, ${fixture.courtId}, '2026-08-01T01:00:00Z', '2026-08-01T02:00:00Z', '2026-08-01',
+        'booking', 'held', '2026-08-01T01:10:00Z', ${fixture.bookingItemId}
+      )
+    `)
+    const next = await createBookingItem(fixture.courtId)
+    await expect(
+      db.execute(sql`
+        INSERT INTO slot_claims (
+          id, court_id, starts_at, ends_at, slot_date, claim_type, status, hold_expires_at, booking_item_id
+        ) VALUES (
+          ${uuidv7()}, ${fixture.courtId}, '2026-08-01T01:00:00Z', '2026-08-01T02:00:00Z', '2026-08-01',
+          'booking', 'held', '2026-08-01T01:10:00Z', ${next.bookingItemId}
+        )
+      `),
+    ).rejects.toThrow()
+  })
+
+  it('C-2 dan C-3 menolak owner yang tidak cocok maupun held tanpa expiry', async () => {
+    const fixture = await createSlotFixture()
+    await expect(
+      db.execute(sql`
+        INSERT INTO slot_claims (id, court_id, starts_at, ends_at, slot_date, claim_type, status)
+        VALUES (
+          ${uuidv7()}, ${fixture.courtId}, '2026-08-01T03:00:00Z', '2026-08-01T04:00:00Z', '2026-08-01',
+          'booking', 'confirmed'
+        )
+      `),
+    ).rejects.toThrow()
+    await expect(
+      db.execute(sql`
+        INSERT INTO slot_claims (
+          id, court_id, starts_at, ends_at, slot_date, claim_type, status, booking_item_id
+        ) VALUES (
+          ${uuidv7()}, ${fixture.courtId}, '2026-08-01T04:00:00Z', '2026-08-01T05:00:00Z', '2026-08-01',
+          'booking', 'held', ${fixture.bookingItemId}
+        )
+      `),
+    ).rejects.toThrow()
+  })
+
+  it('C-4 menolak booking item yang memegang lebih dari satu claim', async () => {
+    const fixture = await createSlotFixture()
+    await db.execute(sql`
+      INSERT INTO slot_claims (
+        id, court_id, starts_at, ends_at, slot_date, claim_type, status, booking_item_id
+      ) VALUES (
+        ${uuidv7()}, ${fixture.courtId}, '2026-08-01T05:00:00Z', '2026-08-01T06:00:00Z', '2026-08-01',
+        'booking', 'released', ${fixture.bookingItemId}
+      )
+    `)
+    await expect(
+      db.execute(sql`
+        INSERT INTO slot_claims (
+          id, court_id, starts_at, ends_at, slot_date, claim_type, status, booking_item_id
+        ) VALUES (
+          ${uuidv7()}, ${fixture.courtId}, '2026-08-01T06:00:00Z', '2026-08-01T07:00:00Z', '2026-08-01',
+          'booking', 'released', ${fixture.bookingItemId}
+        )
+      `),
+    ).rejects.toThrow()
+  })
+
+  it('C-5, C-6, C-7, dan C-20 menegakkan payable, webhook, order, dan redemption unik', async () => {
+    await expect(
+      db.execute(sql`
+        INSERT INTO payments (id, payment_code, provider, amount, status)
+        VALUES (${uuidv7()}, ${`HP-${uuidv7().slice(-12)}`}, 'manual', 100000, 'pending')
+      `),
+    ).rejects.toThrow()
+
+    const fixture = await createSlotFixture()
+    const providerOrderId = `order-${uuidv7()}`
+    const providerEventId = `webhook-${uuidv7()}`
+    const paymentId = await createPayment(fixture.bookingId, providerOrderId)
+    await expect(createPayment(fixture.bookingId, providerOrderId)).rejects.toThrow()
+
+    await db.execute(sql`
+      INSERT INTO payment_webhook_events (
+        id, provider, provider_event_id, payment_id, is_signature_valid, payload, received_at
+      ) VALUES (${uuidv7()}, 'midtrans', ${providerEventId}, ${paymentId}, true, '{}'::jsonb, now())
+    `)
+    await expect(
+      db.execute(sql`
+        INSERT INTO payment_webhook_events (
+          id, provider, provider_event_id, payment_id, is_signature_valid, payload, received_at
+        ) VALUES (${uuidv7()}, 'midtrans', ${providerEventId}, ${paymentId}, true, '{}'::jsonb, now())
+      `),
+    ).rejects.toThrow()
+
+    const promoId = uuidv7()
+    await db.execute(sql`
+      INSERT INTO promos (
+        id, code, name, type, value_percent, applies_to, valid_from, valid_until, status
+      ) VALUES (
+        ${promoId}, ${`PROMO-${promoId.slice(-12)}`}, 'Schema promo', 'percent', 10.00, 'booking',
+        '2026-01-01T00:00:00Z', '2027-01-01T00:00:00Z', 'active'
+      )
+    `)
+    await db.execute(sql`
+      INSERT INTO promo_redemptions (id, promo_id, booking_id, discount_amount, status, reserved_until)
+      VALUES (${uuidv7()}, ${promoId}, ${fixture.bookingId}, 10000, 'reserved', '2026-08-01T01:10:00Z')
+    `)
+    await expect(
+      db.execute(sql`
+        INSERT INTO promo_redemptions (id, promo_id, booking_id, discount_amount, status, reserved_until)
+        VALUES (${uuidv7()}, ${promoId}, ${fixture.bookingId}, 10000, 'reserved', '2026-08-01T01:10:00Z')
       `),
     ).rejects.toThrow()
   })

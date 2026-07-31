@@ -1196,6 +1196,8 @@ Aturan resolusi lengkap: [07 § 3](07-MODULE-PAYMENT.md#3-pricing-pipeline-satu-
 | `customer_note` | text | ✓ | Dari customer |
 | `internal_note` | text | ✓ | Dari staff |
 | `created_by_user_id` | uuid FK | ✓ | Staff yang membuat (channel `admin`/`walk_in`) |
+| `reschedule_count` | int | ✗ | Default 0. Jumlah reschedule yang sudah dilakukan |
+| `reschedule_history` | jsonb | ✗ | Default `[]`. Riwayat immutable `{from_items, to_items, rescheduled_at, actor_user_id, reason}` |
 
 Constraint: `ck_bookings_customer_or_guest` —
 `customer_user_id IS NOT NULL OR (guest_name IS NOT NULL AND guest_phone IS NOT NULL)`.
@@ -1274,6 +1276,12 @@ menjadi satu partial unique index biasa.
 
 ### 8.3 Tabel `slot_claims`
 
+Kolom `event_id` dan `match_id` di bawah adalah bentuk target akhir tabel. Pada Phase 1,
+**keduanya belum dibuat** karena tabel targetnya juga belum ada. Constraint kepemilikan Phase 1
+hanya menerima `booking_item_id` atau `court_maintenance_id`; migration Phase 2 dan Phase 4
+menambah kolom serta mengganti CHECK memakai pola `NOT VALID`/`VALIDATE` di
+[ROADMAP § 1.2](../tasks/ROADMAP.md#12-evolusi-constraint-slot_claims-lintas-phase).
+
 | Kolom | Tipe | Null | Keterangan |
 |---|---|---|---|
 | `id` | uuid | ✗ | PK |
@@ -1285,8 +1293,8 @@ menjadi satu partial unique index biasa.
 | `status` | `claim_status` | ✗ | `held` \| `confirmed` \| `released` |
 | `hold_expires_at` | timestamptz | ✓ | **Wajib** jika `status='held'`, **wajib NULL** selainnya |
 | `booking_item_id` | uuid FK `booking_items` | ✓ | Terisi ⇔ `claim_type='booking'` |
-| `event_id` | uuid FK `events` | ✓ | Terisi ⇔ `claim_type='event'` |
-| `match_id` | uuid FK `matches` | ✓ | Terisi ⇔ `claim_type='match'` |
+| `event_id` | uuid FK `events` | ✓ | Terisi ⇔ `claim_type='event'`; ditambahkan Phase 2 |
+| `match_id` | uuid FK `matches` | ✓ | Terisi ⇔ `claim_type='match'`; ditambahkan Phase 4 |
 | `court_maintenance_id` | uuid FK `court_maintenances` | ✓ | Terisi ⇔ `claim_type='maintenance'` |
 | `released_at` | timestamptz | ✓ | Diisi saat `status → released` |
 | `release_reason` | text | ✓ | `hold_expired`, `booking_cancelled`, `event_cancelled`, `match_rescheduled`, `maintenance_cancelled`, `admin_force_release` |
@@ -1294,6 +1302,10 @@ menjadi satu partial unique index biasa.
 | `created_at`, `updated_at` | timestamptz | ✗ | — |
 
 ### 8.4 Constraint (inti mekanisme)
+
+SQL berikut menunjukkan constraint target akhir. Implementasi Phase 1 memakai versi dua owner
+(`booking_item_id` dan `court_maintenance_id`) sesuai catatan § 8.3; evolusinya dikontrak di
+[ROADMAP § 1.2](../tasks/ROADMAP.md#12-evolusi-constraint-slot_claims-lintas-phase).
 
 ```sql
 -- 1) Kepemilikan tunggal: tepat satu FK owner terisi, dan konsisten dengan claim_type.
@@ -1533,9 +1545,9 @@ Aturan bisnis: [07-MODULE-PAYMENT.md](07-MODULE-PAYMENT.md).
 | `payment_code` | text | ✗ | UNIQUE |
 | `provider` | `payment_provider` | ✗ | `midtrans` \| `manual` (tunai/transfer dicatat staff) |
 | `booking_id` | uuid FK | ✓ | — |
-| `event_registration_id` | uuid FK | ✓ | — |
-| `tournament_registration_id` | uuid FK | ✓ | — |
-| `cafe_invoice_id` | uuid FK | ✓ | — |
+| `event_registration_id` | uuid FK | ✓ | FK ditambahkan Phase 2 bersama tabel target |
+| `tournament_registration_id` | uuid FK | ✓ | FK ditambahkan Phase 4 bersama tabel target |
+| `cafe_invoice_id` | uuid FK | ✓ | FK ditambahkan Phase 2 bersama tabel target |
 | `payer_user_id` | uuid FK `users` | ✓ | NULL untuk pembayaran tunai guest |
 | `amount` | bigint | ✗ | Yang ditagih |
 | `method` | `payment_method` | ✓ | Diketahui setelah customer memilih di Snap |
@@ -1555,6 +1567,7 @@ Aturan bisnis: [07-MODULE-PAYMENT.md](07-MODULE-PAYMENT.md).
 | `provider_meta` | jsonb | ✓ | Ringkasan response provider (sudah disanitasi) |
 | `recorded_by_user_id` | uuid FK | ✓ | Staff yang mencatat pembayaran manual |
 | `idempotency_key` | text | ✓ | UNIQUE jika tidak NULL |
+| `needs_manual_review` | bool | ✗ | Default false. `capture` dengan `fraud_status='challenge'` tidak boleh mengonfirmasi payable |
 
 Constraint `ck_payments_single_payable`: tepat satu dari empat FK payable tidak NULL.
 Index: `(status, expires_at)`, `(booking_id)`, `(cafe_invoice_id)`, `(paid_at)`.
@@ -1652,8 +1665,8 @@ Tidak ada baris = tidak ada pembatasan.
 | `promo_id` | uuid FK | ✗ | — |
 | `user_id` | uuid FK | ✓ | NULL untuk guest walk-in |
 | `booking_id` | uuid FK | ✓ | — |
-| `event_registration_id` | uuid FK | ✓ | — |
-| `tournament_registration_id` | uuid FK | ✓ | — |
+| `event_registration_id` | uuid FK | ✓ | FK ditambahkan Phase 2 bersama tabel target |
+| `tournament_registration_id` | uuid FK | ✓ | FK ditambahkan Phase 4 bersama tabel target |
 | `discount_amount` | bigint | ✗ | Diskon yang benar-benar diberikan |
 | `status` | `promo_redemption_status` | ✗ | `reserved` → `applied` \| `released` |
 | `reserved_until` | timestamptz | ✓ | Wajib saat `reserved`; sama dengan hold booking |
