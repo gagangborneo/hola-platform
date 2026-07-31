@@ -222,12 +222,12 @@ nominal ini.
 
 ## P1.A — Schema slice 2 · 4,5h
 
-- [ ] **P1-01** `1h` 🔒 — Tabel `slot_claims` + **C-1 `uq_slot_claims_active`** (penjaga final anti double-booking) + C-2 (`ck_slot_claims_single_owner`, `ck_slot_claims_owner_matches_type`) + C-3 (`ck_slot_claims_hold_expiry`) + C-4 + 4 index pendukung. **Kolom `event_id` & `match_id` belum dibuat** — lihat [ROADMAP § 1.2](ROADMAP.md#12-evolusi-constraint-slot_claims-lintas-phase). *acuan:* [03 § 8.3](../docs/03-DATA-MODEL.md#83-tabel-slot_claims), [03 § 8.4](../docs/03-DATA-MODEL.md#84-constraint-inti-mekanisme)
-- [ ] **P1-02** `0,5h` — Tabel `court_maintenances` + FK dari `slot_claims`. *acuan:* [03 § 6](../docs/03-DATA-MODEL.md#court_maintenances)
-- [ ] **P1-03** `1h` 🔒 — Tabel `bookings` (+ `ck_bookings_customer_or_guest`, kolom `reschedule_count`/`reschedule_history`, 3 index), `booking_items` (UNIQUE `(booking_id, court_id, starts_at)`), `booking_addons`. *acuan:* [03 § 7](../docs/03-DATA-MODEL.md#7-entitas-booking)
-- [ ] **P1-04** `1h` 🔒 — Tabel `payments` (C-5, C-7, kolom `needs_manual_review`, 4 index), `payment_webhook_events` (C-6), `refunds`. *acuan:* [03 § 9](../docs/03-DATA-MODEL.md#9-entitas-payment--refund)
-- [ ] **P1-05** `0,5h` — Tabel `promos`, `promo_courts`, `promo_sports`, `promo_redemptions` (C-20). *acuan:* [03 § 10](../docs/03-DATA-MODEL.md#10-entitas-promo)
-- [ ] **P1-06** `0,5h` — Tabel `finance_events` (outbox). **Belum ada pemroses** — J-28 dibuat Phase 2; baris menunggu berstatus `pending` (ROADMAP A-2). *acuan:* [03 § 16](../docs/03-DATA-MODEL.md#16-entitas-finance), [16 § 6.2](../docs/16-CONVENTIONS.md#62-pola-outbox)
+- [x] **P1-01** `1h` 🔒 — Tabel `slot_claims` + **C-1 `uq_slot_claims_active`** (penjaga final anti double-booking) + C-2 (`ck_slot_claims_single_owner`, `ck_slot_claims_owner_matches_type`) + C-3 (`ck_slot_claims_hold_expiry`) + C-4 + 4 index pendukung. **Kolom `event_id` & `match_id` belum dibuat** — lihat [ROADMAP § 1.2](ROADMAP.md#12-evolusi-constraint-slot_claims-lintas-phase). *acuan:* [03 § 8.3](../docs/03-DATA-MODEL.md#83-tabel-slot_claims), [03 § 8.4](../docs/03-DATA-MODEL.md#84-constraint-inti-mekanisme)
+- [x] **P1-02** `0,5h` — Tabel `court_maintenances` + FK dari `slot_claims`. *acuan:* [03 § 6](../docs/03-DATA-MODEL.md#court_maintenances)
+- [x] **P1-03** `1h` 🔒 — Tabel `bookings` (+ `ck_bookings_customer_or_guest`, kolom `reschedule_count`/`reschedule_history`, 3 index), `booking_items` (UNIQUE `(booking_id, court_id, starts_at)`), `booking_addons`. *acuan:* [03 § 7](../docs/03-DATA-MODEL.md#7-entitas-booking)
+- [x] **P1-04** `1h` 🔒 — Tabel `payments` (C-5, C-7, kolom `needs_manual_review`, 4 index), `payment_webhook_events` (C-6), `refunds`. *acuan:* [03 § 9](../docs/03-DATA-MODEL.md#9-entitas-payment--refund)
+- [x] **P1-05** `0,5h` — Tabel `promos`, `promo_courts`, `promo_sports`, `promo_redemptions` (C-20). *acuan:* [03 § 10](../docs/03-DATA-MODEL.md#10-entitas-promo)
+- [x] **P1-06** `0,5h` — Tabel `finance_events` (outbox). **Belum ada pemroses** — J-28 dibuat Phase 2; baris menunggu berstatus `pending` (ROADMAP A-2). *acuan:* [03 § 16](../docs/03-DATA-MODEL.md#16-entitas-finance), [16 § 6.2](../docs/16-CONVENTIONS.md#62-pola-outbox)
 
 ## P1.B — `pricing/` — pipeline harga · 5,5h
 
