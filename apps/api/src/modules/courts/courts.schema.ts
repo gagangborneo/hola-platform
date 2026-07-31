@@ -33,5 +33,24 @@ export const patchCourtSchema = createCourtSchema
   .omit({ venue_id: true, sport_id: true })
   .refine((value) => Object.keys(value).length > 0, { message: 'Minimal satu field harus diubah' })
 
+const operatingHourSchema = z
+  .object({
+    day_of_week: z.number().int().min(0).max(6),
+    opens_time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+    closes_time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$|^24:00$/),
+  })
+  .refine((value) => value.opens_time < value.closes_time, {
+    path: ['closes_time'],
+    message: 'Jam tutup harus setelah jam buka',
+  })
+
+export const replaceOperatingHoursSchema = z
+  .object({ hours: z.array(operatingHourSchema).length(7) })
+  .refine((value) => new Set(value.hours.map((hour) => hour.day_of_week)).size === 7, {
+    path: ['hours'],
+    message: 'Setiap hari harus tepat satu kali',
+  })
+
 export type CreateCourtInput = z.infer<typeof createCourtSchema>
 export type PatchCourtInput = z.infer<typeof patchCourtSchema>
+export type ReplaceOperatingHoursInput = z.infer<typeof replaceOperatingHoursSchema>
