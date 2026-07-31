@@ -6,7 +6,11 @@ import { and, eq, inArray } from 'drizzle-orm'
 export type PricingCourt = Pick<
   typeof courts.$inferSelect,
   'code' | 'id' | 'slotDurationMinutes' | 'sportId' | 'status'
->
+> & {
+  /** Optional agar fixture pipeline lama tetap fokus pada harga, bukan limit booking. */
+  minSlotsPerBooking?: number
+  maxSlotsPerBooking?: number
+}
 export type PricingAddon = Pick<
   typeof addons.$inferSelect,
   'code' | 'id' | 'isActive' | 'name' | 'priceAmount'
@@ -25,6 +29,8 @@ export async function findPricingCourts(
       code: courts.code,
       sportId: courts.sportId,
       slotDurationMinutes: courts.slotDurationMinutes,
+      minSlotsPerBooking: courts.minSlotsPerBooking,
+      maxSlotsPerBooking: courts.maxSlotsPerBooking,
       status: courts.status,
     })
     .from(courts)

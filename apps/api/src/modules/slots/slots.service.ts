@@ -120,12 +120,15 @@ function toClaimedSlot(row: SlotClaimRow): ClaimedSlot {
   }
 }
 
-async function deleteHoldKeys(ctx: SlotsServiceContext, keys: readonly string[]): Promise<void> {
+export async function releaseReservedHoldKeys(
+  ctx: SlotsServiceContext,
+  keys: readonly string[],
+): Promise<void> {
   if (keys.length === 0) return
   await ctx.safeRedis('slot_hold', () => ctx.redis.del(...keys), 0)
 }
 
-async function reserveHoldKeys(
+export async function reserveBookingHoldKeys(
   ctx: SlotsServiceContext,
   input: { courtId: string; startsAtList: readonly Date[]; ttlSeconds: number },
 ): Promise<string[]> {
@@ -140,7 +143,7 @@ async function reserveHoldKeys(
     // `undefined` adalah fallback Redis mati: lanjut ke PostgreSQL. `null`
     // berarti Redis sehat dan slot telah diamankan request lain.
     if (result === null) {
-      await deleteHoldKeys(ctx, reserved)
+      await releaseReservedHoldKeys(ctx, reserved)
       throw err.of(ERROR_CODE.SLOT_ALREADY_CLAIMED, {
         details: [{ court_id: input.courtId, starts_at: startsAt.toISOString() }],
       })
@@ -216,7 +219,7 @@ export async function claimSlots(
   }
   const reservedKeys =
     input.mode === 'hold'
-      ? await reserveHoldKeys(ctx, { courtId: input.courtId, startsAtList, ttlSeconds })
+      ? await reserveBookingHoldKeys(ctx, { courtId: input.courtId, startsAtList, ttlSeconds })
       : []
 
   try {
@@ -251,7 +254,7 @@ export async function claimSlots(
       { logger: ctx.logger },
     )
   } catch (error) {
-    await deleteHoldKeys(ctx, reservedKeys)
+    await releaseReservedHoldKeys(ctx, reservedKeys)
     if (error instanceof UniqueViolationError && error.constraintName === 'uq_slot_claims_active') {
       const conflicts = await findActiveConflicts(ctx.db, { courtId: input.courtId, startsAtList })
       throw err.of(ERROR_CODE.SLOT_ALREADY_CLAIMED, { details: conflictDetails(conflicts) })
@@ -260,21 +263,21 @@ export async function claimSlots(
   }
 }
 
-/**
- * Jalur komposisi untuk owner internal yang baru dibuat dalam transaksi yang
- * sama, misalnya `court_maintenances`. Mode hold sengaja dilarang di sini karena
- * reservasi Redis harus dimulai sebelum transaksi dan hanya flow booking publik
- * yang melakukannya.
- */
-export async function claimDirectSlotsInTransaction(
+/** Implementasi transaksi bersama untuk klaim direct internal dan hold booking. */
+async function claimSlotsInTransaction(
   ctx: SlotsServiceContext,
   input: ClaimSlotsInput,
   scope: TransactionScope,
 ): Promise<ClaimedSlot[]> {
-  if (input.mode !== 'direct') throw err.validation({ field: 'mode' })
   const startsAtList = duplicateFreeSlots(input.startsAtList)
   if (startsAtList.length === 0 || !slotOwnerIsValid(input, startsAtList.length)) {
     throw err.validation({ field: 'owner' })
+  }
+  if (input.mode === 'hold' && input.claimType !== 'booking') {
+    throw err.validation({ field: 'mode' })
+  }
+  if (input.mode === 'direct' && input.claimType === 'booking' && input.actor.role === 'customer') {
+    throw err.forbidden('Customer harus memakai hold saat memulai pembayaran.')
   }
   const [court, operatingHours] = await Promise.all([
     findSlotCourt(ctx.db, input.courtId),
@@ -310,6 +313,14 @@ export async function claimDirectSlotsInTransaction(
       throw err.notFound('Lapangan tidak ditemukan.')
     }
     await releaseExpiredHolds(scope.tx, { courtId: input.courtId, startsAtList, now: ctx.now })
+    const ttlSeconds = input.holdTtlSeconds ?? HOLD_TTL_SECONDS
+    if (
+      input.mode === 'hold' &&
+      (!Number.isInteger(ttlSeconds) || ttlSeconds !== HOLD_TTL_SECONDS)
+    ) {
+      throw err.validation({ field: 'hold_ttl_seconds' })
+    }
+    const holdExpiresAt = input.mode === 'hold' ? addSeconds(ctx.now, ttlSeconds) : null
     const claims = await insertSlotClaims(
       scope.tx,
       startsAtList.map((startsAt, index) => ({
@@ -319,8 +330,8 @@ export async function claimDirectSlotsInTransaction(
         endsAt: slotEndsAt(startsAt, court.slotDurationMinutes),
         slotDate: witaDateYmd(startsAt),
         claimType: input.claimType,
-        status: 'confirmed',
-        holdExpiresAt: null,
+        status: input.mode === 'hold' ? 'held' : 'confirmed',
+        holdExpiresAt,
         bookingItemId:
           input.owner.kind === 'booking' ? (input.owner.bookingItemIds[index] ?? null) : null,
         courtMaintenanceId:
@@ -339,6 +350,32 @@ export async function claimDirectSlotsInTransaction(
   }
 }
 
+/** Jalur komposisi untuk owner internal yang dibuat pada transaksi yang sama. */
+export async function claimDirectSlotsInTransaction(
+  ctx: SlotsServiceContext,
+  input: ClaimSlotsInput,
+  scope: TransactionScope,
+): Promise<ClaimedSlot[]> {
+  if (input.mode !== 'direct') throw err.validation({ field: 'mode' })
+  return claimSlotsInTransaction(ctx, input, scope)
+}
+
+/**
+ * Bagian PostgreSQL dari hold booking. Pemanggil wajib sudah memasang Redis
+ * `SET NX EX` melalui `reserveBookingHoldKeys`; bila Redis hilang, fungsi ini
+ * tetap aman karena unique index PostgreSQL adalah penjaga akhir.
+ */
+export async function claimBookingHoldSlotsInTransaction(
+  ctx: SlotsServiceContext,
+  input: ClaimSlotsInput,
+  scope: TransactionScope,
+): Promise<ClaimedSlot[]> {
+  if (input.mode !== 'hold' || input.claimType !== 'booking') {
+    throw err.validation({ field: 'mode' })
+  }
+  return claimSlotsInTransaction(ctx, input, scope)
+}
+
 /** Idempoten: claim yang sudah `released` tidak berubah untuk kedua kalinya. */
 export async function releaseSlots(
   ctx: SlotsServiceContext,
@@ -354,7 +391,7 @@ export async function releaseSlots(
       afterCommit(async () => {
         await Promise.all([
           invalidateAvailability(ctx, released),
-          deleteHoldKeys(
+          releaseReservedHoldKeys(
             ctx,
             released.map((claim) =>
               ctx.redisKeys.holdSlot(claim.courtId, claim.startsAt.toISOString()),
@@ -382,7 +419,7 @@ export async function releaseMaintenanceSlotsInTransaction(
   scope.afterCommit(async () => {
     await Promise.all([
       invalidateAvailability(ctx, released),
-      deleteHoldKeys(
+      releaseReservedHoldKeys(
         ctx,
         released.map((claim) =>
           ctx.redisKeys.holdSlot(claim.courtId, claim.startsAt.toISOString()),

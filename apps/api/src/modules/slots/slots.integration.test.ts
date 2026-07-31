@@ -12,7 +12,7 @@ import {
 } from '@hola/db'
 import { createRedisKeys } from '@hola/shared'
 import { eq } from 'drizzle-orm'
-import { afterAll, beforeEach, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { db } from '../../config/db.ts'
 import { logger } from '../../config/logger.ts'
 import { redis, safeRedis } from '../../config/redis.ts'
@@ -155,6 +155,30 @@ async function insertFixtures(): Promise<void> {
   )
 }
 
+async function waitForRedis(): Promise<void> {
+  if (redis.status === 'ready') return
+  await new Promise<void>((resolve, reject) => {
+    const onReady = (): void => {
+      clearTimeout(timeout)
+      redis.off('error', onError)
+      resolve()
+    }
+    const onError = (error: Error): void => {
+      clearTimeout(timeout)
+      redis.off('ready', onReady)
+      reject(error)
+    }
+    const timeout = setTimeout(() => {
+      redis.off('ready', onReady)
+      redis.off('error', onError)
+      reject(new Error('Redis test tidak siap dalam 3 detik'))
+    }, 3_000)
+    redis.once('ready', onReady)
+    redis.once('error', onError)
+  })
+}
+
+beforeAll(waitForRedis)
 beforeEach(async () => {
   await cleanFixtures()
   await insertFixtures()
