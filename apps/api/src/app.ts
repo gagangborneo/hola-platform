@@ -16,6 +16,7 @@ import { type RequestVariables, requestId } from './middleware/request-id.ts'
 import { assertRouteGuards } from './middleware/require-role.ts'
 import { adminUsersRoutes } from './modules/admin/admin-users.routes.ts'
 import { authRoutes } from './modules/auth/auth.routes.ts'
+import { availabilityRoutes } from './modules/availability/availability.routes.ts'
 import { mediaRoutes } from './modules/media/media.routes.ts'
 import { notificationRoutes } from './modules/notifications/notification.routes.ts'
 import { adminSystemRoutes } from './modules/system/admin-system.routes.ts'
@@ -48,6 +49,7 @@ export const PUBLIC_ROUTE_ALLOWLIST: ReadonlySet<string> = new Set([
   'POST /api/v1/auth/password/forgot',
   'POST /api/v1/auth/password/reset',
   'POST /api/v1/auth/email/verify',
+  'GET /api/v1/courts/:court_id/availability',
 ])
 
 const API_PREFIX = '/api/v1'
@@ -101,6 +103,7 @@ export function createApp() {
   const routes = app
     .route('/', healthRoutes)
     .route(API_PREFIX, configRoutes)
+    .route(API_PREFIX, availabilityRoutes)
     .route(API_PREFIX, authRoutes)
     .route(API_PREFIX, adminUsersRoutes)
     .route(API_PREFIX, adminSystemRoutes)
