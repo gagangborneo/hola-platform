@@ -259,8 +259,8 @@ nominal ini.
 
 ## P1.E — `courts/` — API admin lapangan & harga · 3h
 
-- [ ] **P1-26** `0,5h` — `POST`/`PATCH /courts` (+ `If-Match`; **tolak** ubah `slot_duration_minutes` bila ada klaim aktif `starts_at >= today` → `422 COURT_HAS_FUTURE_CLAIMS`, S-4). *acuan:* [04 § 9.15](../docs/04-API-CONTRACT.md#915-admin-court-harga-maintenance-sistem)
-- [ ] **P1-27** `0,5h` — `PUT /courts/{id}/operating-hours` (ganti 7 baris sekaligus, invalidasi I-8) + `PUT /courts/{id}/photos`
+- [x] **P1-26** `0,5h` — `POST`/`PATCH /courts` (+ `If-Match`; **tolak** ubah `slot_duration_minutes` bila ada klaim aktif `starts_at >= today` → `422 COURT_HAS_FUTURE_CLAIMS`, S-4). *acuan:* [04 § 9.15](../docs/04-API-CONTRACT.md#915-admin-court-harga-maintenance-sistem)
+- [x] **P1-27** `0,5h` — `PUT /courts/{id}/operating-hours` (ganti 7 baris sekaligus, invalidasi I-8) + `PUT /courts/{id}/photos`
 - [x] **P1-28** `0,5h` — `GET`/`POST`/`PATCH`/`DELETE /price-rules` (DELETE hanya bila belum pernah dipakai) + invalidasi I-7 (**semua** key `avail:*`)
 - [x] **P1-29** `0,5h` — `GET`/`POST`/`DELETE /special-dates` + invalidasi I-10
 - [ ] **P1-30** `0,5h` — `POST /court-maintenances` (klaim `claim_type='maintenance'`, mode `direct`) + `/cancel`; `force=true` hanya `admin` (E-11)
