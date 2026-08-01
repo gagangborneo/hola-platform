@@ -58,6 +58,7 @@ export const promos = pgTable(
     /** FK ke `tiers` ditambahkan bersama gamification pada Phase 3. */
     minTierCode: text('min_tier_code'),
     status: promoStatusEnum('status').notNull(),
+    version: integer('version').notNull().default(1),
     createdByUserId: uuid('created_by_user_id').references(() => users.id, {
       onDelete: 'set null',
     }),

@@ -24,6 +24,7 @@ import { specialDatesRoutes } from './modules/courts/special-dates.routes.ts'
 import { mediaRoutes } from './modules/media/media.routes.ts'
 import { notificationRoutes } from './modules/notifications/notification.routes.ts'
 import { priceRulesRoutes } from './modules/pricing/price-rules.routes.ts'
+import { promosRoutes } from './modules/promos/promos.routes.ts'
 import { slotClaimsRoutes } from './modules/slots/slot-claims.routes.ts'
 import { adminSystemRoutes } from './modules/system/admin-system.routes.ts'
 import { configRoutes } from './modules/system/config.routes.ts'
@@ -118,6 +119,7 @@ export function createApp() {
     .route(API_PREFIX, courtMaintenanceRoutes)
     .route(API_PREFIX, specialDatesRoutes)
     .route(API_PREFIX, priceRulesRoutes)
+    .route(API_PREFIX, promosRoutes)
     .route(API_PREFIX, slotClaimsRoutes)
     .route(API_PREFIX, authRoutes)
     .route(API_PREFIX, adminUsersRoutes)

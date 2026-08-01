@@ -1,6 +1,7 @@
 /** Registry worker. Satu-satunya lokasi nama job dihubungkan ke handler. */
 import { JOB, JOB_QUEUE, type JobName, QUEUE, type QueueName } from '@hola/shared'
 import type { RepeatOptions } from 'bullmq'
+import { releaseExpiredPromoReservationsJob } from './commerce/release-expired-promo-reservations.job.ts'
 import { JOB_OPTIONS } from './job-options.ts'
 import { retryStuckNotificationsJob } from './notification/retry-stuck-notifications.job.ts'
 import { sendEmailJob } from './notification/send-email.job.ts'
@@ -21,6 +22,7 @@ const implementedHandlers = new Map<JobName, JobHandler>([
   [cleanupExpiredTokensJob.name, cleanupExpiredTokensJob.handler],
   [cleanupOrphanUploadsJob.name, cleanupOrphanUploadsJob.handler],
   [backupDatabaseJob.name, backupDatabaseJob.handler],
+  [releaseExpiredPromoReservationsJob.name, releaseExpiredPromoReservationsJob.handler],
 ])
 
 /**
@@ -44,6 +46,12 @@ export const scheduledJobs: readonly {
   queue: QueueName
   repeat: Omit<RepeatOptions, 'key' | 'prevMillis'>
 }[] = [
+  {
+    id: 'scheduler:commerce.releaseExpiredPromoReservations',
+    name: JOB.COMMERCE_RELEASE_EXPIRED_PROMO_RESERVATIONS,
+    queue: QUEUE.COMMERCE,
+    repeat: { every: 60_000 },
+  },
   {
     id: 'scheduler:system.backupDatabase',
     name: JOB.SYSTEM_BACKUP_DATABASE,

@@ -17,6 +17,13 @@ import type { Viewer } from '../auth/auth.types.ts'
 import { findPricingCourts } from '../pricing/pricing.repository.ts'
 import { computeQuote } from '../pricing/pricing.service.ts'
 import {
+  evaluatePromo,
+  isPromoAppError,
+  markPromoApplied,
+  releaseBookingPromo,
+  reservePromo,
+} from '../promos/promos.service.ts'
+import {
   claimBookingHoldSlotsInTransaction,
   claimDirectSlotsInTransaction,
   releaseBookingSlotsInTransaction,
@@ -140,22 +147,38 @@ function validateBookingShape(
 }
 
 export async function quoteBooking(
-  ctx: Pick<BookingsServiceContext, 'db' | 'now'>,
+  ctx: Pick<BookingsServiceContext, 'db' | 'now'> & Partial<Pick<BookingsServiceContext, 'actor'>>,
   input: BookingQuoteInput,
   reservePromo = false,
 ): Promise<Quote> {
-  if (input.promo_code) {
-    throw err.featureDisabled('Promo akan tersedia bersama modul P1.G.')
+  const actor = ctx.actor ?? {
+    userId: undefined,
+    role: 'customer' as const,
+    cafeTenantId: undefined,
+    employeeId: undefined,
+  }
+  const quoteInput = {
+    kind: 'booking' as const,
+    at: ctx.now.toISOString(),
+    actor: {
+      role: actor.role,
+      ...(actor.userId ? { user_id: actor.userId } : {}),
+    },
+    booking: { items: input.items, addons: input.addons },
+    ...(input.promo_code ? { promo_code: input.promo_code } : {}),
+    reserve_promo: reservePromo,
   }
   return computeQuote(
-    { db: ctx.db },
     {
-      kind: 'booking',
-      at: ctx.now.toISOString(),
-      actor: { role: 'customer' },
-      booking: { items: input.items, addons: input.addons },
-      reserve_promo: reservePromo,
+      db: ctx.db,
+      ...(input.promo_code
+        ? {
+            evaluatePromo: (details: Parameters<typeof evaluatePromo>[1]) =>
+              evaluatePromo({ db: ctx.db, now: ctx.now }, details),
+          }
+        : {}),
     },
+    quoteInput,
   )
 }
 
@@ -163,9 +186,6 @@ export async function createBooking(
   ctx: BookingsServiceContext,
   input: CreateBookingInput,
 ): Promise<CreatedBooking> {
-  if (input.promo_code) {
-    throw err.featureDisabled('Promo akan tersedia bersama modul P1.G.')
-  }
   const isStaff = ctx.actor.role === 'staff' || ctx.actor.role === 'admin'
   const channel = bookingChannel(ctx.actor, input, ctx.clientPlatform)
   const customerUserId = ctx.actor.role === 'customer' ? ctx.actor.userId : input.customer_user_id
@@ -174,13 +194,23 @@ export async function createBooking(
   if (!customerUserId && (!guestName || !guestPhone))
     throw err.of(ERROR_CODE.GUEST_CONTACT_REQUIRED)
 
-  const [quote, settings, pricingCourts] = await Promise.all([
+  const [quote, settings, pricingCourts, quoteWithoutPromo] = await Promise.all([
     quoteBooking(ctx, input, true),
     findBookingSettings(ctx.db),
     findPricingCourts(
       ctx.db,
       input.items.map((item) => item.court_id),
     ),
+    input.promo_code
+      ? quoteBooking(
+          ctx,
+          {
+            items: input.items,
+            addons: input.addons,
+          },
+          true,
+        )
+      : Promise.resolve<Quote | null>(null),
   ])
   if (
     input.expected_total_amount !== undefined &&
@@ -245,21 +275,64 @@ export async function createBooking(
           }
         }
         const holdExpiresAt = direct ? null : addSeconds(ctx.now, HOLD_SLOT_TTL_SECONDS)
-        const booking = await insertBooking(scope.tx, {
-          bookingCode: await nextBookingCode(scope.tx, ctx.now),
-          customerUserId: customerUserId ?? null,
-          guestName,
-          guestPhone,
-          channel,
-          status: direct ? 'confirmed' : 'pending_payment',
-          bookingDate,
-          slotCount: quoteSlotLines.length,
-          quote,
-          holdExpiresAt,
-          customerNote: input.customer_note ?? null,
-          createdByUserId: isStaff ? ctx.actor.userId : null,
-          now: ctx.now,
-        })
+        const insert = async (
+          tx: Parameters<typeof insertBooking>[0],
+          selectedQuote: Quote,
+        ): Promise<BookingRow> =>
+          insertBooking(tx, {
+            bookingCode: await nextBookingCode(tx, ctx.now),
+            customerUserId: customerUserId ?? null,
+            guestName,
+            guestPhone,
+            channel,
+            status: direct ? 'confirmed' : 'pending_payment',
+            bookingDate,
+            slotCount: quoteSlotLines.length,
+            quote: selectedQuote,
+            holdExpiresAt,
+            customerNote: input.customer_note ?? null,
+            createdByUserId: isStaff ? ctx.actor.userId : null,
+            now: ctx.now,
+          })
+        let effectiveQuote = quote
+        let booking: BookingRow
+        const selectedPromo = quote.promo
+        if (selectedPromo) {
+          try {
+            booking = await scope.tx.transaction(async (promoTx) => {
+              const inserted = await insert(promoTx, quote)
+              const redemption = await reservePromo(
+                ctx,
+                {
+                  promo: selectedPromo,
+                  bookingId: inserted.id,
+                  userId: customerUserId ?? null,
+                  reservedUntil: holdExpiresAt ?? ctx.now,
+                },
+                { tx: promoTx, afterCommit: scope.afterCommit },
+              )
+              if (direct) {
+                await markPromoApplied(ctx, redemption.id, {
+                  tx: promoTx,
+                  afterCommit: scope.afterCommit,
+                })
+              }
+              return inserted
+            })
+          } catch (error) {
+            if (!isPromoAppError(error) || !quoteWithoutPromo) throw error
+            effectiveQuote = {
+              ...quoteWithoutPromo,
+              warnings: [
+                ...quoteWithoutPromo.warnings,
+                { code: error.code, message: error.message },
+              ],
+            }
+            booking = await insert(scope.tx, effectiveQuote)
+          }
+        } else {
+          booking = await insert(scope.tx, quote)
+        }
         const items = await insertBookingItems(scope.tx, {
           bookingId: booking.id,
           lines: quoteSlotLines,
@@ -291,7 +364,7 @@ export async function createBooking(
             await claimBookingHoldSlotsInTransaction(ctx, claimInput, scope)
           }
         }
-        return { booking, items, quote }
+        return { booking, items, quote: effectiveQuote }
       },
       { logger: ctx.logger },
     )
@@ -449,6 +522,7 @@ export async function cancelBooking(
       })
       if (!updated) throw err.of(ERROR_CODE.BOOKING_NOT_CANCELLABLE)
       await releaseBookingSlotsInTransaction(ctx, input.bookingId, scope)
+      await releaseBookingPromo(ctx, input.bookingId, 'booking_cancelled', scope)
       if (ctx.actor.role === 'staff' || ctx.actor.role === 'admin') {
         await writeAuditLog(scope.tx, {
           actorUserId: ctx.actor.userId,

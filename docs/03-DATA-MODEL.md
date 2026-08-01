@@ -1658,6 +1658,7 @@ Aturan bisnis: [08-MODULE-PROMO.md](08-MODULE-PROMO.md).
 | `is_new_customer_only` | bool | ✗ | Default false |
 | `min_tier_code` | text FK `tiers` | ✓ | Batasan tier minimum |
 | `status` | `promo_status` | ✗ | — |
+| `version` | int | ✗ | Default 1. Naik pada setiap PATCH untuk optimistic locking (`If-Match`) |
 | `created_by_user_id` | uuid FK | ✓ | — |
 
 CHECK: `ck_promos_value` memastikan kolom nilai yang sesuai `type` terisi;

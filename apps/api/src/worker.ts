@@ -14,7 +14,18 @@ import { env } from './env.ts'
 import { JOB_OPTIONS, processRegisteredJob, scheduledJobs } from './jobs/index.ts'
 import { recordEmailDeliveryFailure } from './modules/notifications/notification.service.ts'
 
-const workerRuntime = { backup, db, env, logger, mail, queues, storage }
+const workerRuntime = {
+  backup,
+  db,
+  env,
+  logger,
+  mail,
+  queues,
+  redis,
+  redisKeys: keys,
+  safeRedis,
+  storage,
+}
 
 function logJobStart(job: Job<Record<string, unknown>, unknown, string>): number {
   const started = Date.now()

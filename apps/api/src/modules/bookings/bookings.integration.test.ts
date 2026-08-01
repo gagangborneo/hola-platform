@@ -5,6 +5,8 @@ import {
   courtOperatingHours,
   courts,
   priceRules,
+  promoRedemptions,
+  promos,
   slotClaims,
   sports,
   users,
@@ -35,6 +37,7 @@ const ids = {
   court: '01930000-0000-7000-8000-000000000103',
   customer: '01930000-0000-7000-8000-000000000104',
   priceRule: '01930000-0000-7000-8000-000000000105',
+  promo: '01930000-0000-7000-8000-000000000106',
 } as const
 
 const now = new Date('2026-07-31T00:00:00.000Z')
@@ -84,12 +87,15 @@ function input(hours: readonly number[]) {
 }
 
 async function cleanFixtures(): Promise<void> {
+  await redis.del(redisKeys.promoQuota(ids.promo))
   for (let hour = 8; hour < 18; hour += 1) {
     await redis.del(redisKeys.holdSlot(ids.court, startsAt(hour)))
   }
   await db.delete(slotClaims).where(eq(slotClaims.courtId, ids.court))
+  await db.delete(promoRedemptions).where(eq(promoRedemptions.promoId, ids.promo))
   await db.delete(bookingItems).where(eq(bookingItems.courtId, ids.court))
   await db.delete(bookings).where(eq(bookings.customerUserId, ids.customer))
+  await db.delete(promos).where(eq(promos.id, ids.promo))
   await db
     .delete(appSettings)
     .where(inArray(appSettings.key, [SETTINGS_KEY.REQUIRE_CONTIGUOUS_SLOTS]))
@@ -166,6 +172,70 @@ beforeEach(async () => {
 afterAll(cleanFixtures)
 
 describe('booking create dengan PostgreSQL dan Redis nyata', () => {
+  it('BR-B-39/BR-PR-51/T-PR-06: promo direservasi atomik dan dilepas saat booking dibatalkan', async () => {
+    await db.insert(promos).values({
+      id: ids.promo,
+      code: 'HLA20',
+      name: 'Hola 20',
+      type: 'percent',
+      valuePercent: '20.00',
+      maxDiscountAmount: 50_000,
+      appliesTo: 'booking',
+      quotaTotal: 1,
+      validFrom: new Date('2026-07-01T00:00:00Z'),
+      validUntil: new Date('2026-09-01T00:00:00Z'),
+      status: 'active',
+    })
+
+    const created = await createBooking(context(), { ...input([8]), promo_code: ' hla20 ' })
+    const [reserved] = await db
+      .select()
+      .from(promoRedemptions)
+      .where(eq(promoRedemptions.bookingId, created.booking.id))
+    const [afterReserve] = await db.select().from(promos).where(eq(promos.id, ids.promo))
+    expect(created.quote).toMatchObject({ discount_amount: 30_000, total_amount: 120_000 })
+    expect(reserved).toMatchObject({ status: 'reserved', discountAmount: 30_000 })
+    expect(reserved?.reservedUntil).toEqual(created.booking.holdExpiresAt)
+    expect(afterReserve?.quotaUsed).toBe(1)
+
+    await cancelBooking(context(), { bookingId: created.booking.id, reason: 'ubah jadwal' })
+    const [released] = await db
+      .select()
+      .from(promoRedemptions)
+      .where(eq(promoRedemptions.bookingId, created.booking.id))
+    const [afterRelease] = await db.select().from(promos).where(eq(promos.id, ids.promo))
+    expect(released?.status).toBe('released')
+    expect(afterRelease?.quotaUsed).toBe(0)
+  })
+
+  it('BR-PR-13/T-PR-07: promo walk-in tunduk aturan sama dan langsung applied', async () => {
+    await db.insert(promos).values({
+      id: ids.promo,
+      code: 'KASIR20',
+      name: 'Kasir 20',
+      type: 'percent',
+      valuePercent: '20.00',
+      maxDiscountAmount: 50_000,
+      appliesTo: 'booking',
+      quotaTotal: 1,
+      validFrom: new Date('2026-07-01T00:00:00Z'),
+      validUntil: new Date('2026-09-01T00:00:00Z'),
+      status: 'active',
+    })
+    const created = await createBooking(staffContext(now), {
+      ...input([8]),
+      promo_code: 'KASIR20',
+      customer_user_id: ids.customer,
+      channel: 'walk_in',
+    })
+    const [redemption] = await db
+      .select()
+      .from(promoRedemptions)
+      .where(eq(promoRedemptions.bookingId, created.booking.id))
+    expect(created.booking.status).toBe('confirmed')
+    expect(redemption?.status).toBe('applied')
+  })
+
   it('BR-B-13 / BR-B-21 / BR-B-22: quote snapshot, count item, dan held claim dibuat atomik', async () => {
     const created = await createBooking(context(), input([8, 9]))
     const claims = await db
