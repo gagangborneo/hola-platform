@@ -100,8 +100,10 @@ export class MidtransProvider implements PaymentProvider {
   private readonly fetcher: typeof fetch
   private readonly apiBase: string
   private readonly snapBase: string
+  private readonly config: MidtransProviderConfig
 
-  constructor(private readonly config: MidtransProviderConfig) {
+  constructor(config: MidtransProviderConfig) {
+    this.config = config
     this.fetcher = config.fetcher ?? fetch
     this.apiBase = config.isProduction
       ? 'https://api.midtrans.com'
