@@ -270,7 +270,7 @@ nominal ini.
 
 - [x] **P1-32** `0,5h` — `booking-state.ts` **pure**: tabel transisi + penolakan 5 transisi terlarang + test. *acuan:* [06 § 8](../docs/06-MODULE-BOOKING.md#8-state-machine-status-booking)
 - [x] **P1-33** `0,5h` ⛔ D-01 — `booking-refund.ts` **pure**: `computeRefundAmount(booking, policy, now)` yang membaca `app_settings.refund_policy` (Opsi A/B/C) + test ketiga tier Opsi B. *acuan:* [06 § 7](../docs/06-MODULE-BOOKING.md#7-kebijakan-pembatalan--refund-butuh-keputusan-client)
-- [ ] **P1-34** `1,5h` 🔒 — `POST /bookings`: validasi BR-B-01…B-11 → `pricing.computeQuote({ reserve_promo: true })` → `slots.claim({ mode: 'hold' })` → reservasi promo → simpan `quote_snapshot` — **satu transaksi**, `Idempotency-Key` wajib. *acuan:* [06 § 4.4](../docs/06-MODULE-BOOKING.md#44-alur-hold-end-to-end)
+- [x] **P1-34** `1,5h` 🔒 — `POST /bookings`: validasi BR-B-01…B-11 → `pricing.computeQuote({ reserve_promo: true })` → `slots.claim({ mode: 'hold' })` → reservasi promo → simpan `quote_snapshot` — **satu transaksi**, `Idempotency-Key` wajib. *acuan:* [06 § 4.4](../docs/06-MODULE-BOOKING.md#44-alur-hold-end-to-end)
 - [ ] **P1-35** `0,5h` — BR-B-14 (maks 3 `pending_payment` per customer) + BR-B-15 (maks 2 `confirmed` per tanggal) + field opsional `expected_total_amount` → `409` bila tidak cocok (E-13)
 - [x] **P1-36** `0,5h` — Booking oleh staff: `channel='admin'`/`walk_in`, guest (BR-B-11), mode klaim `direct` tanpa hold (BR-B-38), `checked_in_at = created_at` untuk walk-in (BR-B-86)
 - [ ] **P1-37** `1h` — `POST /bookings/{id}/cancel`: BR-B-60…B-71 — pembuatan `refunds` (atau tidak, bila Rp 0), pelepasan klaim + reservasi promo, pembatalan J-03/J-04, notifikasi, `audit_logs` dengan `reason` wajib untuk staff
@@ -280,12 +280,12 @@ nominal ini.
 
 ## P1.G — `promos/` dasar · 4,5h
 
-- [ ] **P1-41** `0,5h` — `computeDiscount()` **pure** untuk `percent` (dengan `max_discount_amount`) & `fixed` + clamp ke `base` + `roundTo100` + test 7 kasus. *acuan:* [08 § 8](../docs/08-MODULE-PROMO.md#8-perhitungan-diskon)
-- [ ] **P1-42** `1h` 🔒 — `promo.evaluate()`: V-1…V-8, V-15, V-16 dengan `reason_code` spesifik. **V-9…V-14 (court/sport/hari/jam/rate class), auto promo, dan stacking ditunda Phase 4.** *acuan:* [08 § 3](../docs/08-MODULE-PROMO.md#3-aturan-validasi-promo-eligibility)
-- [ ] **P1-43** `1h` 🔒 — `promo.reserve()`: **`UPDATE promos SET quota_used = quota_used + 1 WHERE … AND (quota_total IS NULL OR quota_used < quota_total) RETURNING`** → insert `promo_redemptions` (`reserved_until = hold_expires_at`) → **baru** hitung kuota per user (urutan ini penting, BR-PR-33). Pola `SELECT → cek → UPDATE` **dilarang**. *acuan:* [08 § 5.1](../docs/08-MODULE-PROMO.md#51-mekanisme)
-- [ ] **P1-44** `0,5h` — `promo.markApplied()` / `promo.release()` + J-09 `commerce.releaseExpiredPromoReservations` (repeat 60 s, `quota_used − 1` dalam transaksi yang sama) + refresh counter Redis dari `promos.quota_used` (BR-PR-36)
-- [ ] **P1-45** `0,5h` — CRUD admin promo + `pause`/`activate`/`archive` + BR-PR-67 (field terkunci setelah `quota_used > 0`) + `POST /promos/validate` (tidak mereservasi, BR-PR-50)
-- [ ] **P1-46** `1h` 🔴 — Test promo: T-PR-01…T-PR-07, T-PR-09, **race kuota dijalankan dengan & tanpa Redis** (DoD-1-08). *acuan:* [08 § 5.3](../docs/08-MODULE-PROMO.md#53-test-yang-wajib-ada)
+- [x] **P1-41** `0,5h` — `computeDiscount()` **pure** untuk `percent` (dengan `max_discount_amount`) & `fixed` + clamp ke `base` + `roundTo100` + test 7 kasus. *acuan:* [08 § 8](../docs/08-MODULE-PROMO.md#8-perhitungan-diskon)
+- [x] **P1-42** `1h` 🔒 — `promo.evaluate()`: V-1…V-8, V-15, V-16 dengan `reason_code` spesifik. **V-9…V-14 (court/sport/hari/jam/rate class), auto promo, dan stacking ditunda Phase 4.** *acuan:* [08 § 3](../docs/08-MODULE-PROMO.md#3-aturan-validasi-promo-eligibility)
+- [x] **P1-43** `1h` 🔒 — `promo.reserve()`: **`UPDATE promos SET quota_used = quota_used + 1 WHERE … AND (quota_total IS NULL OR quota_used < quota_total) RETURNING`** → insert `promo_redemptions` (`reserved_until = hold_expires_at`) → **baru** hitung kuota per user (urutan ini penting, BR-PR-33). Pola `SELECT → cek → UPDATE` **dilarang**. *acuan:* [08 § 5.1](../docs/08-MODULE-PROMO.md#51-mekanisme)
+- [x] **P1-44** `0,5h` — `promo.markApplied()` / `promo.release()` + J-09 `commerce.releaseExpiredPromoReservations` (repeat 60 s, `quota_used − 1` dalam transaksi yang sama) + refresh counter Redis dari `promos.quota_used` (BR-PR-36)
+- [x] **P1-45** `0,5h` — CRUD admin promo + `pause`/`activate`/`archive` + BR-PR-67 (field terkunci setelah `quota_used > 0`) + `POST /promos/validate` (tidak mereservasi, BR-PR-50)
+- [x] **P1-46** `1h` 🔴 — Test promo: T-PR-01…T-PR-07, T-PR-09, **race kuota dijalankan dengan & tanpa Redis** (DoD-1-08). *acuan:* [08 § 5.3](../docs/08-MODULE-PROMO.md#53-test-yang-wajib-ada)
 
 ## P1.H — `payments/` · 9h
 
