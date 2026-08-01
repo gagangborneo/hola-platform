@@ -16,6 +16,7 @@ import { eq } from 'drizzle-orm'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 import { db } from '../../config/db.ts'
 import { logger } from '../../config/logger.ts'
+import { queues } from '../../config/queues.ts'
 import { redis, safeRedis } from '../../config/redis.ts'
 import {
   createAdminPriceRule,
@@ -53,7 +54,7 @@ const actor = {
   employeeId: undefined,
 }
 const audit = { actor, requestId: 'court-test', ipAddress: undefined, userAgent: undefined }
-const redisContext = { db, redis, redisKeys, safeRedis, logger }
+const redisContext = { db, redis, redisKeys, safeRedis, logger, queues }
 
 async function cleanFixtures(): Promise<void> {
   await db.delete(slotClaims).where(eq(slotClaims.courtId, ids.court))

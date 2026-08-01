@@ -22,6 +22,22 @@ export type BookingSettings = {
   requireContiguousSlots: boolean
 }
 
+export async function findRefundPolicy(
+  db: DbExecutor,
+): Promise<'option_a' | 'option_b' | 'option_c'> {
+  const [row] = await db
+    .select({ value: appSettings.value })
+    .from(appSettings)
+    .where(eq(appSettings.key, SETTINGS_KEY.REFUND_POLICY))
+    .limit(1)
+  if (typeof row?.value === 'object' && row.value !== null && 'option' in row.value) {
+    const option = (row.value as { option?: unknown }).option
+    if (option === 'A') return 'option_a'
+    if (option === 'C') return 'option_c'
+  }
+  return 'option_b'
+}
+
 function positiveInteger(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isInteger(value) && value > 0 ? value : fallback
 }
@@ -171,6 +187,19 @@ export async function findBookingWithItems(
   return { booking, items }
 }
 
+export async function findBookingRecipient(
+  db: DbExecutor,
+  bookingId: string,
+): Promise<{ userId: string; email: string | null; fullName: string } | null> {
+  const [row] = await db
+    .select({ userId: users.id, email: users.email, fullName: users.fullName })
+    .from(bookings)
+    .innerJoin(users, eq(users.id, bookings.customerUserId))
+    .where(eq(bookings.id, bookingId))
+    .limit(1)
+  return row ?? null
+}
+
 export async function markBookingCheckedIn(
   tx: Tx,
   input: { bookingId: string; now: Date },
@@ -312,4 +341,52 @@ export async function cancelPendingBooking(
     .where(and(eq(bookings.id, input.bookingId), eq(bookings.status, 'pending_payment')))
     .returning()
   return booking ?? null
+}
+
+export async function cancelCancellableBooking(
+  tx: Tx,
+  input: { bookingId: string; actorUserId: string; reason: string; now: Date },
+): Promise<BookingRow | null> {
+  const [booking] = await tx
+    .update(bookings)
+    .set({
+      status: 'cancelled',
+      holdExpiresAt: null,
+      cancelledAt: input.now,
+      cancelledByUserId: input.actorUserId,
+      cancellationReason: input.reason,
+      updatedAt: input.now,
+    })
+    .where(
+      and(
+        eq(bookings.id, input.bookingId),
+        inArray(bookings.status, ['pending_payment', 'confirmed']),
+      ),
+    )
+    .returning()
+  return booking ?? null
+}
+
+export async function forceCancelBookings(
+  tx: Tx,
+  input: { bookingIds: readonly string[]; actorUserId: string; reason: string; now: Date },
+): Promise<BookingRow[]> {
+  if (input.bookingIds.length === 0) return []
+  return tx
+    .update(bookings)
+    .set({
+      status: 'cancelled',
+      holdExpiresAt: null,
+      cancelledAt: input.now,
+      cancelledByUserId: input.actorUserId,
+      cancellationReason: input.reason,
+      updatedAt: input.now,
+    })
+    .where(
+      and(
+        inArray(bookings.id, [...input.bookingIds]),
+        inArray(bookings.status, ['pending_payment', 'confirmed']),
+      ),
+    )
+    .returning()
 }

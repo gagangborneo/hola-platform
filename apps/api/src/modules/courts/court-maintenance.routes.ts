@@ -55,7 +55,11 @@ function serviceContext(c: {
   }
 }
 
-function serialize(row: Awaited<ReturnType<typeof createAdminCourtMaintenance>>) {
+function serialize(
+  row: Omit<Awaited<ReturnType<typeof createAdminCourtMaintenance>>, 'cancelledBookingIds'> & {
+    cancelledBookingIds?: string[] | undefined
+  },
+) {
   return {
     id: row.id,
     court_id: row.courtId,
@@ -66,6 +70,7 @@ function serialize(row: Awaited<ReturnType<typeof createAdminCourtMaintenance>>)
     cancelled_at: row.cancelledAt?.toISOString() ?? null,
     created_at: row.createdAt.toISOString(),
     updated_at: row.updatedAt.toISOString(),
+    cancelled_booking_ids: row.cancelledBookingIds ?? [],
   }
 }
 

@@ -8,8 +8,12 @@ export type PaymentTransition = PaymentTransitionInput & { changed: boolean }
 export function applyPaymentTransition(
   current: PaymentTransitionInput,
   next: PaymentTransitionInput,
+  source: 'standard' | 'provider_settlement' = 'standard',
 ): PaymentTransition {
   if (current.status === next.status) return { ...next, changed: false }
+  if (current.status === 'expired' && next.status === 'paid' && source === 'provider_settlement') {
+    return { ...next, changed: true }
+  }
   if (current.status !== 'pending') {
     throw err.conflict('Transisi status payment tidak diizinkan.', {
       from: current.status,

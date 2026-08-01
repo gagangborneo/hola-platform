@@ -13,6 +13,11 @@ auth.password_reset email transaksional
 auth.password_changed email transaksional
 auth.account_locked email transaksional
 booking.confirmed email transaksional
+booking.recovered_after_expiry email transaksional
+booking.force_cancelled email transaksional
+payment.refund_auto_created email transaksional
+payment.refund_completed email transaksional
+payment.refund_required inapp transaksional
 `
 
 const docTemplates = DOC_TEMPLATES.trim()

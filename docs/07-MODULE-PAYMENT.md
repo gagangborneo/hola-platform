@@ -643,6 +643,11 @@ flowchart TD
 
 ### 7.1 Sequence
 
+Untuk Phase 1, cabang gateway pada diagram berikut dinonaktifkan oleh ROADMAP A-4. J-08 hanya
+memakai `cash` atau `manual_transfer`. Refund transfer tanpa rekening tujuan tetap `approved`
+dan membuat tugas admin; setelah admin melengkapi rekening melalui endpoint `approve`, J-08
+memindahkannya ke `processing` sampai bukti pembayaran ditandai selesai.
+
 ```mermaid
 sequenceDiagram
     autonumber
@@ -720,8 +725,8 @@ Kemampuan refund via API **berbeda per metode**. Sistem wajib memeriksa
 | BR-P-53 | Refund butuh persetujuan `admin`, **kecuali** refund yang berasal dari kesalahan/keputusan pihak Hola (force release, event dibatalkan, pembayaran masuk setelah slot hilang) yang langsung `approved` |
 | BR-P-54 | Biaya gateway tidak dapat ditarik kembali. Pada refund 100%, `refunds.amount = payments.amount − payments.gateway_fee_amount`, **kecuali** refund karena kesalahan Hola yang memakai `refunds.amount = payments.amount` penuh (biaya gateway ditanggung Hola) |
 | BR-P-55 | `refunds.status` hanya maju: `requested → approved → processing → completed`, dengan cabang `requested → rejected` dan `processing → failed`. `failed` dapat di-retry admin (kembali ke `approved`) |
-| BR-P-56 | J-08 idempoten: `jobId='refund:{refundId}'`, dan `refund_key` yang dikirim ke Midtrans = `refunds.id` sehingga gateway menolak permintaan refund duplikat |
-| BR-P-57 | Refund menghasilkan `finance_events` dengan `kind='refund'` yang menjadi jurnal pengurang pendapatan (bukan beban) — lihat [14 § 5](14-MODULE-FINANCE.md#5-sumber-transaksi-otomatis) |
+| BR-P-56 | J-08 idempoten: `jobId='refund-{refundId}'` (BullMQ v5 melarang `:`). Phase 1 memakai jalur manual; saat ROADMAP A-4 diimplementasikan, `refund_key` gateway memakai `refunds.id` |
+| BR-P-57 | Refund menghasilkan `finance_events` `kind='refund_accrual'` saat disetujui dan `kind='refund_settlement'` saat dibayar, sesuai katalog definitif [03 § 16](03-DATA-MODEL.md#16-entitas-finance) dan [14 § 5](14-MODULE-FINANCE.md#5-sumber-transaksi-otomatis) |
 | BR-P-58 | Refund atas booking yang sudah `completed` dan berpoin memicu J-20 `gamification.reversePoints` |
 | BR-P-59 | Refund parsial menyisakan `refund_status='partial'`; refund yang totalnya sama dengan `payments.amount` (atau `amount − gateway_fee` sesuai BR-P-54) menjadi `full` |
 | BR-P-60 | Semua aksi refund (`requested`, `approved`, `rejected`, `completed`) mencatat `audit_logs` |
@@ -747,7 +752,7 @@ Kemampuan refund via API **berbeda per metode**. Sistem wajib memeriksa
 | E-12 | Dua `price_rules` cocok dengan `priority` sama | Tie-break 6 tingkat di P2 menjamin hasil deterministik. Ada test yang membuat dua rule identik kecuali `id` dan memastikan hasilnya stabil |
 | E-13 | Admin mengubah `price_rules` saat ada 20 quote aktif di browser customer | Quote di browser sudah basi. `POST /bookings` menghitung ulang; jika `total_amount` berbeda dari yang ditampilkan, response menyertakan `meta.warnings: [PRICE_CHANGED]` dan client **wajib** menampilkan harga baru untuk dikonfirmasi ulang. Field `expected_total_amount` opsional di body `POST /bookings`: jika dikirim dan tidak cocok → `409 CONFLICT` alih-alih membuat booking dengan harga berbeda dari yang dilihat user |
 | E-14 | Total quote Rp 0 (event gratis / promo 100%) | Tidak ada transaksi gateway (BR-P-18). Payment `provider='manual'`, `amount=0`, `status='paid'`. Jurnal tetap dibuat: pendapatan 0 tidak dicatat, tetapi diskon 100% dicatat sebagai contra-revenue vs pendapatan bruto, sehingga laporan diskon tetap akurat |
-| E-15 | Refund atas metode yang tidak mendukung API (VA) | Otomatis dialihkan ke `channel='manual_transfer'`, status berhenti di `processing`, admin diberi tugas transfer manual + mengunggah bukti |
+| E-15 | Refund atas metode yang tidak mendukung API (VA) | Otomatis dialihkan ke `channel='manual_transfer'`; tanpa rekening tujuan tetap `approved` sambil admin diberi tugas, lalu berhenti di `processing` setelah rekening lengkap sampai admin mengunggah bukti |
 | E-16 | Refund gagal di Midtrans (mis. saldo merchant tidak cukup) | `refunds.status='failed'`, `failure_reason` dari gateway, alert admin, dapat di-retry. Payment tetap `paid` dan `refunded_amount` **tidak** bertambah sampai `completed` |
 | E-17 | Customer membatalkan booking, refund `requested`, lalu customer minta dibatalkan pembatalannya | Tidak didukung. Booking sudah `cancelled` (terminal) dan slot sudah dilepas. Customer membuat booking baru; admin dapat `POST /refunds/{id}/reject` jika refund belum diproses agar uang tidak keluar dua kali |
 | E-18 | PostgreSQL mati saat webhook masuk | Handler gagal insert → `503`. Midtrans melakukan retry berjadwal. J-06 juga akan menemukannya. Tidak ada pembayaran hilang |

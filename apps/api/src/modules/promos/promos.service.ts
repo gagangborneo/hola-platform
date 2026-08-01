@@ -301,7 +301,7 @@ export async function markPromoApplied(
 }
 
 export async function releasePromo(
-  ctx: PromoServiceContext,
+  ctx: Pick<PromoServiceContext, 'db' | 'logger' | 'redis' | 'redisKeys' | 'safeRedis' | 'now'>,
   redemptionId: string,
   reason: string,
   scope: TransactionScope,
@@ -325,7 +325,7 @@ export async function releasePromo(
 }
 
 export async function releaseBookingPromo(
-  ctx: PromoServiceContext,
+  ctx: Pick<PromoServiceContext, 'db' | 'logger' | 'redis' | 'redisKeys' | 'safeRedis' | 'now'>,
   bookingId: string,
   reason: string,
   scope: TransactionScope,

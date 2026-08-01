@@ -14,6 +14,7 @@ import { addSeconds } from '../../lib/time.ts'
 import { withTransaction } from '../../lib/transaction.ts'
 import type { CoreDependencies } from '../../middleware/core-dependencies.ts'
 import type { Viewer } from '../auth/auth.types.ts'
+import { findPaidPaymentForBooking } from '../payments/payments.repository.ts'
 import { findPricingCourts } from '../pricing/pricing.repository.ts'
 import { computeQuote } from '../pricing/pricing.service.ts'
 import {
@@ -23,6 +24,7 @@ import {
   releaseBookingPromo,
   reservePromo,
 } from '../promos/promos.service.ts'
+import { createRefundInScope } from '../refunds/refunds.service.ts'
 import {
   claimBookingHoldSlotsInTransaction,
   claimDirectSlotsInTransaction,
@@ -31,14 +33,16 @@ import {
   reserveBookingHoldKeys,
 } from '../slots/slots.service.ts'
 import { writeAuditLog } from '../system/audit.repository.ts'
+import { computeRefundAmount } from './booking-refund.ts'
 import {
   type BookingItemRow,
   type BookingRow,
-  cancelPendingBooking,
+  cancelCancellableBooking,
   countBookings,
   countCustomerBookings,
   findBookingSettings,
   findBookingWithItems,
+  findRefundPolicy,
   insertBooking,
   insertBookingAddons,
   insertBookingItems,
@@ -60,7 +64,7 @@ import type {
 
 export type BookingsServiceContext = Pick<
   CoreDependencies,
-  'db' | 'redis' | 'redisKeys' | 'safeRedis' | 'logger'
+  'db' | 'redis' | 'redisKeys' | 'safeRedis' | 'logger' | 'queues'
 > & {
   now: Date
   actor: Viewer
@@ -504,17 +508,31 @@ export async function listMyBookings(
 export async function cancelBooking(
   ctx: BookingsServiceContext,
   input: { bookingId: string; reason: string },
-): Promise<{ booking: BookingRow; refundEstimateAmount: 0; policyApplied: string }> {
+): Promise<{ booking: BookingRow; refundEstimateAmount: number; policyApplied: string }> {
   const found = await getBookingDetail(ctx, input.bookingId)
-  if (found.booking.status !== 'pending_payment') {
-    throw err.of(ERROR_CODE.BOOKING_NOT_CANCELLABLE, {
-      message: 'Pembatalan booking confirmed menunggu integrasi refund P1.H.',
-    })
-  }
+  if (found.booking.status !== 'pending_payment' && found.booking.status !== 'confirmed')
+    throw err.of(ERROR_CODE.BOOKING_NOT_CANCELLABLE)
+  const payment =
+    found.booking.status === 'confirmed'
+      ? await findPaidPaymentForBooking(ctx.db, input.bookingId)
+      : null
+  if (found.booking.status === 'confirmed' && !payment) throw err.internal()
+  const policy = await findRefundPolicy(ctx.db)
+  const startsAt = found.items.reduce(
+    (earliest, item) => (item.startsAt < earliest ? item.startsAt : earliest),
+    found.items[0]?.startsAt ?? ctx.now,
+  )
+  const refund = payment
+    ? computeRefundAmount(
+        { totalAmount: payment.amount, startsAt, gatewayFeeAmount: payment.gatewayFeeAmount },
+        policy,
+        ctx.now,
+      )
+    : { amount: 0, percentage: 0 as const, policyApplied: 'pending_payment_no_refund' }
   const booking = await withTransaction(
     ctx.db,
     async (scope) => {
-      const updated = await cancelPendingBooking(scope.tx, {
+      const updated = await cancelCancellableBooking(scope.tx, {
         bookingId: input.bookingId,
         actorUserId: ctx.actor.userId,
         reason: input.reason,
@@ -523,6 +541,17 @@ export async function cancelBooking(
       if (!updated) throw err.of(ERROR_CODE.BOOKING_NOT_CANCELLABLE)
       await releaseBookingSlotsInTransaction(ctx, input.bookingId, scope)
       await releaseBookingPromo(ctx, input.bookingId, 'booking_cancelled', scope)
+      if (payment && refund.amount > 0) {
+        await createRefundInScope(ctx, scope, {
+          paymentId: payment.id,
+          amount: refund.amount,
+          reason: input.reason,
+          policyApplied: refund.policyApplied,
+          channel: payment.method === 'cash' ? 'cash' : 'manual_transfer',
+          automatic: false,
+          requestedByUserId: ctx.actor.userId,
+        })
+      }
       if (ctx.actor.role === 'staff' || ctx.actor.role === 'admin') {
         await writeAuditLog(scope.tx, {
           actorUserId: ctx.actor.userId,
@@ -541,5 +570,5 @@ export async function cancelBooking(
     },
     { logger: ctx.logger },
   )
-  return { booking, refundEstimateAmount: 0, policyApplied: 'pending_payment_no_refund' }
+  return { booking, refundEstimateAmount: refund.amount, policyApplied: refund.policyApplied }
 }

@@ -346,7 +346,7 @@ Kolom:
 | J-05 | `payment.processWebhook` | payment | `event` — dienqueue oleh handler HTTP webhook setelah menyimpan payload | 5 × exp mulai 5 s (5 s, 10 s, 20 s, 40 s, 80 s) | `jobId = "wh-midtrans-{sha256(providerEventId)}"`. Hash mempertahankan determinisme tanpa karakter `:` yang dilarang BullMQ v5. Baris `payment_webhook_events` punya UNIQUE `(provider, provider_event_id)`; handler keluar lebih awal jika `processed_at IS NOT NULL`. | [07 § 5](07-MODULE-PAYMENT.md#5-webhook-handling--idempotency) |
 | J-06 | `payment.reconcilePending` | payment | `repeat:5m` | 3 × fixed 60 s | Query berbasis kondisi (`payments.status='pending' AND created_at < now() - interval '5 minutes'`); memanggil API status gateway; transisi status hanya lewat fungsi transisi yang menolak transisi tidak sah. | [07 § 6](07-MODULE-PAYMENT.md#6-rekonsiliasi) |
 | J-07 | `payment.expireUnpaid` | payment | `delayed` (pada `payments.expires_at`) + disapu ulang oleh J-06 | 5 × exp 30 s | `jobId = "expire-{paymentId}"`; `UPDATE payments SET status='expired' WHERE id=? AND status='pending'`. | [07 § 4](07-MODULE-PAYMENT.md#4-flow-pembayaran-end-to-end) |
-| J-08 | `payment.processRefund` | payment | `event` (setelah refund disetujui admin) | 5 × exp 60 s | `jobId = "refund:{refundId}"`; state `refunds.status` hanya maju; call gateway memakai `refunds.id` sebagai reference id sehingga gateway menolak duplikat. | [07 § 7](07-MODULE-PAYMENT.md#7-refund-flow) |
+| J-08 | `payment.processRefund` | payment | `event` (setelah refund disetujui admin) | 5 × exp 60 s | `jobId = "refund-{refundId}"` (BullMQ v5 melarang `:`); state hanya maju. Phase 1 memakai transfer manual; tanpa rekening tujuan tetap `approved` + tugas admin, setelah lengkap berhenti di `processing` sampai ditandai selesai. Gateway refund ditunda ke ROADMAP A-4. | [07 § 7](07-MODULE-PAYMENT.md#7-refund-flow) |
 | J-09 | `commerce.releaseExpiredPromoReservations` | commerce | `repeat:60s` | 3 × fixed 10 s | Kondisional: `promo_redemptions.status='reserved' AND reserved_until < now()`; pengurangan `quota_used` dilakukan dalam transaksi yang sama dengan perubahan status sehingga tidak bisa dobel. | [08 § 5](08-MODULE-PROMO.md#5-validasi-kuota-race-condition-safe) |
 | J-10 | `commerce.generateMonthlyInvoices` | commerce | `cron:0 1 1 * *` (tanggal 1, 01:00 WITA) | 3 × exp 300 s | UNIQUE `(contract_id, period_year, period_month)` di `cafe_invoices`; insert memakai `ON CONFLICT DO NOTHING`. | [09 § 4](09-MODULE-TENANT.md#4-siklus-tagihan-bulanan) |
 | J-11 | `commerce.markOverdueInvoices` | commerce | `cron:0 2 * * *` | 3 × fixed 60 s | Kondisional: `status IN ('issued','partially_paid') AND due_date < current_date`. | [09 § 5](09-MODULE-TENANT.md#5-status-tagihan--penagihan) |
@@ -558,6 +558,11 @@ Phase 1 (booking/payment — [07 § 5](07-MODULE-PAYMENT.md#5-webhook-handling--
 | `code` | Kanal | Transaksional | Dikirim saat |
 |---|---|---|---|
 | `booking.confirmed` | email + in-app | ✓ | Payment booking berubah menjadi `paid`; payload memuat data e-receipt |
+| `booking.recovered_after_expiry` | email + in-app | ✓ | Settlement terlambat dan slot berhasil diklaim ulang |
+| `booking.force_cancelled` | email + in-app | ✓ | Admin force release slot booking untuk maintenance/internal event |
+| `payment.refund_auto_created` | email + in-app | ✓ | Settlement terlambat/dobel tidak dapat diterapkan ke payable |
+| `payment.refund_required` | in-app | ✓ | J-08 membuat tugas pembayaran refund manual untuk admin |
+| `payment.refund_completed` | email + in-app | ✓ | Refund manual ditandai selesai |
 
 Template modul lain (booking, payment, refund, event, tenant, turnamen, gamification)
 **ditambahkan di phase-nya masing-masing**. Contoh bentuk yang sudah disebut dokumen lain:

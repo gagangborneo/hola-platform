@@ -32,6 +32,13 @@ describe('P1-51 payment state machine', () => {
     ).toThrow(/tidak diizinkan/)
   })
 
+  it('E-3: hanya provider settlement yang mengizinkan expired → paid', () => {
+    const current = { status: 'expired' as const, needsManualReview: false, failureReason: null }
+    const paid = { status: 'paid' as const, needsManualReview: false, failureReason: null }
+    expect(() => applyPaymentTransition(current, paid)).toThrow(/tidak diizinkan/)
+    expect(applyPaymentTransition(current, paid, 'provider_settlement').changed).toBe(true)
+  })
+
   it.each([
     ['settlement', undefined, 'paid', false, null, undefined],
     ['capture', 'accept', 'paid', false, null, undefined],

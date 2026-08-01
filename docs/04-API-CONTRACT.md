@@ -649,7 +649,7 @@ Otorisasi lengkap ada di [05 § 6](05-AUTH.md#6-rbac-matrix-per-endpoint).
 | GET | `/refunds` | O | — | Filter: `status`, `payment_id` |
 | POST | `/refunds` | — | wajib | Ajukan refund. Body: `payment_id`, `amount`, `reason`, `channel` |
 | GET | `/refunds/{refund_id}` | — | — | — |
-| POST | `/refunds/{id}/approve` | — | — | Admin menyetujui → enqueue J-08 |
+| POST | `/refunds/{id}/approve` | — | — | Admin menyetujui → enqueue J-08. Body `{}` atau tiga field rekening tujuan `manual_transfer`; ketiganya wajib diisi bersama |
 | POST | `/refunds/{id}/reject` | — | — | Body: `reason` |
 | POST | `/refunds/{id}/mark-completed` | — | — | Untuk `channel=manual_transfer`/`cash`: staff menandai sudah dibayarkan. Body: `proof_media_id?` |
 

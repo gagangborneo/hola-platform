@@ -8,11 +8,13 @@ import { type TransactionScope, withTransaction } from '../../lib/transaction.ts
 import type { CoreDependencies } from '../../middleware/core-dependencies.ts'
 import {
   findActiveConflicts,
+  findBookingIdsForClaims,
   findClosedSpecialDates,
   findCourtOperatingHours,
   findSlotCourt,
   insertSlotClaims,
   lockCourtForShare,
+  reclaimReleasedClaimsByBooking,
   releaseClaims,
   releaseClaimsByBooking,
   releaseClaimsByMaintenance,
@@ -454,4 +456,49 @@ export async function releaseBookingSlotsInTransaction(
     ])
   })
   return released.map(toClaimedSlot)
+}
+
+/**
+ * E-6: klaim ulang baris owner yang sama. Savepoint membuat konflik unique C-1
+ * dapat dikembalikan sebagai `false` tanpa menggagalkan transaksi payment.
+ */
+export async function reclaimExpiredBookingSlotsInTransaction(
+  ctx: SlotsServiceContext,
+  bookingId: string,
+  scope: TransactionScope,
+): Promise<boolean> {
+  try {
+    const reclaimed = await scope.tx.transaction((savepoint) =>
+      reclaimReleasedClaimsByBooking(savepoint, { bookingId, now: ctx.now }),
+    )
+    if (reclaimed.length === 0) return false
+    scope.afterCommit(() => invalidateAvailability(ctx, reclaimed))
+    return true
+  } catch (error) {
+    if (error instanceof UniqueViolationError && error.constraintName === 'uq_slot_claims_active') {
+      return false
+    }
+    throw error
+  }
+}
+
+/** P1-19: hanya klaim booking yang boleh ditimpa oleh keputusan force admin. */
+export async function forceReleaseBookingConflictsInTransaction(
+  ctx: SlotsServiceContext,
+  input: { courtId: string; startsAtList: readonly Date[] },
+  scope: TransactionScope,
+): Promise<{ bookingIds: string[]; claimIds: string[] }> {
+  const conflicts = await findActiveConflicts(scope.tx, input)
+  if (conflicts.some((claim) => claim.claimType !== 'booking')) {
+    throw err.of(ERROR_CODE.SLOT_ALREADY_CLAIMED, { details: conflictDetails(conflicts) })
+  }
+  const claimIds = conflicts.map((claim) => claim.id)
+  const bookingIds = await findBookingIdsForClaims(scope.tx, claimIds)
+  const released = await releaseClaims(scope.tx, {
+    claimIds,
+    reason: 'admin_force_release',
+    now: ctx.now,
+  })
+  scope.afterCommit(() => invalidateAvailability(ctx, released))
+  return { bookingIds, claimIds }
 }

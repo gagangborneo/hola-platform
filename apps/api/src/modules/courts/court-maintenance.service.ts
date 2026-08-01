@@ -1,7 +1,17 @@
+import { TEMPLATE_CODE } from '@hola/shared'
 import { err } from '../../lib/errors.ts'
 import { withTransaction } from '../../lib/transaction.ts'
+import { findBookingRecipient, forceCancelBookings } from '../bookings/bookings.repository.ts'
+import {
+  enqueueEmailNotification,
+  writeEmailNotification,
+} from '../notifications/notification.service.ts'
+import { findPaidPaymentForBooking } from '../payments/payments.repository.ts'
+import { releaseBookingPromo } from '../promos/promos.service.ts'
+import { createRefundInScope } from '../refunds/refunds.service.ts'
 import {
   claimDirectSlotsInTransaction,
+  forceReleaseBookingConflictsInTransaction,
   releaseMaintenanceSlotsInTransaction,
 } from '../slots/slots.service.ts'
 import { writeAuditLog } from '../system/audit.repository.ts'
@@ -46,13 +56,10 @@ function startsAtList(startsAt: Date, endsAt: Date, durationMinutes: number): Da
 export async function createAdminCourtMaintenance(
   ctx: CourtsServiceContext,
   input: CreateCourtMaintenanceInput,
-): Promise<CourtMaintenanceRow> {
+): Promise<CourtMaintenanceRow & { cancelledBookingIds: string[] }> {
   if (input.force) {
     if (ctx.actor.role !== 'admin') throw err.forbidden()
     if (input.confirm !== true) throw err.validation({ field: 'confirm' })
-    throw err.featureDisabled(
-      'Force release akan tersedia setelah booking dan refund selesai dibangun.',
-    )
   }
   const court = await findCourt(ctx.db, input.court_id)
   if (!court) throw err.notFound('Lapangan tidak ditemukan.')
@@ -69,7 +76,56 @@ export async function createAdminCourtMaintenance(
         reason: input.reason,
         createdByUserId: ctx.actor.userId,
       })
-      await claimDirectSlotsInTransaction(
+      const forced = input.force
+        ? await forceReleaseBookingConflictsInTransaction(
+            ctx,
+            { courtId: input.court_id, startsAtList: slots },
+            scope,
+          )
+        : { bookingIds: [], claimIds: [] }
+      const cancelled = await forceCancelBookings(scope.tx, {
+        bookingIds: forced.bookingIds,
+        actorUserId: ctx.actor.userId,
+        reason: input.reason,
+        now: ctx.now,
+      })
+      for (const booking of cancelled) {
+        const payment = await findPaidPaymentForBooking(scope.tx, booking.id)
+        if (payment) {
+          await createRefundInScope(ctx, scope, {
+            paymentId: payment.id,
+            amount: payment.amount,
+            reason: input.reason,
+            policyApplied: 'hola_fault_100pct',
+            channel: payment.method === 'cash' ? 'cash' : 'manual_transfer',
+            automatic: true,
+            requestedByUserId: ctx.actor.userId,
+          })
+        }
+        await releaseBookingPromo(ctx, booking.id, 'admin_force_release', scope)
+        const recipient = await findBookingRecipient(scope.tx, booking.id)
+        if (recipient?.email) {
+          const notification = await writeEmailNotification(
+            scope.tx,
+            {
+              userId: recipient.userId,
+              toEmail: recipient.email,
+              templateCode: TEMPLATE_CODE.BOOKING_FORCE_CANCELLED,
+              dedupeKey: `booking:${booking.id}:force-cancelled`,
+              relatedType: 'booking',
+              relatedId: booking.id,
+              payload: {
+                full_name: recipient.fullName,
+                booking_code: booking.bookingCode,
+                reason: input.reason,
+              },
+            },
+            ctx.now,
+          )
+          if (notification) scope.afterCommit(() => enqueueEmailNotification(ctx, notification.id))
+        }
+      }
+      const claims = await claimDirectSlotsInTransaction(
         ctx,
         {
           courtId: input.court_id,
@@ -83,13 +139,18 @@ export async function createAdminCourtMaintenance(
       )
       await writeAuditLog(scope.tx, {
         ...audit(ctx),
-        action: 'court_maintenance.create',
+        action: input.force ? 'slot.force_release' : 'court_maintenance.create',
         entityType: 'court_maintenance',
         entityId: maintenance.id,
         before: undefined,
-        after: maintenance,
+        after: {
+          maintenance,
+          released_claim_ids: forced.claimIds,
+          new_claim_ids: claims.map((claim) => claim.id),
+          cancelled_booking_ids: cancelled.map((booking) => booking.id),
+        },
       })
-      return maintenance
+      return { ...maintenance, cancelledBookingIds: cancelled.map((booking) => booking.id) }
     },
     { logger: ctx.logger },
   )

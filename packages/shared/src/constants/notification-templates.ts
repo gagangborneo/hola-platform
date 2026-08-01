@@ -24,6 +24,11 @@ export const TEMPLATE_CODE = {
   AUTH_ACCOUNT_LOCKED: 'auth.account_locked',
   /** Konfirmasi booking dan e-receipt setelah payment berhasil. */
   BOOKING_CONFIRMED: 'booking.confirmed',
+  BOOKING_RECOVERED_AFTER_EXPIRY: 'booking.recovered_after_expiry',
+  BOOKING_FORCE_CANCELLED: 'booking.force_cancelled',
+  PAYMENT_REFUND_AUTO_CREATED: 'payment.refund_auto_created',
+  PAYMENT_REFUND_COMPLETED: 'payment.refund_completed',
+  PAYMENT_REFUND_REQUIRED: 'payment.refund_required',
 } as const
 
 export type TemplateCode = (typeof TEMPLATE_CODE)[keyof typeof TEMPLATE_CODE]
@@ -38,4 +43,9 @@ export const TRANSACTIONAL_TEMPLATE_CODES: readonly TemplateCode[] = [
   TEMPLATE_CODE.AUTH_PASSWORD_CHANGED,
   TEMPLATE_CODE.AUTH_ACCOUNT_LOCKED,
   TEMPLATE_CODE.BOOKING_CONFIRMED,
+  TEMPLATE_CODE.BOOKING_RECOVERED_AFTER_EXPIRY,
+  TEMPLATE_CODE.BOOKING_FORCE_CANCELLED,
+  TEMPLATE_CODE.PAYMENT_REFUND_AUTO_CREATED,
+  TEMPLATE_CODE.PAYMENT_REFUND_COMPLETED,
+  TEMPLATE_CODE.PAYMENT_REFUND_REQUIRED,
 ]

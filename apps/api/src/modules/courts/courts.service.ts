@@ -26,7 +26,7 @@ import type {
 } from './courts.schema.ts'
 
 export interface CourtsServiceContext
-  extends Pick<CoreDependencies, 'db' | 'redis' | 'redisKeys' | 'safeRedis' | 'logger'> {
+  extends Pick<CoreDependencies, 'db' | 'redis' | 'redisKeys' | 'safeRedis' | 'logger' | 'queues'> {
   now: Date
   actor: Viewer
   requestId: string | undefined

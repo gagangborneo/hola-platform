@@ -8,6 +8,7 @@ import {
   type QuoteLine,
   TEMPLATE_CODE,
 } from '@hola/shared'
+import { incrementMetric } from '../../config/metrics.ts'
 import { enqueueJobTo } from '../../config/queues.ts'
 import { nextPaymentCode } from '../../lib/codes.ts'
 import { err } from '../../lib/errors.ts'
@@ -20,12 +21,19 @@ import type {
   ProviderItem,
   ProviderTransactionStatus,
 } from '../../providers/payment/payment-provider.ts'
+import { ProviderTransactionNotFoundError } from '../../providers/payment/payment-provider.ts'
 import type { Viewer } from '../auth/auth.types.ts'
 import { findBookingWithItems } from '../bookings/bookings.repository.ts'
 import {
   enqueueEmailNotification,
   writeEmailNotification,
 } from '../notifications/notification.service.ts'
+import { releaseBookingPromo } from '../promos/promos.service.ts'
+import { createRefundInScope } from '../refunds/refunds.service.ts'
+import {
+  reclaimExpiredBookingSlotsInTransaction,
+  releaseBookingSlotsInTransaction,
+} from '../slots/slots.service.ts'
 import { writeAuditLog } from '../system/audit.repository.ts'
 import { applyPaymentTransition, mapMidtransStatus } from './payment-state.ts'
 import {
@@ -35,6 +43,8 @@ import {
   confirmBookingPayable,
   confirmBookingSlotClaims,
   countPayments,
+  expirePendingBooking,
+  expirePendingPayment,
   findBookingPayable,
   findPayment,
   findPaymentByProviderOrderId,
@@ -44,11 +54,15 @@ import {
   insertBookingRevenueEvent,
   insertPayment,
   insertWebhookEvent,
+  listDuePendingPayments,
   listPayments,
+  listPendingPaymentsForReconciliation,
+  listStuckWebhookEvents,
   lockBookingPayment,
   lockWebhookEvent,
   markPaymentPaid,
   type PaymentRow,
+  recoverExpiredBooking,
   saveGatewayTransaction,
   transitionPendingPayment,
   updatePendingPaymentReview,
@@ -62,7 +76,14 @@ import type {
 
 type PaymentDependencies = Pick<
   CoreDependencies,
-  'db' | 'env' | 'logger' | 'paymentProviderFactory' | 'queues'
+  | 'db'
+  | 'env'
+  | 'logger'
+  | 'paymentProviderFactory'
+  | 'queues'
+  | 'redis'
+  | 'redisKeys'
+  | 'safeRedis'
 >
 
 export interface PaymentsServiceContext extends PaymentDependencies {
@@ -152,20 +173,84 @@ async function markPaidInScope(
     paidAt: input.paidAt,
     providerMeta: input.providerMeta,
     now: ctx.now,
+    allowExpired: input.payment.status === 'expired',
   })
   if (!paid) return null
   if (!paid.bookingId) throw err.internal()
-  const confirmed = await confirmBookingPayable(scope.tx, {
-    bookingId: paid.bookingId,
-    now: ctx.now,
-  })
-  if (!confirmed) {
-    throw err.of(ERROR_CODE.BOOKING_ALREADY_PAID, {
-      message: 'Booking tidak lagi menunggu pembayaran.',
+  const payableBefore = await findBookingPayable(scope.tx, paid.bookingId)
+  if (!payableBefore) throw err.internal()
+  let confirmed = false
+  let recoveredAfterExpiry = false
+  if (payableBefore.booking.status === 'pending_payment') {
+    const confirmedClaims = await confirmBookingSlotClaims(scope.tx, {
+      bookingId: paid.bookingId,
+      now: ctx.now,
     })
+    if (confirmedClaims === payableBefore.booking.slotCount) {
+      confirmed = await confirmBookingPayable(scope.tx, { bookingId: paid.bookingId, now: ctx.now })
+      if (!confirmed) throw err.conflict('Status booking berubah saat pembayaran diproses.')
+      await applyBookingPromoRedemptions(scope.tx, { bookingId: paid.bookingId, now: ctx.now })
+    } else {
+      await expirePendingBooking(scope.tx, { bookingId: paid.bookingId, now: ctx.now })
+      await releaseBookingSlotsInTransaction(ctx, paid.bookingId, scope)
+      confirmed = await reclaimExpiredBookingSlotsInTransaction(ctx, paid.bookingId, scope)
+      if (confirmed) {
+        await recoverExpiredBooking(scope.tx, { bookingId: paid.bookingId, now: ctx.now })
+        await applyBookingPromoRedemptions(scope.tx, { bookingId: paid.bookingId, now: ctx.now })
+        recoveredAfterExpiry = true
+        await writeAuditLog(scope.tx, {
+          actorUserId: undefined,
+          actorRole: undefined,
+          action: 'booking.recovered_after_expiry',
+          entityType: 'booking',
+          entityId: paid.bookingId,
+          before: payableBefore.booking,
+          after: { status: 'confirmed', payment_id: paid.id },
+          ipAddress: undefined,
+          userAgent: undefined,
+          requestId: undefined,
+        })
+      } else {
+        await releaseBookingPromo(ctx, paid.bookingId, 'late_payment_slot_lost', scope)
+      }
+    }
+  } else if (payableBefore.booking.status === 'expired') {
+    const reclaimed = await reclaimExpiredBookingSlotsInTransaction(ctx, paid.bookingId, scope)
+    if (reclaimed) {
+      confirmed = await recoverExpiredBooking(scope.tx, { bookingId: paid.bookingId, now: ctx.now })
+      if (!confirmed) throw err.conflict('Status booking berubah saat pemulihan pembayaran.')
+      recoveredAfterExpiry = true
+      await writeAuditLog(scope.tx, {
+        actorUserId: undefined,
+        actorRole: undefined,
+        action: 'booking.recovered_after_expiry',
+        entityType: 'booking',
+        entityId: paid.bookingId,
+        before: payableBefore.booking,
+        after: { status: 'confirmed', payment_id: paid.id },
+        ipAddress: undefined,
+        userAgent: undefined,
+        requestId: undefined,
+      })
+    } else {
+      await releaseBookingPromo(ctx, paid.bookingId, 'late_payment_slot_lost', scope)
+    }
   }
-  await confirmBookingSlotClaims(scope.tx, { bookingId: paid.bookingId, now: ctx.now })
-  await applyBookingPromoRedemptions(scope.tx, { bookingId: paid.bookingId, now: ctx.now })
+  if (!confirmed) {
+    await createRefundInScope(ctx, scope, {
+      paymentId: paid.id,
+      amount: paid.amount,
+      reason:
+        payableBefore.booking.status === 'expired'
+          ? 'Pembayaran diterima setelah slot tidak lagi tersedia.'
+          : 'Pembayaran tambahan diterima setelah booking selesai dibayar atau dibatalkan.',
+      policyApplied: 'hola_fault_100pct',
+      channel: 'manual_transfer',
+      automatic: true,
+    })
+    if (ctx.onPaymentPaid) scope.afterCommit(() => ctx.onPaymentPaid?.(paid))
+    return paid
+  }
   const payable = await findBookingPayable(scope.tx, paid.bookingId)
   if (!payable) throw err.internal()
   await insertBookingRevenueEvent(scope.tx, {
@@ -180,7 +265,9 @@ async function markPaidInScope(
           {
             userId: paid.payerUserId,
             toEmail: payable.payer.email,
-            templateCode: TEMPLATE_CODE.BOOKING_CONFIRMED,
+            templateCode: recoveredAfterExpiry
+              ? TEMPLATE_CODE.BOOKING_RECOVERED_AFTER_EXPIRY
+              : TEMPLATE_CODE.BOOKING_CONFIRMED,
             dedupeKey: `booking:${paid.bookingId}:confirmed`,
             relatedType: 'booking',
             relatedId: paid.bookingId,
@@ -489,6 +576,7 @@ async function applyProviderStatus(
       failureReason: payment.failureReason,
     },
     mapped,
+    'provider_settlement',
   )
   if (!transition.changed) {
     if (payment.status === 'pending') {
@@ -664,4 +752,101 @@ export async function getWebhookEvent(
   providerEventId: string,
 ): Promise<Awaited<ReturnType<typeof findWebhookEvent>>> {
   return findWebhookEvent(ctx.db, providerEventId)
+}
+
+/** J-07 delayed + fallback J-06. Kondisional dan aman diulang. */
+export async function expireUnpaidPayment(
+  ctx: PaymentsServiceContext,
+  paymentId: string,
+): Promise<boolean> {
+  return withTransaction(
+    ctx.db,
+    async (scope) => {
+      const payment = await findPayment(scope.tx, paymentId)
+      if (!payment?.bookingId || payment.status !== 'pending') return false
+      const expired = await expirePendingPayment(scope.tx, { paymentId, now: ctx.now })
+      if (!expired) return false
+      await expirePendingBooking(scope.tx, { bookingId: payment.bookingId, now: ctx.now })
+      await releaseBookingSlotsInTransaction(ctx, payment.bookingId, scope)
+      await releaseBookingPromo(ctx, payment.bookingId, 'payment_expired', scope)
+      return true
+    },
+    { logger: ctx.logger },
+  )
+}
+
+/** J-06: rekonsiliasi gateway sekaligus sweeper job durabel. */
+export async function reconcilePendingPayments(
+  ctx: PaymentsServiceContext,
+): Promise<{ reconciled: number; expiryQueued: number; webhooksQueued: number }> {
+  const before = new Date(ctx.now.getTime() - 5 * 60_000)
+  const [pending, due, webhooks] = await Promise.all([
+    listPendingPaymentsForReconciliation(ctx.db, { before, limit: 200 }),
+    listDuePendingPayments(ctx.db, { now: ctx.now, limit: 200 }),
+    listStuckWebhookEvents(ctx.db, { before, limit: 200 }),
+  ])
+  const provider = await midtransProvider(ctx)
+  let reconciled = 0
+  for (const payment of pending) {
+    if (!payment.providerOrderId) continue
+    try {
+      const status = await provider.getTransactionStatus({
+        provider_order_id: payment.providerOrderId,
+      })
+      const updated = await withTransaction(
+        ctx.db,
+        (scope) => applyProviderStatus(ctx, scope, payment, status),
+        {
+          logger: ctx.logger,
+        },
+      )
+      if (payment.status !== 'paid' && updated.status === 'paid') {
+        incrementMetric('payment_reconcile_fixed_total')
+      }
+      reconciled += 1
+    } catch (error) {
+      if (error instanceof ProviderTransactionNotFoundError) {
+        if (ctx.now.getTime() - payment.createdAt.getTime() > 24 * 60 * 60_000) {
+          await withTransaction(ctx.db, async ({ tx }) => {
+            await transitionPendingPayment(tx, {
+              paymentId: payment.id,
+              status: 'failed',
+              method: payment.method,
+              providerTransactionId: payment.providerTransactionId,
+              failureReason: 'not_found_at_gateway',
+              needsManualReview: false,
+              providerMeta: {},
+              now: ctx.now,
+            })
+          })
+        }
+        continue
+      }
+      ctx.logger.warn(
+        { err: error, payment_id: payment.id },
+        'rekonsiliasi payment gagal; akan diulang',
+      )
+    }
+  }
+  let expiryQueued = 0
+  for (const payment of due) {
+    await enqueueJobTo(
+      ctx.queues,
+      JOB.PAYMENT_EXPIRE_UNPAID,
+      { paymentId: payment.id },
+      { jobId: `expire-${payment.id}` },
+    )
+    expiryQueued += 1
+  }
+  let webhooksQueued = 0
+  for (const event of webhooks) {
+    await enqueueJobTo(
+      ctx.queues,
+      JOB.PAYMENT_PROCESS_WEBHOOK,
+      { providerEventId: event.providerEventId },
+      { jobId: webhookJobId(event.providerEventId) },
+    )
+    webhooksQueued += 1
+  }
+  return { reconciled, expiryQueued, webhooksQueued }
 }

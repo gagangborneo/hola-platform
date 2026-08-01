@@ -156,6 +156,19 @@ export async function findActiveConflicts(
     )
 }
 
+export async function findBookingIdsForClaims(
+  db: DbExecutor,
+  claimIds: readonly string[],
+): Promise<string[]> {
+  if (claimIds.length === 0) return []
+  const rows = await db
+    .select({ bookingId: bookingItems.bookingId })
+    .from(slotClaims)
+    .innerJoin(bookingItems, eq(bookingItems.id, slotClaims.bookingItemId))
+    .where(inArray(slotClaims.id, [...claimIds]))
+  return [...new Set(rows.map((row) => row.bookingId))]
+}
+
 export async function releaseClaims(
   tx: Tx,
   input: { claimIds: readonly string[]; reason: string; now: Date },
@@ -226,4 +239,37 @@ export async function releaseClaimsByBooking(
       ),
     )
     .returning()
+}
+
+/** Aktifkan kembali klaim milik booking yang sebelumnya dilepas oleh expiry. */
+export async function reclaimReleasedClaimsByBooking(
+  tx: Tx,
+  input: { bookingId: string; now: Date },
+): Promise<SlotClaimRow[]> {
+  try {
+    return await tx
+      .update(slotClaims)
+      .set({
+        status: 'confirmed',
+        holdExpiresAt: null,
+        releasedAt: null,
+        releaseReason: null,
+        updatedAt: input.now,
+      })
+      .where(
+        and(
+          inArray(
+            slotClaims.bookingItemId,
+            tx
+              .select({ id: bookingItems.id })
+              .from(bookingItems)
+              .where(eq(bookingItems.bookingId, input.bookingId)),
+          ),
+          eq(slotClaims.status, 'released'),
+        ),
+      )
+      .returning()
+  } catch (error) {
+    throw translateDbError(error)
+  }
 }

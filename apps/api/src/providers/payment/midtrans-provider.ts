@@ -10,7 +10,10 @@ import type {
   PaymentProviderCapabilities,
   ProviderTransactionStatus,
 } from './payment-provider.ts'
-import { UnsupportedPaymentOperationError } from './payment-provider.ts'
+import {
+  ProviderTransactionNotFoundError,
+  UnsupportedPaymentOperationError,
+} from './payment-provider.ts'
 
 const snapResponseSchema = z.object({ token: z.string().min(1), redirect_url: z.url() })
 const midtransPayloadSchema = z
@@ -124,6 +127,7 @@ export class MidtransProvider implements PaymentProvider {
     } catch (error) {
       throw err.upstream('Midtrans tidak dapat dihubungi.', error)
     }
+    if (response.status === 404) throw new ProviderTransactionNotFoundError()
     if (!response.ok) throw err.upstream(`Midtrans mengembalikan HTTP ${response.status}.`)
     try {
       return await response.json()

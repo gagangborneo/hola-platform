@@ -5,7 +5,10 @@ import { releaseExpiredPromoReservationsJob } from './commerce/release-expired-p
 import { JOB_OPTIONS } from './job-options.ts'
 import { retryStuckNotificationsJob } from './notification/retry-stuck-notifications.job.ts'
 import { sendEmailJob } from './notification/send-email.job.ts'
+import { expireUnpaidPaymentJob } from './payment/expire-unpaid.job.ts'
+import { processRefundJob } from './payment/process-refund.job.ts'
 import { processPaymentWebhookJob } from './payment/process-webhook.job.ts'
+import { reconcilePendingPaymentsJob } from './payment/reconcile-pending.job.ts'
 import { backupDatabaseJob } from './system/backup-database.job.ts'
 import { cleanupExpiredTokensJob } from './system/cleanup-expired-tokens.job.ts'
 import { cleanupOrphanUploadsJob } from './system/cleanup-orphan-uploads.job.ts'
@@ -25,6 +28,9 @@ const implementedHandlers = new Map<JobName, JobHandler>([
   [backupDatabaseJob.name, backupDatabaseJob.handler],
   [releaseExpiredPromoReservationsJob.name, releaseExpiredPromoReservationsJob.handler],
   [processPaymentWebhookJob.name, processPaymentWebhookJob.handler],
+  [reconcilePendingPaymentsJob.name, reconcilePendingPaymentsJob.handler],
+  [expireUnpaidPaymentJob.name, expireUnpaidPaymentJob.handler],
+  [processRefundJob.name, processRefundJob.handler],
 ])
 
 /**
@@ -48,6 +54,12 @@ export const scheduledJobs: readonly {
   queue: QueueName
   repeat: Omit<RepeatOptions, 'key' | 'prevMillis'>
 }[] = [
+  {
+    id: 'scheduler:payment.reconcilePending',
+    name: JOB.PAYMENT_RECONCILE_PENDING,
+    queue: QUEUE.PAYMENT,
+    repeat: { every: 300_000 },
+  },
   {
     id: 'scheduler:commerce.releaseExpiredPromoReservations',
     name: JOB.COMMERCE_RELEASE_EXPIRED_PROMO_RESERVATIONS,

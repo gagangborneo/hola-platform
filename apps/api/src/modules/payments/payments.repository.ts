@@ -17,7 +17,21 @@ import {
   type PaymentStatus,
   SETTINGS_KEY,
 } from '@hola/shared'
-import { and, asc, desc, eq, gte, ilike, inArray, lte, or, type SQL, sql } from 'drizzle-orm'
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gte,
+  ilike,
+  inArray,
+  isNull,
+  lt,
+  lte,
+  or,
+  type SQL,
+  sql,
+} from 'drizzle-orm'
 import type { Tx } from '../../lib/transaction.ts'
 import type { PaymentsQuery } from './payments.schema.ts'
 
@@ -159,6 +173,19 @@ export async function findPaymentByProviderOrderId(
   return row ?? null
 }
 
+export async function findPaidPaymentForBooking(
+  db: DbExecutor,
+  bookingId: string,
+): Promise<PaymentRow | null> {
+  const [row] = await db
+    .select()
+    .from(payments)
+    .where(and(eq(payments.bookingId, bookingId), eq(payments.status, 'paid')))
+    .orderBy(desc(payments.paidAt), desc(payments.id))
+    .limit(1)
+  return row ?? null
+}
+
 function listWhere(query: PaymentsQuery): SQL | undefined {
   const search = query.q
     ? or(ilike(payments.paymentCode, `%${query.q}%`), ilike(bookings.bookingCode, `%${query.q}%`))
@@ -252,6 +279,7 @@ export async function markPaymentPaid(
     paidAt: Date
     providerMeta: Record<string, unknown> | null
     now: Date
+    allowExpired?: boolean | undefined
   },
 ): Promise<PaymentRow | null> {
   const [row] = await tx
@@ -265,9 +293,107 @@ export async function markPaymentPaid(
       providerMeta: input.providerMeta,
       updatedAt: input.now,
     })
-    .where(and(eq(payments.id, input.paymentId), eq(payments.status, 'pending')))
+    .where(
+      and(
+        eq(payments.id, input.paymentId),
+        input.allowExpired
+          ? inArray(payments.status, ['pending', 'expired'])
+          : eq(payments.status, 'pending'),
+      ),
+    )
     .returning()
   return row ?? null
+}
+
+export async function listPendingPaymentsForReconciliation(
+  db: HolaDb,
+  input: { before: Date; limit: number },
+): Promise<PaymentRow[]> {
+  return db
+    .select()
+    .from(payments)
+    .where(
+      and(
+        eq(payments.provider, 'midtrans'),
+        eq(payments.status, 'pending'),
+        lt(payments.createdAt, input.before),
+        sql`${payments.providerOrderId} IS NOT NULL`,
+      ),
+    )
+    .orderBy(asc(payments.createdAt), asc(payments.id))
+    .limit(input.limit)
+}
+
+export async function listDuePendingPayments(
+  db: HolaDb,
+  input: { now: Date; limit: number },
+): Promise<PaymentRow[]> {
+  return db
+    .select()
+    .from(payments)
+    .where(and(eq(payments.status, 'pending'), lte(payments.expiresAt, input.now)))
+    .orderBy(asc(payments.expiresAt), asc(payments.id))
+    .limit(input.limit)
+}
+
+export async function listStuckWebhookEvents(
+  db: HolaDb,
+  input: { before: Date; limit: number },
+): Promise<PaymentWebhookEventRow[]> {
+  return db
+    .select()
+    .from(paymentWebhookEvents)
+    .where(
+      and(
+        eq(paymentWebhookEvents.isSignatureValid, true),
+        isNull(paymentWebhookEvents.processedAt),
+        lt(paymentWebhookEvents.receivedAt, input.before),
+      ),
+    )
+    .orderBy(asc(paymentWebhookEvents.receivedAt), asc(paymentWebhookEvents.id))
+    .limit(input.limit)
+}
+
+export async function expirePendingPayment(
+  tx: Tx,
+  input: { paymentId: string; now: Date; reason?: string | undefined },
+): Promise<PaymentRow | null> {
+  const [row] = await tx
+    .update(payments)
+    .set({ status: 'expired', failureReason: input.reason ?? null, updatedAt: input.now })
+    .where(
+      and(
+        eq(payments.id, input.paymentId),
+        eq(payments.status, 'pending'),
+        lte(payments.expiresAt, input.now),
+      ),
+    )
+    .returning()
+  return row ?? null
+}
+
+export async function expirePendingBooking(
+  tx: Tx,
+  input: { bookingId: string; now: Date },
+): Promise<boolean> {
+  const [row] = await tx
+    .update(bookings)
+    .set({ status: 'expired', holdExpiresAt: null, updatedAt: input.now })
+    .where(and(eq(bookings.id, input.bookingId), eq(bookings.status, 'pending_payment')))
+    .returning({ id: bookings.id })
+  return row !== undefined
+}
+
+export async function recoverExpiredBooking(
+  tx: Tx,
+  input: { bookingId: string; now: Date },
+): Promise<boolean> {
+  const [row] = await tx
+    .update(bookings)
+    .set({ status: 'confirmed', confirmedAt: input.now, updatedAt: input.now })
+    .where(and(eq(bookings.id, input.bookingId), eq(bookings.status, 'expired')))
+    .returning({ id: bookings.id })
+  return row !== undefined
 }
 
 export async function confirmBookingPayable(
@@ -285,8 +411,8 @@ export async function confirmBookingPayable(
 export async function confirmBookingSlotClaims(
   tx: Tx,
   input: { bookingId: string; now: Date },
-): Promise<void> {
-  await tx
+): Promise<number> {
+  const rows = await tx
     .update(slotClaims)
     .set({ status: 'confirmed', holdExpiresAt: null, updatedAt: input.now })
     .where(
@@ -295,6 +421,8 @@ export async function confirmBookingSlotClaims(
         sql`EXISTS (SELECT 1 FROM ${bookingItems} bi WHERE bi.id = ${slotClaims.bookingItemId} AND bi.booking_id = ${input.bookingId})`,
       ),
     )
+    .returning({ id: slotClaims.id })
+  return rows.length
 }
 
 export async function applyBookingPromoRedemptions(

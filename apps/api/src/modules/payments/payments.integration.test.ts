@@ -1,6 +1,8 @@
 import {
   bookingItems,
   bookings,
+  courtMaintenances,
+  courtOperatingHours,
   courts,
   financeEvents,
   notifications,
@@ -8,6 +10,7 @@ import {
   paymentWebhookEvents,
   promoRedemptions,
   promos,
+  refunds,
   slotClaims,
   sports,
   users,
@@ -18,15 +21,28 @@ import { and, eq, inArray, sql } from 'drizzle-orm'
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { db } from '../../config/db.ts'
 import { logger } from '../../config/logger.ts'
+import { renderMetrics, resetMetrics } from '../../config/metrics.ts'
 import type { QueueProducers } from '../../config/queues.ts'
+import { keys, redis, safeRedis } from '../../config/redis.ts'
 import { MidtransProvider } from '../../providers/payment/midtrans-provider.ts'
 import type { PaymentProvider } from '../../providers/payment/payment-provider.ts'
+import { cancelBooking } from '../bookings/bookings.service.ts'
+import { createAdminCourtMaintenance } from '../courts/court-maintenance.service.ts'
+import {
+  approveRefund,
+  createRefundRequest,
+  markRefundCompleted,
+  processManualRefund,
+  rejectRefund,
+} from '../refunds/refunds.service.ts'
 import {
   createManualPayment,
   createPayment,
+  expireUnpaidPayment,
   type PaymentsServiceContext,
   processMidtransWebhook,
   receiveMidtransWebhook,
+  reconcilePendingPayments,
 } from './payments.service.ts'
 
 const ids = {
@@ -40,6 +56,10 @@ const ids = {
   claim: '01940000-0000-7000-8000-000000000108',
   promo: '01940000-0000-7000-8000-000000000109',
   redemption: '01940000-0000-7000-8000-000000000110',
+  otherBooking: '01940000-0000-7000-8000-000000000111',
+  otherItem: '01940000-0000-7000-8000-000000000112',
+  otherClaim: '01940000-0000-7000-8000-000000000113',
+  secondPayment: '01940000-0000-7000-8000-000000000114',
 } as const
 
 const now = new Date('2026-08-01T02:00:00.000Z')
@@ -148,6 +168,9 @@ function context(overrides: Partial<PaymentsServiceContext> = {}): PaymentsServi
     logger,
     queues,
     paymentProviderFactory: () => provider(),
+    redis,
+    redisKeys: keys,
+    safeRedis,
     now,
     actor: {
       userId: ids.customer,
@@ -167,6 +190,24 @@ async function cleanFixtures(): Promise<void> {
     .where(eq(payments.bookingId, ids.booking))
   const paymentIds = paymentRows.map((row) => row.id)
   const orderIds = paymentRows.flatMap((row) => (row.orderId ? [row.orderId] : []))
+  if (paymentIds.length > 0) {
+    const refundRows = await db
+      .select({ id: refunds.id })
+      .from(refunds)
+      .where(inArray(refunds.paymentId, paymentIds))
+    if (refundRows.length > 0) {
+      await db.delete(financeEvents).where(
+        and(
+          eq(financeEvents.sourceType, 'refund'),
+          inArray(
+            financeEvents.sourceId,
+            refundRows.map((row) => row.id),
+          ),
+        ),
+      )
+    }
+    await db.delete(refunds).where(inArray(refunds.paymentId, paymentIds))
+  }
   await db
     .delete(paymentWebhookEvents)
     .where(
@@ -180,11 +221,15 @@ async function cleanFixtures(): Promise<void> {
     .delete(financeEvents)
     .where(and(eq(financeEvents.sourceType, 'booking'), eq(financeEvents.sourceId, ids.booking)))
   await db.delete(payments).where(eq(payments.bookingId, ids.booking))
-  await db.delete(slotClaims).where(eq(slotClaims.id, ids.claim))
+  await db.delete(slotClaims).where(eq(slotClaims.courtId, ids.court))
+  await db.delete(courtMaintenances).where(eq(courtMaintenances.courtId, ids.court))
   await db.delete(promoRedemptions).where(eq(promoRedemptions.id, ids.redemption))
   await db.delete(bookingItems).where(eq(bookingItems.id, ids.item))
+  await db.delete(bookingItems).where(eq(bookingItems.id, ids.otherItem))
   await db.delete(bookings).where(eq(bookings.id, ids.booking))
+  await db.delete(bookings).where(eq(bookings.id, ids.otherBooking))
   await db.delete(promos).where(eq(promos.id, ids.promo))
+  await db.delete(courtOperatingHours).where(eq(courtOperatingHours.courtId, ids.court))
   await db.delete(courts).where(eq(courts.id, ids.court))
   await db.delete(sports).where(eq(sports.id, ids.sport))
   await db.delete(venues).where(eq(venues.id, ids.venue))
@@ -221,6 +266,12 @@ async function insertFixtures(total = 150_000): Promise<void> {
     name: 'Payment Fixture Court',
     slotDurationMinutes: 60,
     status: 'active',
+  })
+  await db.insert(courtOperatingHours).values({
+    courtId: ids.court,
+    dayOfWeek: 0,
+    opensTime: '06:00',
+    closesTime: '23:00',
   })
   if (total === 0) {
     await db.insert(promos).values({
@@ -283,6 +334,56 @@ async function insertFixtures(total = 150_000): Promise<void> {
       reservedUntil: new Date('2026-08-01T02:10:00Z'),
     })
   }
+}
+
+async function settle(
+  payment: { providerOrderId: string | null; amount: number },
+  ctx: PaymentsServiceContext,
+): Promise<void> {
+  const received = await receiveMidtransWebhook(ctx, {
+    rawBody: webhookBody({
+      orderId: payment.providerOrderId ?? '',
+      amount: payment.amount,
+      transactionStatus: 'settlement',
+    }),
+    headers: {},
+  })
+  await processMidtransWebhook(ctx, received.providerEventId)
+}
+
+async function insertConflictingBooking(): Promise<void> {
+  await db.insert(bookings).values({
+    id: ids.otherBooking,
+    bookingCode: 'HB-PAYMENT-CONFLICT',
+    customerUserId: ids.customer,
+    channel: 'web',
+    status: 'confirmed',
+    bookingDate: '2026-08-02',
+    slotCount: 1,
+    quoteSnapshot: quote(),
+    subtotalAmount: 150_000,
+    totalAmount: 150_000,
+  })
+  await db.insert(bookingItems).values({
+    id: ids.otherItem,
+    bookingId: ids.otherBooking,
+    courtId: ids.court,
+    startsAt: new Date('2026-08-02T00:00:00Z'),
+    endsAt: new Date('2026-08-02T01:00:00Z'),
+    rateClass: 'offpeak',
+    unitPriceAmount: 150_000,
+    lineTotalAmount: 150_000,
+  })
+  await db.insert(slotClaims).values({
+    id: ids.otherClaim,
+    courtId: ids.court,
+    startsAt: new Date('2026-08-02T00:00:00Z'),
+    endsAt: new Date('2026-08-02T01:00:00Z'),
+    slotDate: '2026-08-02',
+    claimType: 'booking',
+    status: 'confirmed',
+    bookingItemId: ids.otherItem,
+  })
 }
 
 beforeEach(async () => {
@@ -520,6 +621,249 @@ describe('payment dengan PostgreSQL nyata', () => {
     await processMidtransWebhook(context(), received.providerEventId)
     const [stored] = await db.select().from(payments).where(eq(payments.id, payment.id))
     expect(stored).toMatchObject({ status: 'pending', needsManualReview: true })
+  })
+
+  it('P1-58/BR-P-41…BR-P-44/DoD-1-04: J-06 mengonfirmasi payment berumur lima menit tanpa webhook dan mencatat metrik', async () => {
+    resetMetrics()
+    const payment = await createPayment(context(), { booking_id: ids.booking })
+    await db
+      .update(payments)
+      .set({ createdAt: new Date(now.getTime() - 6 * 60_000) })
+      .where(eq(payments.id, payment.id))
+    const gateway = provider()
+    const statusProvider: PaymentProvider = {
+      createTransaction: gateway.createTransaction.bind(gateway),
+      getTransactionStatus: async () => ({
+        status: 'settlement',
+        method: 'qris',
+        provider_transaction_id: 'reconciled-tx',
+        paid_at: now,
+        gross_amount: payment.amount,
+        raw: { source: 'reconcile' },
+      }),
+      parseWebhook: gateway.parseWebhook.bind(gateway),
+      createRefund: gateway.createRefund.bind(gateway),
+      capabilities: gateway.capabilities.bind(gateway),
+    }
+    const result = await reconcilePendingPayments(
+      context({ paymentProviderFactory: () => statusProvider }),
+    )
+    const [stored] = await db.select().from(payments).where(eq(payments.id, payment.id))
+    const [booking] = await db.select().from(bookings).where(eq(bookings.id, ids.booking))
+    expect(result.reconciled).toBe(1)
+    expect(stored?.status).toBe('paid')
+    expect(booking?.status).toBe('confirmed')
+    expect(renderMetrics()).toContain('payment_reconcile_fixed_total 1')
+  })
+
+  it('P1-59/P1-60 E-6: J-07 expire lalu settlement terlambat mengklaim ulang slot yang masih bebas', async () => {
+    const payment = await createPayment(context(), { booking_id: ids.booking })
+    const late = context({ now: new Date(now.getTime() + 16 * 60_000) })
+    expect(await expireUnpaidPayment(late, payment.id)).toBe(true)
+    await settle(payment, late)
+    const [storedPayment] = await db.select().from(payments).where(eq(payments.id, payment.id))
+    const [booking] = await db.select().from(bookings).where(eq(bookings.id, ids.booking))
+    const [claim] = await db.select().from(slotClaims).where(eq(slotClaims.id, ids.claim))
+    expect(storedPayment?.status).toBe('paid')
+    expect(booking?.status).toBe('confirmed')
+    expect(claim?.status).toBe('confirmed')
+  })
+
+  it('P1-60 E-6: settlement terlambat saat slot diambil membuat refund Hola 100% approved', async () => {
+    const payment = await createPayment(context(), { booking_id: ids.booking })
+    const late = context({ now: new Date(now.getTime() + 16 * 60_000) })
+    await expireUnpaidPayment(late, payment.id)
+    await insertConflictingBooking()
+    await settle(payment, late)
+    const [booking] = await db.select().from(bookings).where(eq(bookings.id, ids.booking))
+    const [refund] = await db.select().from(refunds).where(eq(refunds.paymentId, payment.id))
+    expect(booking?.status).toBe('expired')
+    expect(refund).toMatchObject({
+      amount: payment.amount,
+      status: 'approved',
+      policyApplied: 'hola_fault_100pct',
+    })
+  })
+
+  it('P1-63 E-7: payment kedua yang settle setelah booking confirmed direfund penuh otomatis', async () => {
+    const first = await createPayment(context(), { booking_id: ids.booking })
+    await settle(first, context())
+    await db.insert(payments).values({
+      id: ids.secondPayment,
+      paymentCode: 'HP-DOUBLE-TEST',
+      provider: 'midtrans',
+      bookingId: ids.booking,
+      payerUserId: ids.customer,
+      amount: first.amount,
+      status: 'expired',
+      providerOrderId: 'HP-DOUBLE-TEST',
+      expiresAt: new Date(now.getTime() - 1),
+    })
+    await settle({ providerOrderId: 'HP-DOUBLE-TEST', amount: first.amount }, context())
+    const [second] = await db.select().from(payments).where(eq(payments.id, ids.secondPayment))
+    const [refund] = await db.select().from(refunds).where(eq(refunds.paymentId, ids.secondPayment))
+    expect(second?.status).toBe('paid')
+    expect(refund).toMatchObject({
+      amount: first.amount,
+      status: 'approved',
+      policyApplied: 'hola_fault_100pct',
+    })
+  })
+
+  it('P1-61 BR-P-50…BR-P-61: refund manual menjaga batas nominal, state maju, jurnal, dan idempotensi selesai', async () => {
+    const staff = context({
+      actor: { userId: ids.staff, role: 'staff', cafeTenantId: undefined, employeeId: undefined },
+    })
+    const admin = context({
+      actor: { userId: ids.staff, role: 'admin', cafeTenantId: undefined, employeeId: undefined },
+    })
+    const paid = await createManualPayment(staff, {
+      booking_id: ids.booking,
+      amount: 150_000,
+      method: 'cash',
+    })
+    const first = await createRefundRequest(staff, {
+      payment_id: paid.id,
+      amount: 100_000,
+      reason: 'Koreksi layanan',
+      channel: 'cash',
+    })
+    const second = await createRefundRequest(staff, {
+      payment_id: paid.id,
+      amount: 100_000,
+      reason: 'Permintaan kedua',
+      channel: 'cash',
+    })
+    const approved = await approveRefund(admin, first.id)
+    await expect(approveRefund(admin, second.id)).rejects.toMatchObject({
+      code: 'REFUND_AMOUNT_EXCEEDS_PAYMENT',
+    })
+    expect((await processManualRefund(admin, approved.id))?.status).toBe('processing')
+    expect((await markRefundCompleted(staff, approved.id, {})).status).toBe('completed')
+    await expect(markRefundCompleted(staff, approved.id, {})).rejects.toMatchObject({
+      code: 'REFUND_ALREADY_COMPLETED',
+    })
+    const rejected = await rejectRefund(admin, second.id, 'Nominal ganda')
+    const [storedPayment] = await db.select().from(payments).where(eq(payments.id, paid.id))
+    const events = await db
+      .select()
+      .from(financeEvents)
+      .where(and(eq(financeEvents.sourceType, 'refund'), eq(financeEvents.sourceId, first.id)))
+    expect(rejected.status).toBe('rejected')
+    expect(storedPayment).toMatchObject({ refundedAmount: 100_000, refundStatus: 'partial' })
+    expect(events.map((event) => event.kind).sort()).toEqual([
+      'refund_accrual',
+      'refund_settlement',
+    ])
+  })
+
+  it('P1-61/P1-62 BR-P-61: J-08 transfer manual menunggu rekening lengkap lalu berhenti di processing', async () => {
+    const staff = context({
+      actor: { userId: ids.staff, role: 'staff', cafeTenantId: undefined, employeeId: undefined },
+    })
+    const admin = context({
+      actor: { userId: ids.staff, role: 'admin', cafeTenantId: undefined, employeeId: undefined },
+    })
+    const paid = await createManualPayment(staff, {
+      booking_id: ids.booking,
+      amount: 150_000,
+      method: 'cash',
+    })
+    const refund = await createRefundRequest(staff, {
+      payment_id: paid.id,
+      amount: 50_000,
+      reason: 'Transfer customer',
+      channel: 'manual_transfer',
+    })
+    await expect(approveRefund(admin, refund.id)).rejects.toMatchObject({
+      code: 'VALIDATION_ERROR',
+    })
+    const approved = await approveRefund(admin, refund.id, {
+      destination_bank_name: 'Bank Test',
+      destination_account_number: '1234567890',
+      destination_account_name: 'Payment Customer',
+    })
+    expect((await processManualRefund(admin, approved.id))?.status).toBe('processing')
+  })
+
+  it('P1-61/BR-B-62: cancel booking confirmed membuat refund requested sesuai kebijakan', async () => {
+    const early = new Date('2026-07-30T00:00:00.000Z')
+    const staff = {
+      db,
+      redis,
+      redisKeys: keys,
+      safeRedis,
+      logger,
+      queues,
+      now: early,
+      actor: {
+        userId: ids.staff,
+        role: 'staff' as const,
+        cafeTenantId: undefined,
+        employeeId: undefined,
+      },
+    }
+    const paid = await createManualPayment(context({ now: early, actor: staff.actor }), {
+      booking_id: ids.booking,
+      amount: 150_000,
+      method: 'cash',
+    })
+    const result = await cancelBooking(staff, {
+      bookingId: ids.booking,
+      reason: 'Permintaan customer',
+    })
+    const [refund] = await db.select().from(refunds).where(eq(refunds.paymentId, paid.id))
+    expect(result).toMatchObject({
+      refundEstimateAmount: 150_000,
+      policyApplied: 'option_b_100_percent_minus_gateway_fee',
+    })
+    expect(refund).toMatchObject({ amount: 150_000, status: 'requested' })
+  })
+
+  it('P1-19/P1-61 BR-P-53: force release admin membatalkan booking berbayar dan membuat refund 100% approved', async () => {
+    const paid = await createManualPayment(
+      context({
+        actor: { userId: ids.staff, role: 'staff', cafeTenantId: undefined, employeeId: undefined },
+      }),
+      { booking_id: ids.booking, amount: 150_000, method: 'cash' },
+    )
+    const maintenance = await createAdminCourtMaintenance(
+      {
+        db,
+        redis,
+        redisKeys: keys,
+        safeRedis,
+        logger,
+        queues,
+        now,
+        actor: { userId: ids.staff, role: 'admin', cafeTenantId: undefined, employeeId: undefined },
+        requestId: 'force-release-test',
+        ipAddress: undefined,
+        userAgent: undefined,
+      },
+      {
+        court_id: ids.court,
+        starts_at: '2026-08-02T00:00:00.000Z',
+        ends_at: '2026-08-02T01:00:00.000Z',
+        reason: 'Perawatan darurat',
+        force: true,
+        confirm: true,
+      },
+    )
+    const [booking] = await db.select().from(bookings).where(eq(bookings.id, ids.booking))
+    const [refund] = await db.select().from(refunds).where(eq(refunds.paymentId, paid.id))
+    const claims = await db.select().from(slotClaims).where(eq(slotClaims.courtId, ids.court))
+    expect(maintenance.cancelledBookingIds).toEqual([ids.booking])
+    expect(booking?.status).toBe('cancelled')
+    expect(refund).toMatchObject({
+      amount: paid.amount,
+      status: 'approved',
+      policyApplied: 'hola_fault_100pct',
+    })
+    expect(claims.filter((claim) => claim.status === 'confirmed')).toHaveLength(1)
+    expect(claims.find((claim) => claim.id === ids.claim)?.releaseReason).toBe(
+      'admin_force_release',
+    )
   })
 })
 

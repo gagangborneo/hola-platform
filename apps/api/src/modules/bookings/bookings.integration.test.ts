@@ -17,6 +17,7 @@ import { eq, inArray } from 'drizzle-orm'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { db } from '../../config/db.ts'
 import { logger } from '../../config/logger.ts'
+import { queues } from '../../config/queues.ts'
 import { redis, safeRedis } from '../../config/redis.ts'
 import { AppError } from '../../lib/errors.ts'
 import type { BookingsServiceContext } from './bookings.service.ts'
@@ -55,6 +56,7 @@ function context(): BookingsServiceContext {
     redisKeys,
     safeRedis,
     logger,
+    queues,
     now,
     actor: {
       userId: ids.customer,

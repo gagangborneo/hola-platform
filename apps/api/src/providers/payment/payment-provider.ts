@@ -66,6 +66,13 @@ export class UnsupportedPaymentOperationError extends Error {
   }
 }
 
+export class ProviderTransactionNotFoundError extends Error {
+  constructor() {
+    super('Transaksi tidak ditemukan di provider')
+    this.name = 'ProviderTransactionNotFoundError'
+  }
+}
+
 export type PaymentTransitionInput = {
   status: PaymentStatus
   needsManualReview: boolean

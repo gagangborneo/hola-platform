@@ -160,6 +160,36 @@ const authTemplates = [
     'Halo {{full_name}}, pembayaran {{payment_code}} telah diterima. Booking {{booking_code}} terkonfirmasi dengan total Rp{{total_amount}}.',
     ['full_name', 'booking_code', 'payment_code', 'total_amount'],
   ],
+  [
+    TEMPLATE_CODE.BOOKING_RECOVERED_AFTER_EXPIRY,
+    'Booking {{booking_code}} berhasil dipulihkan',
+    'Halo {{full_name}}, pembayaran {{payment_code}} diterima dan booking {{booking_code}} kembali aktif.',
+    ['full_name', 'booking_code', 'payment_code'],
+  ],
+  [
+    TEMPLATE_CODE.BOOKING_FORCE_CANCELLED,
+    'Booking {{booking_code}} dibatalkan Hola',
+    'Halo {{full_name}}, booking {{booking_code}} dibatalkan karena {{reason}}. Refund penuh akan diproses bila pembayaran sudah diterima.',
+    ['full_name', 'booking_code', 'reason'],
+  ],
+  [
+    TEMPLATE_CODE.PAYMENT_REFUND_AUTO_CREATED,
+    'Refund {{refund_code}} otomatis dibuat',
+    'Mohon maaf, booking tidak dapat dipulihkan. Refund {{refund_code}} sebesar Rp{{amount}} sedang diproses.',
+    ['refund_code', 'amount'],
+  ],
+  [
+    TEMPLATE_CODE.PAYMENT_REFUND_COMPLETED,
+    'Refund {{refund_code}} selesai',
+    'Refund {{refund_code}} sebesar Rp{{amount}} telah dibayarkan.',
+    ['refund_code', 'amount'],
+  ],
+  [
+    TEMPLATE_CODE.PAYMENT_REFUND_REQUIRED,
+    'Refund {{refund_code}} perlu dibayarkan',
+    'Refund {{refund_code}} sebesar Rp{{amount}} menunggu transfer manual.',
+    ['refund_code', 'amount'],
+  ],
 ] as const
 
 const { db, sql: connection } = createDb({ url: databaseUrl, onlyOneConnection: true })
