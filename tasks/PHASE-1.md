@@ -246,7 +246,7 @@ nominal ini.
 - [x] **P1-16** `1h` 🔒 — Langkah 5 **TAKEOVER** (lepas hold kedaluwarsa dalam transaksi yang sama — tanpa ini slot basi memblokir penjualan) + langkah 6 INSERT + pemetaan unique violation `uq_slot_claims_active` → `409 SLOT_ALREADY_CLAIMED` dengan `details` daftar slot bentrok. *acuan:* [06 BR-B-35](../docs/06-MODULE-BOOKING.md#43-aturan-hold)
 - [x] **P1-17** `0,5h` — Langkah 7–10: sisipkan baris owner + hubungkan FK, COMMIT, invalidasi cache **setelah** commit (kegagalan hanya `warn`)
 - [x] **P1-18** `0,5h` — `slots.release()` idempoten (`AND status IN ('held','confirmed')`) + hapus key hold Redis agar slot tidak tertahan sampai TTL. *acuan:* [03 § 8.7](../docs/03-DATA-MODEL.md#87-prosedur-pelepasan)
-- [ ] **P1-19** `1h` — **Force release** (`force=true`, hanya `admin`, hanya menimpa `claim_type='booking'`): 6 efek berantai wajib dalam satu transaksi + body `{"confirm": true}` + `audit_logs`. *acuan:* [03 § 8.8](../docs/03-DATA-MODEL.md#88-force-release-hanya-admin)
+- [x] **P1-19** `1h` — **Force release** (`force=true`, hanya `admin`, hanya menimpa `claim_type='booking'`): 6 efek berantai wajib dalam satu transaksi + body `{"confirm": true}` + `audit_logs`. *acuan:* [03 § 8.8](../docs/03-DATA-MODEL.md#88-force-release-hanya-admin)
 - [ ] **P1-20** `1,5h` 🔴 — Test `slots/`: T-B-01…T-B-04, S-1…S-12, **setiap test race dijalankan dua kali — Redis hidup dan Redis dimatikan** (BR-B-30, BR-TT-04) — coverage 100%. *acuan:* [06 § 4.5](../docs/06-MODULE-BOOKING.md#45-test-yang-wajib-ada), [03 § 8.11](../docs/03-DATA-MODEL.md#811-edge-cases-slot-ownership)
 
 ## P1.D — Ketersediaan & cache · 3,5h
@@ -303,12 +303,12 @@ nominal ini.
 
 ## P1.I — Rekonsiliasi & refund · 4,5h
 
-- [ ] **P1-58** `1h` — J-06 `payment.reconcilePending` (repeat 5 m): LIMIT 200 urut `created_at`, panggil status gateway, transisi hanya ke arah sah (BR-P-43), **plus perannya sebagai sweeper** J-07 dan sweeper `payment_webhook_events` yang `processed_at IS NULL` > 5 menit (E-19). *acuan:* [07 § 6.1](../docs/07-MODULE-PAYMENT.md#61-j-06-paymentreconcilepending-tiap-5-menit)
-- [ ] **P1-59** `0,5h` — J-07 `payment.expireUnpaid` (delayed pada `expires_at`, `jobId = expire-{paymentId}`)
-- [ ] **P1-60** `1h` 🔒 — **Jalur pemulihan E-6**: pembayaran masuk setelah booking `expired` → payment tetap `paid` → coba `slots.claim(mode:'direct')` → berhasil: `expired → confirmed` + `audit_logs action='booking.recovered_after_expiry'` + notifikasi; gagal: refund **100% tanpa potongan**, `approved` otomatis + notifikasi permintaan maaf. Ini **satu-satunya** jalur `expired → confirmed`. *acuan:* [06 § 11 E-6](../docs/06-MODULE-BOOKING.md#11-edge-cases)
-- [ ] **P1-61** `1h` ⛔ K-10 — Modul `refunds`: pembuatan dari cancel & force release, `approve`/`reject` (admin), `mark-completed` (`manual_transfer`/`cash`), BR-P-50…BR-P-61. **Tanpa** `createRefund()` gateway ([ROADMAP A-4](ROADMAP.md#11-penyesuaian-terhadap-struktur-phase-wajib-dibaca))
-- [ ] **P1-62** `0,5h` — J-08 `payment.processRefund` jalur manual: arahkan ke `channel='manual_transfer'`, buat tugas + notifikasi ke admin, status berhenti di `processing`
-- [ ] **P1-63** `0,5h` 🔴 — Test: DoD-1-04 (webhook dimatikan → J-06 mengonfirmasi ≤ 5 menit), E-6 **kedua cabang**, E-7 (pembayaran dobel → refund otomatis)
+- [x] **P1-58** `1h` — J-06 `payment.reconcilePending` (repeat 5 m): LIMIT 200 urut `created_at`, panggil status gateway, transisi hanya ke arah sah (BR-P-43), **plus perannya sebagai sweeper** J-07 dan sweeper `payment_webhook_events` yang `processed_at IS NULL` > 5 menit (E-19). *acuan:* [07 § 6.1](../docs/07-MODULE-PAYMENT.md#61-j-06-paymentreconcilepending-tiap-5-menit)
+- [x] **P1-59** `0,5h` — J-07 `payment.expireUnpaid` (delayed pada `expires_at`, `jobId = expire-{paymentId}`)
+- [x] **P1-60** `1h` 🔒 — **Jalur pemulihan E-6**: pembayaran masuk setelah booking `expired` → payment tetap `paid` → coba `slots.claim(mode:'direct')` → berhasil: `expired → confirmed` + `audit_logs action='booking.recovered_after_expiry'` + notifikasi; gagal: refund **100% tanpa potongan**, `approved` otomatis + notifikasi permintaan maaf. Ini **satu-satunya** jalur `expired → confirmed`. *acuan:* [06 § 11 E-6](../docs/06-MODULE-BOOKING.md#11-edge-cases)
+- [x] **P1-61** `1h` ⛔ K-10 — Modul `refunds`: pembuatan dari cancel & force release, `approve`/`reject` (admin), `mark-completed` (`manual_transfer`/`cash`), BR-P-50…BR-P-61. **Tanpa** `createRefund()` gateway ([ROADMAP A-4](ROADMAP.md#11-penyesuaian-terhadap-struktur-phase-wajib-dibaca))
+- [x] **P1-62** `0,5h` — J-08 `payment.processRefund` jalur manual: arahkan ke `channel='manual_transfer'`, buat tugas + notifikasi ke admin; tanpa rekening tujuan tetap `approved`, setelah lengkap berhenti di `processing`
+- [x] **P1-63** `0,5h` 🔴 — Test: DoD-1-04 (webhook dimatikan → J-06 mengonfirmasi ≤ 5 menit), E-6 **kedua cabang**, E-7 (pembayaran dobel → refund otomatis)
 
 ## P1.J — Job booking & email transaksional · 4,5h
 
