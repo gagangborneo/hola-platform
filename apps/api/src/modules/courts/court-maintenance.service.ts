@@ -1,6 +1,7 @@
 import { TEMPLATE_CODE } from '@hola/shared'
 import { err } from '../../lib/errors.ts'
 import { withTransaction } from '../../lib/transaction.ts'
+import { cancelBookingJobs } from '../bookings/booking-jobs.ts'
 import { findBookingRecipient, forceCancelBookings } from '../bookings/bookings.repository.ts'
 import {
   enqueueEmailNotification,
@@ -90,6 +91,7 @@ export async function createAdminCourtMaintenance(
         now: ctx.now,
       })
       for (const booking of cancelled) {
+        scope.afterCommit(() => cancelBookingJobs(ctx, booking.id))
         const payment = await findPaidPaymentForBooking(scope.tx, booking.id)
         if (payment) {
           await createRefundInScope(ctx, scope, {

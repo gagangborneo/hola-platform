@@ -340,7 +340,7 @@ Kolom:
 | # | Nama job (kanonik) | Queue | Trigger | Retry | Idempotency | Dipakai oleh |
 |---|---|---|---|---|---|---|
 | J-01 | `booking.releaseExpiredHolds` | booking | `repeat:60s` | 3 × fixed 10 s | Query berbasis kondisi (`status='held' AND hold_expires_at < now()`), bukan daftar id. `UPDATE ... WHERE status='held'` sehingga baris yang sudah dilepas tidak berubah dua kali. | [06 § 4](06-MODULE-BOOKING.md#4-hold-slot--anti-double-booking) |
-| J-02 | `booking.autoCompleteBookings` | booking | `repeat:15m` | 3 × fixed 30 s | `UPDATE bookings SET status='completed' WHERE status='confirmed' AND ends_at < now() - interval '30 minutes'` — kondisional, aman diulang. Emisi poin lewat J-16 yang punya unique key sendiri. | [06 § 8](06-MODULE-BOOKING.md#8-state-machine-status-booking) |
+| J-02 | `booking.autoCompleteBookings` | booking | `repeat:15m` | 3 × fixed 30 s | `UPDATE bookings SET status='completed' WHERE status='confirmed' AND checked_in_at IS NOT NULL AND ends_at < now() - interval '30 minutes'` — kondisional, aman diulang. Booking tanpa check-in disapu ke J-04. Emisi poin lewat J-16 yang punya unique key sendiri. | [06 § 8](06-MODULE-BOOKING.md#8-state-machine-status-booking) |
 | J-03 | `booking.sendBookingReminder` | booking | `delayed` (pada `starts_at − 2 jam`), dibuat saat booking `confirmed` | 3 × exp 60 s | `jobId = "reminder-{bookingId}"`. BullMQ menolak jobId duplikat. Handler juga memeriksa `bookings.status='confirmed'` sebelum mengirim. | [06](06-MODULE-BOOKING.md) |
 | J-04 | `booking.markNoShow` | booking | `delayed` (pada `ends_at + 30 menit`) | 3 × fixed 30 s | `jobId = "noshow-{bookingId}"`; `UPDATE ... WHERE status='confirmed' AND checked_in_at IS NULL`. | [06 § 8](06-MODULE-BOOKING.md#8-state-machine-status-booking) |
 | J-05 | `payment.processWebhook` | payment | `event` — dienqueue oleh handler HTTP webhook setelah menyimpan payload | 5 × exp mulai 5 s (5 s, 10 s, 20 s, 40 s, 80 s) | `jobId = "wh-midtrans-{sha256(providerEventId)}"`. Hash mempertahankan determinisme tanpa karakter `:` yang dilarang BullMQ v5. Baris `payment_webhook_events` punya UNIQUE `(provider, provider_event_id)`; handler keluar lebih awal jika `processed_at IS NOT NULL`. | [07 § 5](07-MODULE-PAYMENT.md#5-webhook-handling--idempotency) |
@@ -558,8 +558,10 @@ Phase 1 (booking/payment — [07 § 5](07-MODULE-PAYMENT.md#5-webhook-handling--
 | `code` | Kanal | Transaksional | Dikirim saat |
 |---|---|---|---|
 | `booking.confirmed` | email + in-app | ✓ | Payment booking berubah menjadi `paid`; payload memuat data e-receipt |
+| `booking.cancelled` | email + in-app | ✓ | Customer/staff membatalkan booking; payload memuat nominal dan estimasi refund |
 | `booking.recovered_after_expiry` | email + in-app | ✓ | Settlement terlambat dan slot berhasil diklaim ulang |
 | `booking.force_cancelled` | email + in-app | ✓ | Admin force release slot booking untuk maintenance/internal event |
+| `booking.reminder_2h` | email + in-app | ✓ | Dua jam sebelum booking confirmed dimulai |
 | `payment.refund_auto_created` | email + in-app | ✓ | Settlement terlambat/dobel tidak dapat diterapkan ke payable |
 | `payment.refund_required` | in-app | ✓ | J-08 membuat tugas pembayaran refund manual untuk admin |
 | `payment.refund_completed` | email + in-app | ✓ | Refund manual ditandai selesai |

@@ -343,7 +343,7 @@ describe('promo redemption lifecycle', () => {
     return { promo, redemption }
   }
 
-  it('T-PR-04/T-PR-05/J-09: expiry melepas sekali dan refresh counter Redis', async () => {
+  it('T-PR-04/T-PR-05/BR-TT-14/J-09: dua run expiry melepas sekali dan refresh Redis', async () => {
     await reserveOne(new Date('2026-07-31T23:59:00Z'))
     expect(await releaseExpiredPromoReservations(context(true))).toBe(1)
     await redis.set(redisKeys.promoQuota(ids.promo), '99', 'EX', 120)

@@ -13,8 +13,10 @@ auth.password_reset email transaksional
 auth.password_changed email transaksional
 auth.account_locked email transaksional
 booking.confirmed email transaksional
+booking.cancelled email transaksional
 booking.recovered_after_expiry email transaksional
 booking.force_cancelled email transaksional
+booking.reminder_2h email transaksional
 payment.refund_auto_created email transaksional
 payment.refund_completed email transaksional
 payment.refund_required inapp transaksional
@@ -37,7 +39,7 @@ describe('notification-templates ≡ docs/02-INFRASTRUCTURE.md § 7', () => {
 
   it('setiap kode memakai konvensi {domain}.{peristiwa}', () => {
     for (const code of Object.values(TEMPLATE_CODE)) {
-      expect(code, code).toMatch(/^[a-z_]+\.[a-z_]+$/)
+      expect(code, code).toMatch(/^[a-z_]+\.[a-z0-9_]+$/)
     }
   })
 

@@ -103,6 +103,20 @@ export async function releaseExpiredHolds(
     )
 }
 
+/** J-01: sapu seluruh hold basi dari kondisi PostgreSQL, bukan daftar job Redis. */
+export async function releaseAllExpiredHolds(tx: Tx, now: Date): Promise<SlotClaimRow[]> {
+  return tx
+    .update(slotClaims)
+    .set({
+      status: 'released',
+      holdExpiresAt: null,
+      releasedAt: now,
+      releaseReason: 'hold_expired',
+    })
+    .where(and(eq(slotClaims.status, 'held'), lt(slotClaims.holdExpiresAt, now)))
+    .returning()
+}
+
 export interface InsertSlotClaim {
   id: string
   courtId: string

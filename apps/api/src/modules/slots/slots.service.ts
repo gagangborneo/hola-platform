@@ -15,6 +15,7 @@ import {
   insertSlotClaims,
   lockCourtForShare,
   reclaimReleasedClaimsByBooking,
+  releaseAllExpiredHolds,
   releaseClaims,
   releaseClaimsByBooking,
   releaseClaimsByMaintenance,
@@ -444,6 +445,29 @@ export async function releaseBookingSlotsInTransaction(
     reason: 'booking_cancelled',
     now: ctx.now,
   })
+  scope.afterCommit(async () => {
+    await Promise.all([
+      invalidateAvailability(ctx, released),
+      releaseReservedHoldKeys(
+        ctx,
+        released.map((claim) =>
+          ctx.redisKeys.holdSlot(claim.courtId, claim.startsAt.toISOString()),
+        ),
+      ),
+    ])
+  })
+  return released.map(toClaimedSlot)
+}
+
+/**
+ * J-01: pelepasan global tetap melalui modul slots. Kondisi UPDATE membuatnya
+ * idempoten; kehilangan Redis hanya menyebabkan cache miss setelah invalidasi.
+ */
+export async function releaseExpiredBookingHoldsInTransaction(
+  ctx: SlotsServiceContext,
+  scope: TransactionScope,
+): Promise<ClaimedSlot[]> {
+  const released = await releaseAllExpiredHolds(scope.tx, ctx.now)
   scope.afterCommit(async () => {
     await Promise.all([
       invalidateAvailability(ctx, released),

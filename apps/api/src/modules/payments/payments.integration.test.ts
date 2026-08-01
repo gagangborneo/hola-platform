@@ -65,9 +65,10 @@ const ids = {
 const now = new Date('2026-08-01T02:00:00.000Z')
 const serverKey = 'sandbox-server-key-for-integration'
 const queueAdd = vi.fn(async () => undefined)
-// Aman untuk test: service hanya memanggil method `add` milik producer BullMQ.
+const queueRemove = vi.fn(async () => 1)
+// Aman untuk test: service hanya memanggil method `add`/`remove` producer BullMQ.
 const queues = Object.fromEntries(
-  Object.values(QUEUE).map((queue) => [queue, { add: queueAdd }]),
+  Object.values(QUEUE).map((queue) => [queue, { add: queueAdd, remove: queueRemove }]),
 ) as unknown as QueueProducers
 
 function quote(total = 150_000): Quote {
@@ -390,6 +391,7 @@ beforeEach(async () => {
   await cleanFixtures()
   await insertFixtures()
   queueAdd.mockClear()
+  queueRemove.mockClear()
   snapRequest = null
 })
 afterAll(cleanFixtures)
@@ -504,7 +506,7 @@ describe('payment dengan PostgreSQL nyata', () => {
     expect(events).toHaveLength(1)
   })
 
-  it('BR-P-30…BR-P-40/DoD-1-03: webhook identik 5× menghasilkan satu transisi, efek, dan finance event', async () => {
+  it('BR-P-30…BR-P-40/BR-TT-14/J-05: webhook identik 5× menghasilkan satu efek', async () => {
     const email = vi.fn(async () => undefined)
     const ctx = context({ onPaymentPaid: email })
     const payment = await createPayment(ctx, { booking_id: ids.booking })
@@ -544,6 +546,17 @@ describe('payment dengan PostgreSQL nyata', () => {
     expect(webhookRows[0]?.processedAt).not.toBeNull()
     expect(email).toHaveBeenCalledTimes(1)
     expect(emailRows).toHaveLength(1)
+    const confirmedInbox = await db
+      .select()
+      .from(notifications)
+      .where(
+        and(
+          eq(notifications.userId, ids.customer),
+          eq(notifications.templateCode, TEMPLATE_CODE.BOOKING_CONFIRMED),
+          eq(notifications.channel, 'inapp'),
+        ),
+      )
+    expect(confirmedInbox).toHaveLength(1)
     expect(events).toHaveLength(1)
   })
 
@@ -623,7 +636,7 @@ describe('payment dengan PostgreSQL nyata', () => {
     expect(stored).toMatchObject({ status: 'pending', needsManualReview: true })
   })
 
-  it('P1-58/BR-P-41…BR-P-44/DoD-1-04: J-06 mengonfirmasi payment berumur lima menit tanpa webhook dan mencatat metrik', async () => {
+  it('P1-58/BR-P-41…BR-P-44/BR-TT-14/J-06: dua run rekonsiliasi memberi satu transisi', async () => {
     resetMetrics()
     const payment = await createPayment(context(), { booking_id: ids.booking })
     await db
@@ -648,18 +661,23 @@ describe('payment dengan PostgreSQL nyata', () => {
     const result = await reconcilePendingPayments(
       context({ paymentProviderFactory: () => statusProvider }),
     )
+    const repeated = await reconcilePendingPayments(
+      context({ paymentProviderFactory: () => statusProvider }),
+    )
     const [stored] = await db.select().from(payments).where(eq(payments.id, payment.id))
     const [booking] = await db.select().from(bookings).where(eq(bookings.id, ids.booking))
     expect(result.reconciled).toBe(1)
+    expect(repeated.reconciled).toBe(0)
     expect(stored?.status).toBe('paid')
     expect(booking?.status).toBe('confirmed')
     expect(renderMetrics()).toContain('payment_reconcile_fixed_total 1')
   })
 
-  it('P1-59/P1-60 E-6: J-07 expire lalu settlement terlambat mengklaim ulang slot yang masih bebas', async () => {
+  it('P1-59/P1-60/BR-TT-14/J-07 E-6: dua run expiry lalu settlement memulihkan slot', async () => {
     const payment = await createPayment(context(), { booking_id: ids.booking })
     const late = context({ now: new Date(now.getTime() + 16 * 60_000) })
     expect(await expireUnpaidPayment(late, payment.id)).toBe(true)
+    expect(await expireUnpaidPayment(late, payment.id)).toBe(false)
     await settle(payment, late)
     const [storedPayment] = await db.select().from(payments).where(eq(payments.id, payment.id))
     const [booking] = await db.select().from(bookings).where(eq(bookings.id, ids.booking))
@@ -749,15 +767,20 @@ describe('payment dengan PostgreSQL nyata', () => {
       .select()
       .from(financeEvents)
       .where(and(eq(financeEvents.sourceType, 'refund'), eq(financeEvents.sourceId, first.id)))
+    const completedNotifications = await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.templateCode, TEMPLATE_CODE.PAYMENT_REFUND_COMPLETED))
     expect(rejected.status).toBe('rejected')
     expect(storedPayment).toMatchObject({ refundedAmount: 100_000, refundStatus: 'partial' })
     expect(events.map((event) => event.kind).sort()).toEqual([
       'refund_accrual',
       'refund_settlement',
     ])
+    expect(completedNotifications.map((row) => row.channel).sort()).toEqual(['email', 'inapp'])
   })
 
-  it('P1-61/P1-62 BR-P-61: J-08 transfer manual menunggu rekening lengkap lalu berhenti di processing', async () => {
+  it('P1-61/P1-62/BR-TT-14/J-08: dua run refund manual berhenti di processing tanpa duplikasi', async () => {
     const staff = context({
       actor: { userId: ids.staff, role: 'staff', cafeTenantId: undefined, employeeId: undefined },
     })
@@ -784,6 +807,7 @@ describe('payment dengan PostgreSQL nyata', () => {
       destination_account_name: 'Payment Customer',
     })
     expect((await processManualRefund(admin, approved.id))?.status).toBe('processing')
+    expect(await processManualRefund(admin, approved.id)).toBeNull()
   })
 
   it('P1-61/BR-B-62: cancel booking confirmed membuat refund requested sesuai kebijakan', async () => {
@@ -813,11 +837,18 @@ describe('payment dengan PostgreSQL nyata', () => {
       reason: 'Permintaan customer',
     })
     const [refund] = await db.select().from(refunds).where(eq(refunds.paymentId, paid.id))
+    const cancelledNotifications = await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.templateCode, TEMPLATE_CODE.BOOKING_CANCELLED))
     expect(result).toMatchObject({
       refundEstimateAmount: 150_000,
       policyApplied: 'option_b_100_percent_minus_gateway_fee',
     })
     expect(refund).toMatchObject({ amount: 150_000, status: 'requested' })
+    expect(cancelledNotifications.map((row) => row.channel).sort()).toEqual(['email', 'inapp'])
+    expect(queueRemove).toHaveBeenCalledWith(`reminder-${ids.booking}`)
+    expect(queueRemove).toHaveBeenCalledWith(`noshow-${ids.booking}`)
   })
 
   it('P1-19/P1-61 BR-P-53: force release admin membatalkan booking berbayar dan membuat refund 100% approved', async () => {
@@ -853,6 +884,10 @@ describe('payment dengan PostgreSQL nyata', () => {
     const [booking] = await db.select().from(bookings).where(eq(bookings.id, ids.booking))
     const [refund] = await db.select().from(refunds).where(eq(refunds.paymentId, paid.id))
     const claims = await db.select().from(slotClaims).where(eq(slotClaims.courtId, ids.court))
+    const forceNotifications = await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.templateCode, TEMPLATE_CODE.BOOKING_FORCE_CANCELLED))
     expect(maintenance.cancelledBookingIds).toEqual([ids.booking])
     expect(booking?.status).toBe('cancelled')
     expect(refund).toMatchObject({
@@ -864,6 +899,7 @@ describe('payment dengan PostgreSQL nyata', () => {
     expect(claims.find((claim) => claim.id === ids.claim)?.releaseReason).toBe(
       'admin_force_release',
     )
+    expect(forceNotifications.map((row) => row.channel).sort()).toEqual(['email', 'inapp'])
   })
 })
 

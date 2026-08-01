@@ -23,6 +23,7 @@ import type {
 } from '../../providers/payment/payment-provider.ts'
 import { ProviderTransactionNotFoundError } from '../../providers/payment/payment-provider.ts'
 import type { Viewer } from '../auth/auth.types.ts'
+import { scheduleBookingJobs } from '../bookings/booking-jobs.ts'
 import { findBookingWithItems } from '../bookings/bookings.repository.ts'
 import {
   enqueueEmailNotification,
@@ -276,6 +277,7 @@ async function markPaidInScope(
               booking_code: payable.booking.bookingCode,
               payment_code: paid.paymentCode,
               total_amount: paid.amount,
+              paid_at: (paid.paidAt ?? ctx.now).toISOString(),
             },
           },
           ctx.now,
@@ -291,28 +293,9 @@ async function markPaidInScope(
     const endsAt = booking.items.reduce((latest, item) =>
       item.endsAt > latest.endsAt ? item : latest,
     ).endsAt
-    scope.afterCommit(async () => {
-      await Promise.all([
-        enqueueJobTo(
-          ctx.queues,
-          JOB.BOOKING_SEND_BOOKING_REMINDER,
-          { bookingId: paid.bookingId },
-          {
-            jobId: `reminder-${paid.bookingId}`,
-            delay: Math.max(0, startsAt.getTime() - 2 * 60 * 60_000 - ctx.now.getTime()),
-          },
-        ),
-        enqueueJobTo(
-          ctx.queues,
-          JOB.BOOKING_MARK_NO_SHOW,
-          { bookingId: paid.bookingId },
-          {
-            jobId: `noshow-${paid.bookingId}`,
-            delay: Math.max(0, endsAt.getTime() + 30 * 60_000 - ctx.now.getTime()),
-          },
-        ),
-      ])
-    })
+    scope.afterCommit(() =>
+      scheduleBookingJobs(ctx, { bookingId: payable.booking.id, startsAt, endsAt }),
+    )
   }
   if (ctx.onPaymentPaid) scope.afterCommit(() => ctx.onPaymentPaid?.(paid))
   return paid

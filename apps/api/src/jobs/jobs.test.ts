@@ -12,6 +12,16 @@ describe('registry BullMQ', () => {
     expect(scheduledJobs).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
+          id: 'scheduler:booking.releaseExpiredHolds',
+          name: JOB.BOOKING_RELEASE_EXPIRED_HOLDS,
+          repeat: { every: 60_000 },
+        }),
+        expect.objectContaining({
+          id: 'scheduler:booking.autoCompleteBookings',
+          name: JOB.BOOKING_AUTO_COMPLETE_BOOKINGS,
+          repeat: { every: 900_000 },
+        }),
+        expect.objectContaining({
           id: 'scheduler:system.backupDatabase',
           name: JOB.SYSTEM_BACKUP_DATABASE,
           repeat: expect.objectContaining({ pattern: '0 3 * * *', tz: 'Asia/Makassar' }),

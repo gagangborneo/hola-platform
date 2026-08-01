@@ -1,6 +1,29 @@
-import { appSettings, bookingAddons, bookingItems, bookings, type HolaDb, users } from '@hola/db'
-import { type Quote, type QuoteLine, SETTINGS_KEY } from '@hola/shared'
-import { and, asc, desc, eq, gte, ilike, inArray, lt, lte, or, type SQL, sql } from 'drizzle-orm'
+import {
+  appSettings,
+  bookingAddons,
+  bookingItems,
+  bookings,
+  type HolaDb,
+  notifications,
+  users,
+} from '@hola/db'
+import { type Quote, type QuoteLine, SETTINGS_KEY, TEMPLATE_CODE } from '@hola/shared'
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gte,
+  ilike,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  lte,
+  or,
+  type SQL,
+  sql,
+} from 'drizzle-orm'
 import type { Tx } from '../../lib/transaction.ts'
 import type { BookingsQuery, MyBookingsQuery } from './bookings.schema.ts'
 
@@ -389,4 +412,111 @@ export async function forceCancelBookings(
       ),
     )
     .returning()
+}
+
+/** J-01: booking pending mengikuti expiry hold, terlepas dari keadaan Redis. */
+export async function expirePendingBookings(tx: Tx, now: Date): Promise<BookingRow[]> {
+  return tx
+    .update(bookings)
+    .set({ status: 'expired', holdExpiresAt: null, updatedAt: now })
+    .where(
+      and(
+        eq(bookings.status, 'pending_payment'),
+        isNotNull(bookings.holdExpiresAt),
+        lt(bookings.holdExpiresAt, now),
+      ),
+    )
+    .returning()
+}
+
+/** J-02: hanya booking yang sudah check-in boleh menjadi completed (BR-B-17/18). */
+export async function completeDueBookings(tx: Tx, now: Date): Promise<BookingRow[]> {
+  const cutoff = new Date(now.getTime() - 30 * 60_000)
+  return tx
+    .update(bookings)
+    .set({ status: 'completed', completedAt: now, updatedAt: now })
+    .where(
+      and(
+        eq(bookings.status, 'confirmed'),
+        isNotNull(bookings.checkedInAt),
+        sql`(SELECT MAX(${bookingItems.endsAt}) FROM ${bookingItems} WHERE ${bookingItems.bookingId} = ${bookings.id}) <= ${cutoff.toISOString()}::timestamptz`,
+      ),
+    )
+    .returning()
+}
+
+export type BookingJobCandidate = { bookingId: string; startsAt: Date; endsAt: Date }
+
+/** Sweeper resmi J-03: reminder yang dapat direkonstruksi dari PostgreSQL. */
+export async function findUpcomingReminderCandidates(
+  db: DbExecutor,
+  now: Date,
+  limit = 200,
+): Promise<BookingJobCandidate[]> {
+  const reminderHorizon = new Date(now.getTime() + 2 * 60 * 60_000)
+  const startsAt = sql<Date>`MIN(${bookingItems.startsAt})`.mapWith(bookingItems.startsAt)
+  const endsAt = sql<Date>`MAX(${bookingItems.endsAt})`.mapWith(bookingItems.endsAt)
+  return db
+    .select({ bookingId: bookings.id, startsAt, endsAt })
+    .from(bookings)
+    .innerJoin(bookingItems, eq(bookingItems.bookingId, bookings.id))
+    .where(
+      and(
+        eq(bookings.status, 'confirmed'),
+        isNotNull(bookings.customerUserId),
+        sql`NOT EXISTS (
+          SELECT 1 FROM ${notifications}
+          WHERE ${notifications.userId} = ${bookings.customerUserId}
+            AND ${notifications.templateCode} = ${TEMPLATE_CODE.BOOKING_REMINDER_2H}
+            AND ${notifications.dedupeKey} = ('booking:' || ${bookings.id} || ':reminder2h:inapp')
+        )`,
+      ),
+    )
+    .groupBy(bookings.id)
+    .having(
+      sql`${startsAt} >= ${now.toISOString()}::timestamptz AND ${startsAt} <= ${reminderHorizon.toISOString()}::timestamptz`,
+    )
+    .orderBy(startsAt, bookings.id)
+    .limit(limit)
+}
+
+/** Sweeper resmi J-04: no-show yang dapat direkonstruksi dari PostgreSQL. */
+export async function findDueNoShowCandidates(
+  db: DbExecutor,
+  now: Date,
+  limit = 200,
+): Promise<BookingJobCandidate[]> {
+  const cutoff = new Date(now.getTime() - 30 * 60_000)
+  const startsAt = sql<Date>`MIN(${bookingItems.startsAt})`.mapWith(bookingItems.startsAt)
+  const endsAt = sql<Date>`MAX(${bookingItems.endsAt})`.mapWith(bookingItems.endsAt)
+  return db
+    .select({ bookingId: bookings.id, startsAt, endsAt })
+    .from(bookings)
+    .innerJoin(bookingItems, eq(bookingItems.bookingId, bookings.id))
+    .where(and(eq(bookings.status, 'confirmed'), isNull(bookings.checkedInAt)))
+    .groupBy(bookings.id)
+    .having(sql`${endsAt} <= ${cutoff.toISOString()}::timestamptz`)
+    .orderBy(endsAt, bookings.id)
+    .limit(limit)
+}
+
+/** J-04: kondisi status, check-in, dan waktu diuji kembali saat handler berjalan. */
+export async function markBookingNoShowIfDue(
+  tx: Tx,
+  input: { bookingId: string; now: Date },
+): Promise<BookingRow | null> {
+  const cutoff = new Date(input.now.getTime() - 30 * 60_000)
+  const [booking] = await tx
+    .update(bookings)
+    .set({ status: 'no_show', updatedAt: input.now })
+    .where(
+      and(
+        eq(bookings.id, input.bookingId),
+        eq(bookings.status, 'confirmed'),
+        isNull(bookings.checkedInAt),
+        sql`(SELECT MAX(${bookingItems.endsAt}) FROM ${bookingItems} WHERE ${bookingItems.bookingId} = ${bookings.id}) <= ${cutoff.toISOString()}::timestamptz`,
+      ),
+    )
+    .returning()
+  return booking ?? null
 }

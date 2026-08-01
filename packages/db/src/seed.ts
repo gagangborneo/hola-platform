@@ -157,8 +157,14 @@ const authTemplates = [
   [
     TEMPLATE_CODE.BOOKING_CONFIRMED,
     'Booking {{booking_code}} terkonfirmasi',
-    'Halo {{full_name}}, pembayaran {{payment_code}} telah diterima. Booking {{booking_code}} terkonfirmasi dengan total Rp{{total_amount}}.',
-    ['full_name', 'booking_code', 'payment_code', 'total_amount'],
+    'Halo {{full_name}}, pembayaran {{payment_code}} telah diterima. E-receipt booking {{booking_code}}: total Rp{{total_amount}}, dibayar pada {{paid_at}}.',
+    ['full_name', 'booking_code', 'payment_code', 'total_amount', 'paid_at'],
+  ],
+  [
+    TEMPLATE_CODE.BOOKING_CANCELLED,
+    'Booking {{booking_code}} dibatalkan',
+    'Halo {{full_name}}, booking {{booking_code}} dibatalkan karena {{reason}}. Refund: Rp{{refund_amount}} ({{policy_applied}}), estimasi {{refund_timeline}}.',
+    ['full_name', 'booking_code', 'reason', 'refund_amount', 'policy_applied', 'refund_timeline'],
   ],
   [
     TEMPLATE_CODE.BOOKING_RECOVERED_AFTER_EXPIRY,
@@ -171,6 +177,12 @@ const authTemplates = [
     'Booking {{booking_code}} dibatalkan Hola',
     'Halo {{full_name}}, booking {{booking_code}} dibatalkan karena {{reason}}. Refund penuh akan diproses bila pembayaran sudah diterima.',
     ['full_name', 'booking_code', 'reason'],
+  ],
+  [
+    TEMPLATE_CODE.BOOKING_REMINDER_2H,
+    'Pengingat booking {{booking_code}}',
+    'Halo {{full_name}}, booking {{booking_code}} dimulai pada {{starts_at}}. Mohon datang tepat waktu.',
+    ['full_name', 'booking_code', 'starts_at'],
   ],
   [
     TEMPLATE_CODE.PAYMENT_REFUND_AUTO_CREATED,

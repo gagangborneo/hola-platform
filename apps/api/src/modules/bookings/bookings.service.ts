@@ -5,6 +5,7 @@ import {
   MAX_PENDING_PAYMENT_BOOKINGS_PER_CUSTOMER,
   type PaginationMeta,
   type Quote,
+  TEMPLATE_CODE,
   witaDateYmd,
 } from '@hola/shared'
 import { nextBookingCode } from '../../lib/codes.ts'
@@ -14,6 +15,10 @@ import { addSeconds } from '../../lib/time.ts'
 import { withTransaction } from '../../lib/transaction.ts'
 import type { CoreDependencies } from '../../middleware/core-dependencies.ts'
 import type { Viewer } from '../auth/auth.types.ts'
+import {
+  enqueueEmailNotification,
+  writeEmailNotification,
+} from '../notifications/notification.service.ts'
 import { findPaidPaymentForBooking } from '../payments/payments.repository.ts'
 import { findPricingCourts } from '../pricing/pricing.repository.ts'
 import { computeQuote } from '../pricing/pricing.service.ts'
@@ -33,6 +38,7 @@ import {
   reserveBookingHoldKeys,
 } from '../slots/slots.service.ts'
 import { writeAuditLog } from '../system/audit.repository.ts'
+import { cancelBookingJobs, scheduleBookingJobs } from './booking-jobs.ts'
 import { computeRefundAmount } from './booking-refund.ts'
 import {
   type BookingItemRow,
@@ -40,6 +46,7 @@ import {
   cancelCancellableBooking,
   countBookings,
   countCustomerBookings,
+  findBookingRecipient,
   findBookingSettings,
   findBookingWithItems,
   findRefundPolicy,
@@ -368,6 +375,16 @@ export async function createBooking(
             await claimBookingHoldSlotsInTransaction(ctx, claimInput, scope)
           }
         }
+        if (direct) {
+          const window = bookingWindow(items)
+          scope.afterCommit(() =>
+            scheduleBookingJobs(ctx, {
+              bookingId: booking.id,
+              startsAt: window.startsAt,
+              endsAt: window.endsAt,
+            }),
+          )
+        }
         return { booking, items, quote: effectiveQuote }
       },
       { logger: ctx.logger },
@@ -566,6 +583,31 @@ export async function cancelBooking(
           requestId: undefined,
         })
       }
+      const recipient = await findBookingRecipient(scope.tx, input.bookingId)
+      if (recipient?.email) {
+        const notification = await writeEmailNotification(
+          scope.tx,
+          {
+            userId: recipient.userId,
+            toEmail: recipient.email,
+            templateCode: TEMPLATE_CODE.BOOKING_CANCELLED,
+            dedupeKey: `booking:${input.bookingId}:cancelled`,
+            relatedType: 'booking',
+            relatedId: input.bookingId,
+            payload: {
+              full_name: recipient.fullName,
+              booking_code: updated.bookingCode,
+              refund_amount: refund.amount,
+              policy_applied: refund.policyApplied,
+              refund_timeline: refund.amount > 0 ? '3–14 hari kerja' : 'tidak ada refund',
+              reason: input.reason,
+            },
+          },
+          ctx.now,
+        )
+        if (notification) scope.afterCommit(() => enqueueEmailNotification(ctx, notification.id))
+      }
+      scope.afterCommit(() => cancelBookingJobs(ctx, input.bookingId))
       return updated
     },
     { logger: ctx.logger },

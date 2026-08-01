@@ -1,6 +1,10 @@
 /** Registry worker. Satu-satunya lokasi nama job dihubungkan ke handler. */
 import { JOB, JOB_QUEUE, type JobName, QUEUE, type QueueName } from '@hola/shared'
 import type { RepeatOptions } from 'bullmq'
+import { autoCompleteBookingsJob } from './booking/auto-complete-bookings.job.ts'
+import { markNoShowJob } from './booking/mark-no-show.job.ts'
+import { releaseExpiredHoldsJob } from './booking/release-expired-holds.job.ts'
+import { sendBookingReminderJob } from './booking/send-booking-reminder.job.ts'
 import { releaseExpiredPromoReservationsJob } from './commerce/release-expired-promo-reservations.job.ts'
 import { JOB_OPTIONS } from './job-options.ts'
 import { retryStuckNotificationsJob } from './notification/retry-stuck-notifications.job.ts'
@@ -21,6 +25,10 @@ interface RegisteredJobDefinition {
 }
 
 const implementedHandlers = new Map<JobName, JobHandler>([
+  [releaseExpiredHoldsJob.name, releaseExpiredHoldsJob.handler],
+  [autoCompleteBookingsJob.name, autoCompleteBookingsJob.handler],
+  [sendBookingReminderJob.name, sendBookingReminderJob.handler],
+  [markNoShowJob.name, markNoShowJob.handler],
   [sendEmailJob.name, sendEmailJob.handler],
   [retryStuckNotificationsJob.name, retryStuckNotificationsJob.handler],
   [cleanupExpiredTokensJob.name, cleanupExpiredTokensJob.handler],
@@ -54,6 +62,18 @@ export const scheduledJobs: readonly {
   queue: QueueName
   repeat: Omit<RepeatOptions, 'key' | 'prevMillis'>
 }[] = [
+  {
+    id: 'scheduler:booking.releaseExpiredHolds',
+    name: JOB.BOOKING_RELEASE_EXPIRED_HOLDS,
+    queue: QUEUE.BOOKING,
+    repeat: { every: 60_000 },
+  },
+  {
+    id: 'scheduler:booking.autoCompleteBookings',
+    name: JOB.BOOKING_AUTO_COMPLETE_BOOKINGS,
+    queue: QUEUE.BOOKING,
+    repeat: { every: 900_000 },
+  },
   {
     id: 'scheduler:payment.reconcilePending',
     name: JOB.PAYMENT_RECONCILE_PENDING,

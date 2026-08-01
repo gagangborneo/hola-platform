@@ -425,7 +425,7 @@ stateDiagram-v2
 | `pending_payment` | `expired` | J-01/J-02 | Klaim → `released` (`hold_expired`); promo → `released` (J-09); payment → `expired` (J-06/J-07); invalidasi cache. **Tanpa** notifikasi (menghindari spam abandonment) |
 | `pending_payment` | `cancelled` | Endpoint cancel | Sama seperti `expired`, **plus** notifikasi & `audit_logs` jika oleh staff |
 | `confirmed` | `completed` | J-02 | `completed_at`; `point_events` untuk `BOOKING_COMPLETED`; `activities` otomatis dibuat jika belum ada (verifikasi = `booking`) |
-| `confirmed` | `no_show` | J-04 | `no_show_at`; **tanpa** poin; catatan CRM |
+| `confirmed` | `no_show` | J-04 | status dan `updated_at` diperbarui; **tanpa** poin; catatan CRM |
 | `confirmed` | `cancelled` | Endpoint cancel / force release | Klaim → `released`; `refunds` sesuai kebijakan; J-03/J-04 dibatalkan; notifikasi; `audit_logs` |
 | `completed` | `cancelled` | Admin (koreksi) | J-20 reversal poin; refund manual; `audit_logs` wajib dengan `reason` |
 
