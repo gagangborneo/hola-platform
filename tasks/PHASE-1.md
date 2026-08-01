@@ -242,40 +242,40 @@ nominal ini.
 
 ## P1.C — `slots/` — klaim slot · 5,5h
 
-- [ ] **P1-15** `1h` 🔒 — `slots.claim()` langkah 1–4: validasi grid + jam operasional + `courts.status`, lapis 3 Redis `SET NX EX 600` (boleh gagal), `BEGIN`, `SELECT courts FOR SHARE`. *acuan:* [03 § 8.6](../docs/03-DATA-MODEL.md#86-prosedur-klaim-satu-fungsi-untuk-semua-pemakai)
-- [ ] **P1-16** `1h` 🔒 — Langkah 5 **TAKEOVER** (lepas hold kedaluwarsa dalam transaksi yang sama — tanpa ini slot basi memblokir penjualan) + langkah 6 INSERT + pemetaan unique violation `uq_slot_claims_active` → `409 SLOT_ALREADY_CLAIMED` dengan `details` daftar slot bentrok. *acuan:* [06 BR-B-35](../docs/06-MODULE-BOOKING.md#43-aturan-hold)
-- [ ] **P1-17** `0,5h` — Langkah 7–10: sisipkan baris owner + hubungkan FK, COMMIT, invalidasi cache **setelah** commit (kegagalan hanya `warn`)
-- [ ] **P1-18** `0,5h` — `slots.release()` idempoten (`AND status IN ('held','confirmed')`) + hapus key hold Redis agar slot tidak tertahan sampai TTL. *acuan:* [03 § 8.7](../docs/03-DATA-MODEL.md#87-prosedur-pelepasan)
+- [x] **P1-15** `1h` 🔒 — `slots.claim()` langkah 1–4: validasi grid + jam operasional + `courts.status`, lapis 3 Redis `SET NX EX 600` (boleh gagal), `BEGIN`, `SELECT courts FOR SHARE`. *acuan:* [03 § 8.6](../docs/03-DATA-MODEL.md#86-prosedur-klaim-satu-fungsi-untuk-semua-pemakai)
+- [x] **P1-16** `1h` 🔒 — Langkah 5 **TAKEOVER** (lepas hold kedaluwarsa dalam transaksi yang sama — tanpa ini slot basi memblokir penjualan) + langkah 6 INSERT + pemetaan unique violation `uq_slot_claims_active` → `409 SLOT_ALREADY_CLAIMED` dengan `details` daftar slot bentrok. *acuan:* [06 BR-B-35](../docs/06-MODULE-BOOKING.md#43-aturan-hold)
+- [x] **P1-17** `0,5h` — Langkah 7–10: sisipkan baris owner + hubungkan FK, COMMIT, invalidasi cache **setelah** commit (kegagalan hanya `warn`)
+- [x] **P1-18** `0,5h` — `slots.release()` idempoten (`AND status IN ('held','confirmed')`) + hapus key hold Redis agar slot tidak tertahan sampai TTL. *acuan:* [03 § 8.7](../docs/03-DATA-MODEL.md#87-prosedur-pelepasan)
 - [ ] **P1-19** `1h` — **Force release** (`force=true`, hanya `admin`, hanya menimpa `claim_type='booking'`): 6 efek berantai wajib dalam satu transaksi + body `{"confirm": true}` + `audit_logs`. *acuan:* [03 § 8.8](../docs/03-DATA-MODEL.md#88-force-release-hanya-admin)
 - [ ] **P1-20** `1,5h` 🔴 — Test `slots/`: T-B-01…T-B-04, S-1…S-12, **setiap test race dijalankan dua kali — Redis hidup dan Redis dimatikan** (BR-B-30, BR-TT-04) — coverage 100%. *acuan:* [06 § 4.5](../docs/06-MODULE-BOOKING.md#45-test-yang-wajib-ada), [03 § 8.11](../docs/03-DATA-MODEL.md#811-edge-cases-slot-ownership)
 
 ## P1.D — Ketersediaan & cache · 3,5h
 
-- [ ] **P1-21** `1h` 🔒 — `GET /courts/{id}/availability`: 8 langkah perhitungan, bentuk response persis, `unavailable_reason`, `meta.generated_at`. **Hold kedaluwarsa dihitung sebagai tersedia** (BR-B-35). *acuan:* [06 § 5.1](../docs/06-MODULE-BOOKING.md#51-cara-menghitung-ketersediaan), [03 § 8.9](../docs/03-DATA-MODEL.md#89-cara-membaca-ketersediaan-satu-query-untuk-semua)
-- [ ] **P1-22** `0,5h` — Cache Redis TTL 60 s + header `X-Cache: HIT|MISS` + **validasi zod saat membaca cache** (bentuk berubah = perlakukan sebagai miss, BR-RD-11)
+- [x] **P1-21** `1h` 🔒 — `GET /courts/{id}/availability`: 8 langkah perhitungan, bentuk response persis, `unavailable_reason`, `meta.generated_at`. **Hold kedaluwarsa dihitung sebagai tersedia** (BR-B-35). *acuan:* [06 § 5.1](../docs/06-MODULE-BOOKING.md#51-cara-menghitung-ketersediaan), [03 § 8.9](../docs/03-DATA-MODEL.md#89-cara-membaca-ketersediaan-satu-query-untuk-semua)
+- [x] **P1-22** `0,5h` — Cache Redis TTL 60 s + header `X-Cache: HIT|MISS` + **validasi zod saat membaca cache** (bentuk berubah = perlakukan sebagai miss, BR-RD-11)
 - [ ] **P1-23** `1h` 🔒 — **10 aturan invalidasi I-1…I-10**, termasuk penghapusan berpola prefiks memakai `SCAN COUNT 200` (bukan `KEYS`). *acuan:* [02 § 4.4](../docs/02-INFRASTRUCTURE.md#44-aturan-invalidasi-cache-ketersediaan)
-- [ ] **P1-24** `0,5h` — `GET /availability` lintas court **ditunda ke Phase 2**; yang dibuat sekarang: `meta.warnings: [BEYOND_BOOKING_HORIZON]` (E-19) + batas rentang 14 hari (BR-B-47)
+- [x] **P1-24** `0,5h` — `GET /availability` lintas court **ditunda ke Phase 2**; yang dibuat sekarang: `meta.warnings: [BEYOND_BOOKING_HORIZON]` (E-19) + batas rentang 14 hari (BR-B-47)
 - [ ] **P1-25** `0,5h` 🔴 — Test: T-B-08, T-B-09, BR-B-41…B-47, dan kebenaran hasil saat Redis mati (BR-B-45)
 
 ## P1.E — `courts/` — API admin lapangan & harga · 3h
 
 - [ ] **P1-26** `0,5h` — `POST`/`PATCH /courts` (+ `If-Match`; **tolak** ubah `slot_duration_minutes` bila ada klaim aktif `starts_at >= today` → `422 COURT_HAS_FUTURE_CLAIMS`, S-4). *acuan:* [04 § 9.15](../docs/04-API-CONTRACT.md#915-admin-court-harga-maintenance-sistem)
 - [ ] **P1-27** `0,5h` — `PUT /courts/{id}/operating-hours` (ganti 7 baris sekaligus, invalidasi I-8) + `PUT /courts/{id}/photos`
-- [ ] **P1-28** `0,5h` — `GET`/`POST`/`PATCH`/`DELETE /price-rules` (DELETE hanya bila belum pernah dipakai) + invalidasi I-7 (**semua** key `avail:*`)
-- [ ] **P1-29** `0,5h` — `GET`/`POST`/`DELETE /special-dates` + invalidasi I-10
+- [x] **P1-28** `0,5h` — `GET`/`POST`/`PATCH`/`DELETE /price-rules` (DELETE hanya bila belum pernah dipakai) + invalidasi I-7 (**semua** key `avail:*`)
+- [x] **P1-29** `0,5h` — `GET`/`POST`/`DELETE /special-dates` + invalidasi I-10
 - [ ] **P1-30** `0,5h` — `POST /court-maintenances` (klaim `claim_type='maintenance'`, mode `direct`) + `/cancel`; `force=true` hanya `admin` (E-11)
-- [ ] **P1-31** `0,5h` — `GET /slot-claims` read-only dengan filter (untuk kalender admin & diagnosis; **tidak ada** POST/DELETE)
+- [x] **P1-31** `0,5h` — `GET /slot-claims` read-only dengan filter (untuk kalender admin & diagnosis; **tidak ada** POST/DELETE)
 
 ## P1.F — `bookings/` · 6,5h
 
-- [ ] **P1-32** `0,5h` — `booking-state.ts` **pure**: tabel transisi + penolakan 5 transisi terlarang + test. *acuan:* [06 § 8](../docs/06-MODULE-BOOKING.md#8-state-machine-status-booking)
-- [ ] **P1-33** `0,5h` ⛔ D-01 — `booking-refund.ts` **pure**: `computeRefundAmount(booking, policy, now)` yang membaca `app_settings.refund_policy` (Opsi A/B/C) + test ketiga tier Opsi B. *acuan:* [06 § 7](../docs/06-MODULE-BOOKING.md#7-kebijakan-pembatalan--refund-butuh-keputusan-client)
+- [x] **P1-32** `0,5h` — `booking-state.ts` **pure**: tabel transisi + penolakan 5 transisi terlarang + test. *acuan:* [06 § 8](../docs/06-MODULE-BOOKING.md#8-state-machine-status-booking)
+- [x] **P1-33** `0,5h` ⛔ D-01 — `booking-refund.ts` **pure**: `computeRefundAmount(booking, policy, now)` yang membaca `app_settings.refund_policy` (Opsi A/B/C) + test ketiga tier Opsi B. *acuan:* [06 § 7](../docs/06-MODULE-BOOKING.md#7-kebijakan-pembatalan--refund-butuh-keputusan-client)
 - [ ] **P1-34** `1,5h` 🔒 — `POST /bookings`: validasi BR-B-01…B-11 → `pricing.computeQuote({ reserve_promo: true })` → `slots.claim({ mode: 'hold' })` → reservasi promo → simpan `quote_snapshot` — **satu transaksi**, `Idempotency-Key` wajib. *acuan:* [06 § 4.4](../docs/06-MODULE-BOOKING.md#44-alur-hold-end-to-end)
 - [ ] **P1-35** `0,5h` — BR-B-14 (maks 3 `pending_payment` per customer) + BR-B-15 (maks 2 `confirmed` per tanggal) + field opsional `expected_total_amount` → `409` bila tidak cocok (E-13)
-- [ ] **P1-36** `0,5h` — Booking oleh staff: `channel='admin'`/`walk_in`, guest (BR-B-11), mode klaim `direct` tanpa hold (BR-B-38), `checked_in_at = created_at` untuk walk-in (BR-B-86)
+- [x] **P1-36** `0,5h` — Booking oleh staff: `channel='admin'`/`walk_in`, guest (BR-B-11), mode klaim `direct` tanpa hold (BR-B-38), `checked_in_at = created_at` untuk walk-in (BR-B-86)
 - [ ] **P1-37** `1h` — `POST /bookings/{id}/cancel`: BR-B-60…B-71 — pembuatan `refunds` (atau tidak, bila Rp 0), pelepasan klaim + reservasi promo, pembatalan J-03/J-04, notifikasi, `audit_logs` dengan `reason` wajib untuk staff
-- [ ] **P1-38** `0,5h` — `POST /bookings/{id}/check-in` (jendela −30 menit s.d. `ends_at`, `force` khusus admin) + `/no-show`. *acuan:* [06 § 9](../docs/06-MODULE-BOOKING.md#9-check-in--no-show)
-- [ ] **P1-39** `0,5h` — `GET /bookings` (filter + pencarian `q` atas kode/nama/telepon), `GET /bookings/{id}`, `GET /me/bookings`, `PATCH` catatan, `GET /bookings/{id}/receipt`
+- [x] **P1-38** `0,5h` — `POST /bookings/{id}/check-in` (jendela −30 menit s.d. `ends_at`, `force` khusus admin) + `/no-show`. *acuan:* [06 § 9](../docs/06-MODULE-BOOKING.md#9-check-in--no-show)
+- [x] **P1-39** `0,5h` — `GET /bookings` (filter + pencarian `q` atas kode/nama/telepon), `GET /bookings/{id}`, `GET /me/bookings`, `PATCH` catatan, `GET /bookings/{id}/receipt`
 - [ ] **P1-40** `1h` 🔴 — Test `bookings/`: setiap `BR-B-*` dalam scope Phase 1 + edge case E-2, E-3, E-4, E-13, E-20, E-22
 
 ## P1.G — `promos/` dasar · 4,5h
