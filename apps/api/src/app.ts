@@ -23,6 +23,7 @@ import { courtsRoutes } from './modules/courts/courts.routes.ts'
 import { specialDatesRoutes } from './modules/courts/special-dates.routes.ts'
 import { mediaRoutes } from './modules/media/media.routes.ts'
 import { notificationRoutes } from './modules/notifications/notification.routes.ts'
+import { paymentsRoutes } from './modules/payments/payments.routes.ts'
 import { priceRulesRoutes } from './modules/pricing/price-rules.routes.ts'
 import { promosRoutes } from './modules/promos/promos.routes.ts'
 import { slotClaimsRoutes } from './modules/slots/slot-claims.routes.ts'
@@ -58,6 +59,8 @@ export const PUBLIC_ROUTE_ALLOWLIST: ReadonlySet<string> = new Set([
   'POST /api/v1/auth/email/verify',
   'GET /api/v1/courts/:court_id/availability',
   'POST /api/v1/bookings/quote',
+  'POST /api/v1/webhooks/midtrans',
+  ...(env.APP_ENV === 'local' ? ['POST /api/v1/dev/simulate-webhook'] : []),
   'GET /api/v1/special-dates',
 ])
 
@@ -125,6 +128,7 @@ export function createApp() {
     .route(API_PREFIX, adminUsersRoutes)
     .route(API_PREFIX, adminSystemRoutes)
     .route(API_PREFIX, notificationRoutes)
+    .route(API_PREFIX, paymentsRoutes)
     .route(API_PREFIX, mediaRoutes)
 
   assertRouteGuards(routes.routes, PUBLIC_ROUTE_ALLOWLIST)

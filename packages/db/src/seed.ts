@@ -112,8 +112,8 @@ const defaultSettings = [
   [SETTINGS_KEY.TAX_RATE, 0, 'D-06 default sementara: harga termasuk pajak.'],
   [
     SETTINGS_KEY.REFUND_API_SUPPORTED_METHODS,
-    ['qris', 'gopay', 'shopeepay', 'bank_transfer_va', 'credit_card'],
-    'Metode yang mendukung refund gateway.',
+    ['gopay', 'shopeepay', 'credit_card'],
+    'Metode refund gateway terverifikasi; QRIS dan VA default ke transfer manual.',
   ],
   [SETTINGS_KEY.EVENT_WAITLIST_PAYMENT_WINDOW_MINUTES, 60, 'Batas bayar peserta waitlist event.'],
   [SETTINGS_KEY.CAFE_INVOICE_AUTO_ISSUE, true, 'Terbitkan invoice cafe otomatis.'],
@@ -153,6 +153,12 @@ const authTemplates = [
     'Akun Hola terkunci',
     'Halo {{full_name}}, akun Anda terkunci sementara setelah terlalu banyak percobaan login.',
     ['full_name'],
+  ],
+  [
+    TEMPLATE_CODE.BOOKING_CONFIRMED,
+    'Booking {{booking_code}} terkonfirmasi',
+    'Halo {{full_name}}, pembayaran {{payment_code}} telah diterima. Booking {{booking_code}} terkonfirmasi dengan total Rp{{total_amount}}.',
+    ['full_name', 'booking_code', 'payment_code', 'total_amount'],
   ],
 ] as const
 

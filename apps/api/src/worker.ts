@@ -6,6 +6,7 @@ import { closeDatabase, db } from './config/db.ts'
 import { logger } from './config/logger.ts'
 import { mail } from './config/mail.ts'
 import { incrementMetric } from './config/metrics.ts'
+import { paymentProviderFactory } from './config/payment.ts'
 import { BULLMQ_PREFIX, closeQueues, queues } from './config/queues.ts'
 import { bullRedis, closeRedis, keys, redis, safeRedis } from './config/redis.ts'
 import { closeSentry } from './config/sentry.ts'
@@ -20,6 +21,7 @@ const workerRuntime = {
   env,
   logger,
   mail,
+  paymentProviderFactory,
   queues,
   redis,
   redisKeys: keys,

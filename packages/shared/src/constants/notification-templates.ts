@@ -3,10 +3,8 @@
  *
  * Sumber kebenaran: docs/02-INFRASTRUCTURE.md § 7 "Katalog `template_code`".
  *
- * Katalog itu tumbuh PER MODUL: sebuah template masuk ke dokumen bersama modul
- * yang mengirimnya, di PR yang sama. Karena itu file ini hanya memuat template
- * Phase 0 (auth) — bukan karena yang lain terlupa, melainkan karena modulnya
- * memang belum ada.
+ * Katalog tumbuh PER MODUL: sebuah template masuk ke dokumen bersama modul
+ * yang mengirimnya, di perubahan yang sama.
  *
  * Konvensi nama: `{domain}.{peristiwa}` (docs/03 § `notification_templates`).
  *
@@ -24,17 +22,20 @@ export const TEMPLATE_CODE = {
   AUTH_PASSWORD_CHANGED: 'auth.password_changed',
   /** Pemberitahuan akun terkunci setelah 10 gagal login (docs/05 § 8 Brute force). */
   AUTH_ACCOUNT_LOCKED: 'auth.account_locked',
+  /** Konfirmasi booking dan e-receipt setelah payment berhasil. */
+  BOOKING_CONFIRMED: 'booking.confirmed',
 } as const
 
 export type TemplateCode = (typeof TEMPLATE_CODE)[keyof typeof TEMPLATE_CODE]
 
 /**
  * Template transaksional mengabaikan preferensi notifikasi user
- * (docs/02 § 7 aturan 3). Seluruh template auth bersifat transaksional.
+ * (docs/02 § 7 aturan 3).
  */
 export const TRANSACTIONAL_TEMPLATE_CODES: readonly TemplateCode[] = [
   TEMPLATE_CODE.AUTH_EMAIL_VERIFY,
   TEMPLATE_CODE.AUTH_PASSWORD_RESET,
   TEMPLATE_CODE.AUTH_PASSWORD_CHANGED,
   TEMPLATE_CODE.AUTH_ACCOUNT_LOCKED,
+  TEMPLATE_CODE.BOOKING_CONFIRMED,
 ]

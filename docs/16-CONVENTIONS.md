@@ -409,7 +409,7 @@ graph TB
 | BR-BQ-08 | Payload job punya zod schema sendiri dan divalidasi di awal handler. Payload yang tidak valid → gagal permanen (tanpa retry) + Sentry, karena retry tidak akan memperbaikinya |
 | BR-BQ-09 | **Setiap handler wajib idempoten**, dengan mekanisme yang tertulis di kolom "Idempotency" [02 § 5.2](02-INFRASTRUCTURE.md#52-tabel-job). Ini bagian kontrak — ada test per job |
 | BR-BQ-10 | Handler memakai service layer yang sama dengan route. Tidak ada duplikasi business rule di job |
-| BR-BQ-11 | `jobId` deterministik untuk job yang tidak boleh dobel (`wh:{provider}:{eventId}`, `expire:{paymentId}`, `reminder:{bookingId}`). BullMQ menolak `jobId` duplikat — lapisan idempotency kedua |
+| BR-BQ-11 | `jobId` deterministik untuk job yang tidak boleh dobel (`wh-midtrans-{sha256(eventId)}`, `expire-{paymentId}`, `reminder-{bookingId}`). Custom job ID memakai `-`, bukan `:`, karena batasan BullMQ v5. BullMQ menolak `jobId` duplikat — lapisan idempotency kedua |
 | BR-BQ-12 | `attempts` & `backoff` diambil dari tabel [02 § 5.2](02-INFRASTRUCTURE.md#52-tabel-job), tidak dikarang di kode |
 | BR-BQ-13 | `removeOnComplete: { count: 1000 }`, `removeOnFail: { count: 5000 }` |
 | BR-BQ-14 | Handler mencatat log terstruktur di awal & akhir dengan `job_name`, `job_id`, `attempt`, `duration_ms`, `outcome` |

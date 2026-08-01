@@ -1892,7 +1892,7 @@ Kunci yang dipakai modul (daftar kanonik, konstanta di
 | `refund_policy` | Opsi B (D-01) | [06 § 7](06-MODULE-BOOKING.md#7-kebijakan-pembatalan--refund-butuh-keputusan-client) |
 | `cancellation_policy_text` | teks | [06 BR-B-71](06-MODULE-BOOKING.md#7-kebijakan-pembatalan--refund-butuh-keputusan-client) |
 | `tax_rate` | `0` (D-06) | [07 § 3.3 P8](07-MODULE-PAYMENT.md#33-detail-per-step) |
-| `refund_api_supported_methods` | daftar | [07 § 7.2](07-MODULE-PAYMENT.md#72-dukungan-refund-per-metode-pembayaran) |
+| `refund_api_supported_methods` | `["gopay","shopeepay","credit_card"]` | [07 § 7.2](07-MODULE-PAYMENT.md#72-dukungan-refund-per-metode-pembayaran); QRIS dan VA default ke transfer manual sampai terverifikasi |
 | `event_waitlist_payment_window_minutes` | `60` | [10 BR-E-44](10-MODULE-EVENT.md#52-aturan-waitlist) |
 | `cafe_invoice_auto_issue` | `true` | [09 BR-T-22](09-MODULE-TENANT.md#42-business-rules-tagihan) |
 | `staff_expense_limit_amount` | `500000` | [14 BR-F-42](14-MODULE-FINANCE.md#6-pengeluaran-expenses) |

@@ -341,11 +341,11 @@ Kolom:
 |---|---|---|---|---|---|---|
 | J-01 | `booking.releaseExpiredHolds` | booking | `repeat:60s` | 3 × fixed 10 s | Query berbasis kondisi (`status='held' AND hold_expires_at < now()`), bukan daftar id. `UPDATE ... WHERE status='held'` sehingga baris yang sudah dilepas tidak berubah dua kali. | [06 § 4](06-MODULE-BOOKING.md#4-hold-slot--anti-double-booking) |
 | J-02 | `booking.autoCompleteBookings` | booking | `repeat:15m` | 3 × fixed 30 s | `UPDATE bookings SET status='completed' WHERE status='confirmed' AND ends_at < now() - interval '30 minutes'` — kondisional, aman diulang. Emisi poin lewat J-16 yang punya unique key sendiri. | [06 § 8](06-MODULE-BOOKING.md#8-state-machine-status-booking) |
-| J-03 | `booking.sendBookingReminder` | booking | `delayed` (pada `starts_at − 2 jam`), dibuat saat booking `confirmed` | 3 × exp 60 s | `jobId = "reminder:{bookingId}"`. BullMQ menolak jobId duplikat. Handler juga memeriksa `bookings.status='confirmed'` sebelum mengirim. | [06](06-MODULE-BOOKING.md) |
-| J-04 | `booking.markNoShow` | booking | `delayed` (pada `ends_at + 30 menit`) | 3 × fixed 30 s | `jobId = "noshow:{bookingId}"`; `UPDATE ... WHERE status='confirmed' AND checked_in_at IS NULL`. | [06 § 8](06-MODULE-BOOKING.md#8-state-machine-status-booking) |
-| J-05 | `payment.processWebhook` | payment | `event` — dienqueue oleh handler HTTP webhook setelah menyimpan payload | 5 × exp mulai 5 s (5 s, 10 s, 20 s, 40 s, 80 s) | `jobId = "wh:{provider}:{providerEventId}"`. Baris `payment_webhook_events` punya UNIQUE `(provider, provider_event_id)`; handler keluar lebih awal jika `processed_at IS NOT NULL`. | [07 § 5](07-MODULE-PAYMENT.md#5-webhook-handling--idempotency) |
+| J-03 | `booking.sendBookingReminder` | booking | `delayed` (pada `starts_at − 2 jam`), dibuat saat booking `confirmed` | 3 × exp 60 s | `jobId = "reminder-{bookingId}"`. BullMQ menolak jobId duplikat. Handler juga memeriksa `bookings.status='confirmed'` sebelum mengirim. | [06](06-MODULE-BOOKING.md) |
+| J-04 | `booking.markNoShow` | booking | `delayed` (pada `ends_at + 30 menit`) | 3 × fixed 30 s | `jobId = "noshow-{bookingId}"`; `UPDATE ... WHERE status='confirmed' AND checked_in_at IS NULL`. | [06 § 8](06-MODULE-BOOKING.md#8-state-machine-status-booking) |
+| J-05 | `payment.processWebhook` | payment | `event` — dienqueue oleh handler HTTP webhook setelah menyimpan payload | 5 × exp mulai 5 s (5 s, 10 s, 20 s, 40 s, 80 s) | `jobId = "wh-midtrans-{sha256(providerEventId)}"`. Hash mempertahankan determinisme tanpa karakter `:` yang dilarang BullMQ v5. Baris `payment_webhook_events` punya UNIQUE `(provider, provider_event_id)`; handler keluar lebih awal jika `processed_at IS NOT NULL`. | [07 § 5](07-MODULE-PAYMENT.md#5-webhook-handling--idempotency) |
 | J-06 | `payment.reconcilePending` | payment | `repeat:5m` | 3 × fixed 60 s | Query berbasis kondisi (`payments.status='pending' AND created_at < now() - interval '5 minutes'`); memanggil API status gateway; transisi status hanya lewat fungsi transisi yang menolak transisi tidak sah. | [07 § 6](07-MODULE-PAYMENT.md#6-rekonsiliasi) |
-| J-07 | `payment.expireUnpaid` | payment | `delayed` (pada `payments.expires_at`) + disapu ulang oleh J-06 | 5 × exp 30 s | `jobId = "expire:{paymentId}"`; `UPDATE payments SET status='expired' WHERE id=? AND status='pending'`. | [07 § 4](07-MODULE-PAYMENT.md#4-flow-pembayaran-end-to-end) |
+| J-07 | `payment.expireUnpaid` | payment | `delayed` (pada `payments.expires_at`) + disapu ulang oleh J-06 | 5 × exp 30 s | `jobId = "expire-{paymentId}"`; `UPDATE payments SET status='expired' WHERE id=? AND status='pending'`. | [07 § 4](07-MODULE-PAYMENT.md#4-flow-pembayaran-end-to-end) |
 | J-08 | `payment.processRefund` | payment | `event` (setelah refund disetujui admin) | 5 × exp 60 s | `jobId = "refund:{refundId}"`; state `refunds.status` hanya maju; call gateway memakai `refunds.id` sebagai reference id sehingga gateway menolak duplikat. | [07 § 7](07-MODULE-PAYMENT.md#7-refund-flow) |
 | J-09 | `commerce.releaseExpiredPromoReservations` | commerce | `repeat:60s` | 3 × fixed 10 s | Kondisional: `promo_redemptions.status='reserved' AND reserved_until < now()`; pengurangan `quota_used` dilakukan dalam transaksi yang sama dengan perubahan status sehingga tidak bisa dobel. | [08 § 5](08-MODULE-PROMO.md#5-validasi-kuota-race-condition-safe) |
 | J-10 | `commerce.generateMonthlyInvoices` | commerce | `cron:0 1 1 * *` (tanggal 1, 01:00 WITA) | 3 × exp 300 s | UNIQUE `(contract_id, period_year, period_month)` di `cafe_invoices`; insert memakai `ON CONFLICT DO NOTHING`. | [09 § 4](09-MODULE-TENANT.md#4-siklus-tagihan-bulanan) |
@@ -552,6 +552,12 @@ Phase 0 (auth — [05 § 8](05-AUTH.md#8-registrasi--login)):
 | `auth.password_reset` | email | ✓ | `POST /auth/password/forgot`. Token TTL 1 jam, sekali pakai |
 | `auth.password_changed` | email | ✓ | Password berhasil diubah lewat `/password/change` atau `/reset` |
 | `auth.account_locked` | email | ✓ | Akun terkunci setelah 10 gagal login berturut-turut |
+
+Phase 1 (booking/payment — [07 § 5](07-MODULE-PAYMENT.md#5-webhook-handling--idempotency)):
+
+| `code` | Kanal | Transaksional | Dikirim saat |
+|---|---|---|---|
+| `booking.confirmed` | email + in-app | ✓ | Payment booking berubah menjadi `paid`; payload memuat data e-receipt |
 
 Template modul lain (booking, payment, refund, event, tenant, turnamen, gamification)
 **ditambahkan di phase-nya masing-masing**. Contoh bentuk yang sudah disebut dokumen lain:

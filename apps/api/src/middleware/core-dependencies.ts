@@ -12,6 +12,7 @@ import type { Redis } from 'ioredis'
 import { db } from '../config/db.ts'
 import { type Logger, logger } from '../config/logger.ts'
 import { mail } from '../config/mail.ts'
+import { type PaymentProviderFactory, paymentProviderFactory } from '../config/payment.ts'
 import { type QueueProducers, queues } from '../config/queues.ts'
 import { keys, redis, safeRedis } from '../config/redis.ts'
 import { storage } from '../config/storage.ts'
@@ -27,6 +28,7 @@ export interface CoreDependencies {
   queues: QueueProducers
   mail: MailAdapter
   storage: StorageAdapter
+  paymentProviderFactory: PaymentProviderFactory
   logger: Logger
   env: Env
 }
@@ -43,6 +45,7 @@ const core: CoreDependencies = {
   queues,
   mail,
   storage,
+  paymentProviderFactory,
   logger,
   env,
 }

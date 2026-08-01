@@ -5,7 +5,16 @@ import type { BackupAdapter } from '../providers/backup.ts'
 
 export type WorkerRuntime = Pick<
   CoreDependencies,
-  'db' | 'env' | 'logger' | 'mail' | 'queues' | 'redis' | 'redisKeys' | 'safeRedis' | 'storage'
+  | 'db'
+  | 'env'
+  | 'logger'
+  | 'mail'
+  | 'paymentProviderFactory'
+  | 'queues'
+  | 'redis'
+  | 'redisKeys'
+  | 'safeRedis'
+  | 'storage'
 > & { backup: BackupAdapter; now: Date }
 
 export type RegisteredJob = Job<Record<string, unknown>, unknown, string>

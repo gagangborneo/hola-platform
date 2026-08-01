@@ -12,6 +12,7 @@ auth.email_verify email transaksional
 auth.password_reset email transaksional
 auth.password_changed email transaksional
 auth.account_locked email transaksional
+booking.confirmed email transaksional
 `
 
 const docTemplates = DOC_TEMPLATES.trim()

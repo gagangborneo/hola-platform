@@ -5,6 +5,7 @@ import { releaseExpiredPromoReservationsJob } from './commerce/release-expired-p
 import { JOB_OPTIONS } from './job-options.ts'
 import { retryStuckNotificationsJob } from './notification/retry-stuck-notifications.job.ts'
 import { sendEmailJob } from './notification/send-email.job.ts'
+import { processPaymentWebhookJob } from './payment/process-webhook.job.ts'
 import { backupDatabaseJob } from './system/backup-database.job.ts'
 import { cleanupExpiredTokensJob } from './system/cleanup-expired-tokens.job.ts'
 import { cleanupOrphanUploadsJob } from './system/cleanup-orphan-uploads.job.ts'
@@ -23,6 +24,7 @@ const implementedHandlers = new Map<JobName, JobHandler>([
   [cleanupOrphanUploadsJob.name, cleanupOrphanUploadsJob.handler],
   [backupDatabaseJob.name, backupDatabaseJob.handler],
   [releaseExpiredPromoReservationsJob.name, releaseExpiredPromoReservationsJob.handler],
+  [processPaymentWebhookJob.name, processPaymentWebhookJob.handler],
 ])
 
 /**

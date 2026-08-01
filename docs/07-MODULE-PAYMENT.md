@@ -442,7 +442,7 @@ sequenceDiagram
         MT->>A: POST /webhooks/midtrans (signature_key)
         A->>A: verifikasi signature (timing-safe)
         A->>PG: INSERT payment_webhook_events ON CONFLICT DO NOTHING
-        A->>Q: enqueue J-05 payment.processWebhook (jobId=wh:midtrans:{eventId})
+        A->>Q: enqueue J-05 payment.processWebhook (jobId=wh-midtrans-{sha256(eventId)})
         A-->>MT: 200 (< 1 detik, tanpa logika bisnis)
         WK->>PG: J-05: baca event, petakan status, transisi payment
         WK->>PG: payment paid → booking confirmed,<br/>slot_claims held→confirmed, promo reserved→applied
@@ -557,7 +557,7 @@ flowchart LR
         H2 -->|invalid| HX["401 WEBHOOK_SIGNATURE_INVALID<br/>TIDAK disimpan sebagai valid"]
         H2 -->|valid| H3["3. Bentuk provider_event_id"]
         H3 --> H4["4. INSERT payment_webhook_events<br/>ON CONFLICT (provider, provider_event_id) DO NOTHING"]
-        H4 --> H5["5. enqueue J-05<br/>jobId = wh:midtrans:{provider_event_id}"]
+        H4 --> H5["5. enqueue J-05<br/>jobId = wh-midtrans-{sha256(provider_event_id)}"]
         H5 --> H6["6. return 200"]
     end
 
@@ -583,7 +583,7 @@ flowchart LR
 |---|---|
 | BR-P-30 | `provider_event_id` untuk Midtrans dibentuk dari: `{order_id}:{transaction_status}:{status_code}:{transaction_time}`. Alasan: Midtrans tidak menyediakan id event unik, tetapi kombinasi ini stabil untuk satu perubahan status. Notifikasi ulang untuk status yang sama menghasilkan id yang sama → tertolak UNIQUE |
 | BR-P-31 | UNIQUE `(provider, provider_event_id)` di `payment_webhook_events` adalah **jaminan idempotency durabel**. Redis tidak dilibatkan |
-| BR-P-32 | `jobId` BullMQ = `wh:{provider}:{provider_event_id}`. BullMQ menolak job dengan `jobId` yang masih ada, memberi lapisan kedua |
+| BR-P-32 | `jobId` BullMQ = `wh-midtrans-{sha256(provider_event_id)}`. Hash mempertahankan determinisme tanpa karakter `:` yang dilarang BullMQ v5; BullMQ menolak job dengan `jobId` yang masih ada, memberi lapisan kedua |
 | BR-P-33 | Semua transisi status payment melalui fungsi `applyPaymentTransition(payment, next)` yang **menolak** transisi tidak sah (mis. `paid → pending`) dan mengembalikan "no-op" untuk transisi ke status yang sama. Ini yang membuat pemrosesan berulang aman |
 | BR-P-34 | `payments.markPaid()` dijalankan dalam **satu transaksi** yang mencakup: payment → `paid`, payable → `confirmed`, `slot_claims` → `confirmed`, `promo_redemptions` → `applied`, `INSERT finance_events`. Enqueue notifikasi dilakukan **setelah** commit |
 | BR-P-35 | `markPaid()` memeriksa `payments.status = 'pending'` di dalam UPDATE (`WHERE id = ? AND status = 'pending'`). Jika 0 baris ter-update, fungsi keluar tanpa efek — inilah idempotency di level SQL |
