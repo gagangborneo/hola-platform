@@ -312,13 +312,13 @@ nominal ini.
 
 ## P1.J — Job booking & email transaksional · 4,5h
 
-- [ ] **P1-64** `0,5h` — J-01 `booking.releaseExpiredHolds` (repeat 60 s, kondisional atas `status='held' AND hold_expires_at < now()`) + test idempotensi T-B-04
-- [ ] **P1-65** `1h` — J-02 `booking.autoCompleteBookings` (repeat 15 m) **+ perannya sebagai sweeper resmi J-03 dan J-04** (mencari pekerjaan tertinggal dari kondisi PostgreSQL, bukan dari daftar job Redis). *acuan:* [02 § 5.3 Aturan sweeper](../docs/02-INFRASTRUCTURE.md#53-ketahanan-job-terhadap-kehilangan-redis)
-- [ ] **P1-66** `0,5h` — J-03 `booking.sendBookingReminder` (delayed pada `starts_at − 2 jam`, `jobId = reminder-{bookingId}`)
-- [ ] **P1-67** `0,5h` — J-04 `booking.markNoShow` (delayed pada `ends_at + 30 menit`, kondisional `checked_in_at IS NULL`)
-- [ ] **P1-68** `1h` ⛔ K-09 — Template email transaksional: `booking.confirmed` + e-receipt, `booking.cancelled`, `booking.force_cancelled`, `booking.reminder_2h`, `payment.refund_completed` — semuanya menulis baris `inapp` juga
-- [ ] **P1-69** `0,5h` — Penjadwalan & pembatalan job saat booking berubah status (BR-B-58, BR-B-68): reschedule/cancel me-remove `jobId` lama
-- [ ] **P1-70** `0,5h` 🔴 — Test idempotensi setiap job Phase 1 (BR-TT-14): jalankan handler dua kali dengan input sama → state akhir identik, tidak ada baris ganda
+- [x] **P1-64** `0,5h` — J-01 `booking.releaseExpiredHolds` (repeat 60 s, kondisional atas `status='held' AND hold_expires_at < now()`) + test idempotensi T-B-04
+- [x] **P1-65** `1h` — J-02 `booking.autoCompleteBookings` (repeat 15 m) **+ perannya sebagai sweeper resmi J-03 dan J-04** (mencari pekerjaan tertinggal dari kondisi PostgreSQL, bukan dari daftar job Redis). *acuan:* [02 § 5.3 Aturan sweeper](../docs/02-INFRASTRUCTURE.md#53-ketahanan-job-terhadap-kehilangan-redis)
+- [x] **P1-66** `0,5h` — J-03 `booking.sendBookingReminder` (delayed pada `starts_at − 2 jam`, `jobId = reminder-{bookingId}`)
+- [x] **P1-67** `0,5h` — J-04 `booking.markNoShow` (delayed pada `ends_at + 30 menit`, kondisional `checked_in_at IS NULL`)
+- [x] **P1-68** `1h` ⛔ K-09 — Template email transaksional: `booking.confirmed` + e-receipt, `booking.cancelled`, `booking.force_cancelled`, `booking.reminder_2h`, `payment.refund_completed` — semuanya menulis baris `inapp` juga
+- [x] **P1-69** `0,5h` — Penjadwalan & pembatalan job saat booking berubah status (BR-B-58, BR-B-68): reschedule/cancel me-remove `jobId` lama
+- [x] **P1-70** `0,5h` 🔴 — Test idempotensi setiap job Phase 1 (BR-TT-14): jalankan handler dua kali dengan input sama → state akhir identik, tidak ada baris ganda
 
 ## P1.K — `apps/web` (customer) · 9h
 
