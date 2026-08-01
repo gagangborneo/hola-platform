@@ -3,11 +3,13 @@ import {
   ERROR_CODE,
   HOLD_SLOT_TTL_SECONDS,
   MAX_PENDING_PAYMENT_BOOKINGS_PER_CUSTOMER,
+  type PaginationMeta,
   type Quote,
   witaDateYmd,
 } from '@hola/shared'
 import { nextBookingCode } from '../../lib/codes.ts'
 import { err } from '../../lib/errors.ts'
+import { buildCursorMeta, decodeCursor } from '../../lib/pagination.ts'
 import { addSeconds } from '../../lib/time.ts'
 import { withTransaction } from '../../lib/transaction.ts'
 import type { CoreDependencies } from '../../middleware/core-dependencies.ts'
@@ -16,25 +18,38 @@ import { findPricingCourts } from '../pricing/pricing.repository.ts'
 import { computeQuote } from '../pricing/pricing.service.ts'
 import {
   claimBookingHoldSlotsInTransaction,
+  claimDirectSlotsInTransaction,
+  releaseBookingSlotsInTransaction,
   releaseReservedHoldKeys,
   reserveBookingHoldKeys,
 } from '../slots/slots.service.ts'
+import { writeAuditLog } from '../system/audit.repository.ts'
 import {
   type BookingItemRow,
   type BookingRow,
+  cancelPendingBooking,
+  countBookings,
   countCustomerBookings,
   findBookingSettings,
   findBookingWithItems,
   insertBooking,
   insertBookingAddons,
   insertBookingItems,
+  listBookings,
+  listCustomerBookings,
   lockCustomerBookingLimits,
   markBookingCheckedIn,
   markBookingNoShow,
   type PersistedAddonQuoteLine,
   type PersistedSlotQuoteLine,
+  patchBookingNotes,
 } from './bookings.repository.ts'
-import type { BookingQuoteInput, CreateBookingInput } from './bookings.schema.ts'
+import type {
+  BookingQuoteInput,
+  BookingsQuery,
+  CreateBookingInput,
+  MyBookingsQuery,
+} from './bookings.schema.ts'
 
 export type BookingsServiceContext = Pick<
   CoreDependencies,
@@ -73,10 +88,7 @@ function bookingChannel(
   if (actor.role === 'customer') {
     return platform === 'mobile-ios' || platform === 'mobile-android' ? 'mobile' : 'web'
   }
-  if (input.channel === 'walk_in') {
-    throw err.featureDisabled('Booking walk-in menunggu pencatatan payment tunai di P1.H.')
-  }
-  return 'admin'
+  return input.channel === 'walk_in' ? 'walk_in' : 'admin'
 }
 
 function addDays(instant: Date, days: number): Date {
@@ -130,6 +142,7 @@ function validateBookingShape(
 export async function quoteBooking(
   ctx: Pick<BookingsServiceContext, 'db' | 'now'>,
   input: BookingQuoteInput,
+  reservePromo = false,
 ): Promise<Quote> {
   if (input.promo_code) {
     throw err.featureDisabled('Promo akan tersedia bersama modul P1.G.')
@@ -141,6 +154,7 @@ export async function quoteBooking(
       at: ctx.now.toISOString(),
       actor: { role: 'customer' },
       booking: { items: input.items, addons: input.addons },
+      reserve_promo: reservePromo,
     },
   )
 }
@@ -161,13 +175,22 @@ export async function createBooking(
     throw err.of(ERROR_CODE.GUEST_CONTACT_REQUIRED)
 
   const [quote, settings, pricingCourts] = await Promise.all([
-    quoteBooking(ctx, input),
+    quoteBooking(ctx, input, true),
     findBookingSettings(ctx.db),
     findPricingCourts(
       ctx.db,
       input.items.map((item) => item.court_id),
     ),
   ])
+  if (
+    input.expected_total_amount !== undefined &&
+    input.expected_total_amount !== quote.total_amount
+  ) {
+    throw err.conflict('Harga berubah. Konfirmasikan quote terbaru sebelum melanjutkan.', {
+      code: ERROR_CODE.PRICE_CHANGED,
+      quote,
+    })
+  }
   const courtsById = new Map(pricingCourts.map((court) => [court.id, court]))
   const bookingDate = validateBookingShape(
     quote,
@@ -193,20 +216,23 @@ export async function createBooking(
   }
 
   const reservedKeys: string[] = []
+  const direct = isStaff && channel === 'walk_in'
   try {
-    for (const [courtId, lines] of linesByCourt) {
-      const keys = await reserveBookingHoldKeys(ctx, {
-        courtId,
-        startsAtList: lines.map((line) => new Date(line.starts_at)),
-        ttlSeconds: HOLD_SLOT_TTL_SECONDS,
-      })
-      reservedKeys.push(...keys)
+    if (!direct) {
+      for (const [courtId, lines] of linesByCourt) {
+        const keys = await reserveBookingHoldKeys(ctx, {
+          courtId,
+          startsAtList: lines.map((line) => new Date(line.starts_at)),
+          ttlSeconds: HOLD_SLOT_TTL_SECONDS,
+        })
+        reservedKeys.push(...keys)
+      }
     }
 
     return await withTransaction(
       ctx.db,
       async (scope) => {
-        if (customerUserId) {
+        if (customerUserId && !direct) {
           await lockCustomerBookingLimits(scope.tx, customerUserId)
           const pendingCount = await countCustomerBookings(scope.tx, {
             customerUserId,
@@ -218,14 +244,14 @@ export async function createBooking(
             )
           }
         }
-        const holdExpiresAt = addSeconds(ctx.now, HOLD_SLOT_TTL_SECONDS)
+        const holdExpiresAt = direct ? null : addSeconds(ctx.now, HOLD_SLOT_TTL_SECONDS)
         const booking = await insertBooking(scope.tx, {
           bookingCode: await nextBookingCode(scope.tx, ctx.now),
           customerUserId: customerUserId ?? null,
           guestName,
           guestPhone,
           channel,
-          status: 'pending_payment',
+          status: direct ? 'confirmed' : 'pending_payment',
           bookingDate,
           slotCount: quoteSlotLines.length,
           quote,
@@ -248,21 +274,22 @@ export async function createBooking(
             itemBySlot.get(itemKey(courtId, startsAt)),
           )
           if (bookingItemIds.some((id) => !id)) throw err.internal()
-          await claimBookingHoldSlotsInTransaction(
-            ctx,
-            {
-              courtId,
-              startsAtList,
-              claimType: 'booking',
-              owner: {
-                kind: 'booking',
-                bookingItemIds: bookingItemIds.filter((id): id is string => !!id),
-              },
-              mode: 'hold',
-              actor: { userId: ctx.actor.userId, role: ctx.actor.role },
+          const claimInput = {
+            courtId,
+            startsAtList,
+            claimType: 'booking' as const,
+            owner: {
+              kind: 'booking' as const,
+              bookingItemIds: bookingItemIds.filter((id): id is string => !!id),
             },
-            scope,
-          )
+            mode: direct ? ('direct' as const) : ('hold' as const),
+            actor: { userId: ctx.actor.userId, role: ctx.actor.role },
+          }
+          if (direct) {
+            await claimDirectSlotsInTransaction(ctx, claimInput, scope)
+          } else {
+            await claimBookingHoldSlotsInTransaction(ctx, claimInput, scope)
+          }
         }
         return { booking, items, quote }
       },
@@ -332,4 +359,113 @@ export async function markBookingAsNoShow(
     },
     { logger: ctx.logger },
   )
+}
+
+export async function getBookingDetail(
+  ctx: Pick<BookingsServiceContext, 'db' | 'actor'>,
+  bookingId: string,
+): Promise<{ booking: BookingRow; items: BookingItemRow[] }> {
+  const found = await findBookingWithItems(ctx.db, bookingId)
+  if (!found) throw err.notFound('Booking tidak ditemukan.')
+  if (ctx.actor.role === 'customer' && found.booking.customerUserId !== ctx.actor.userId)
+    throw err.notOwner()
+  return found
+}
+
+export async function updateBookingNotes(
+  ctx: BookingsServiceContext,
+  input: {
+    bookingId: string
+    customerNote?: string | undefined
+    internalNote?: string | undefined
+  },
+): Promise<BookingRow> {
+  await getBookingDetail(ctx, input.bookingId)
+  if (ctx.actor.role === 'customer' && input.internalNote !== undefined) throw err.forbidden()
+  if (ctx.actor.role !== 'customer' && input.customerNote !== undefined) throw err.forbidden()
+  return withTransaction(
+    ctx.db,
+    async ({ tx }) => {
+      const booking = await patchBookingNotes(tx, { ...input, now: ctx.now })
+      if (!booking) throw err.notFound('Booking tidak ditemukan.')
+      return booking
+    },
+    { logger: ctx.logger },
+  )
+}
+
+export async function listAllBookings(
+  ctx: Pick<BookingsServiceContext, 'db'>,
+  query: BookingsQuery,
+): Promise<{ rows: BookingRow[]; totalCount: number }> {
+  const [rows, totalCount] = await Promise.all([
+    listBookings(ctx.db, query),
+    countBookings(ctx.db, query),
+  ])
+  return { rows, totalCount }
+}
+
+export async function listMyBookings(
+  ctx: Pick<BookingsServiceContext, 'db' | 'actor' | 'now'>,
+  query: MyBookingsQuery,
+): Promise<{ rows: BookingRow[]; pagination: Extract<PaginationMeta, { mode: 'cursor' }> }> {
+  let decodedCursor: { createdAt: Date; id: string } | undefined
+  if (query.cursor) {
+    const cursor = decodeCursor(query.cursor)
+    const createdAt = new Date(String(cursor.k[0] ?? ''))
+    if (Number.isNaN(createdAt.getTime())) throw err.validation({ field: 'cursor' })
+    decodedCursor = { createdAt, id: cursor.id }
+  }
+  const rows = await listCustomerBookings(ctx.db, {
+    ...query,
+    customerUserId: ctx.actor.userId,
+    nowDate: witaDateYmd(ctx.now),
+    decodedCursor,
+  })
+  return buildCursorMeta(rows, query, (booking) => ({
+    k: [booking.createdAt.toISOString()],
+    id: booking.id,
+  }))
+}
+
+export async function cancelBooking(
+  ctx: BookingsServiceContext,
+  input: { bookingId: string; reason: string },
+): Promise<{ booking: BookingRow; refundEstimateAmount: 0; policyApplied: string }> {
+  const found = await getBookingDetail(ctx, input.bookingId)
+  if (found.booking.status !== 'pending_payment') {
+    throw err.of(ERROR_CODE.BOOKING_NOT_CANCELLABLE, {
+      message: 'Pembatalan booking confirmed menunggu integrasi refund P1.H.',
+    })
+  }
+  const booking = await withTransaction(
+    ctx.db,
+    async (scope) => {
+      const updated = await cancelPendingBooking(scope.tx, {
+        bookingId: input.bookingId,
+        actorUserId: ctx.actor.userId,
+        reason: input.reason,
+        now: ctx.now,
+      })
+      if (!updated) throw err.of(ERROR_CODE.BOOKING_NOT_CANCELLABLE)
+      await releaseBookingSlotsInTransaction(ctx, input.bookingId, scope)
+      if (ctx.actor.role === 'staff' || ctx.actor.role === 'admin') {
+        await writeAuditLog(scope.tx, {
+          actorUserId: ctx.actor.userId,
+          actorRole: ctx.actor.role,
+          action: 'booking.cancel',
+          entityType: 'booking',
+          entityId: input.bookingId,
+          before: found.booking,
+          after: updated,
+          ipAddress: undefined,
+          userAgent: undefined,
+          requestId: undefined,
+        })
+      }
+      return updated
+    },
+    { logger: ctx.logger },
+  )
+  return { booking, refundEstimateAmount: 0, policyApplied: 'pending_payment_no_refund' }
 }

@@ -18,7 +18,16 @@ import { logger } from '../../config/logger.ts'
 import { redis, safeRedis } from '../../config/redis.ts'
 import { AppError } from '../../lib/errors.ts'
 import type { BookingsServiceContext } from './bookings.service.ts'
-import { checkInBooking, createBooking, markBookingAsNoShow } from './bookings.service.ts'
+import {
+  cancelBooking,
+  checkInBooking,
+  createBooking,
+  getBookingDetail,
+  listAllBookings,
+  listMyBookings,
+  markBookingAsNoShow,
+  updateBookingNotes,
+} from './bookings.service.ts'
 
 const ids = {
   venue: '01930000-0000-7000-8000-000000000101',
@@ -255,5 +264,101 @@ describe('booking create dengan PostgreSQL dan Redis nyata', () => {
       .where(eq(slotClaims.bookingItemId, created.items[0]?.id ?? ''))
     expect(noShow.status).toBe('no_show')
     expect(claim?.status).toBe('confirmed')
+  })
+
+  it('P1-39: detail dan notes menegakkan ownership serta batas field berdasarkan role', async () => {
+    const created = await createBooking(context(), input([15]))
+    expect((await getBookingDetail(context(), created.booking.id)).booking.id).toBe(
+      created.booking.id,
+    )
+    await expect(
+      getBookingDetail(
+        {
+          ...context(),
+          actor: { ...context().actor, userId: '01930000-0000-7000-8000-000000000999' },
+        },
+        created.booking.id,
+      ),
+    ).rejects.toMatchObject({ code: 'NOT_RESOURCE_OWNER' })
+
+    const customerPatch = await updateBookingNotes(context(), {
+      bookingId: created.booking.id,
+      customerNote: 'Mohon siapkan net.',
+    })
+    expect(customerPatch.customerNote).toBe('Mohon siapkan net.')
+    await expect(
+      updateBookingNotes(context(), {
+        bookingId: created.booking.id,
+        internalNote: 'tidak boleh',
+      }),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' })
+
+    const staffPatch = await updateBookingNotes(staffContext(now), {
+      bookingId: created.booking.id,
+      internalNote: 'Customer sudah dihubungi.',
+    })
+    expect(staffPatch.internalNote).toBe('Customer sudah dihubungi.')
+  })
+
+  it('P1-39: daftar admin mendukung pencarian dan riwayat me memakai cursor stabil', async () => {
+    const created = await createBooking(context(), input([16]))
+    const adminList = await listAllBookings(context(), {
+      page: 1,
+      per_page: 25,
+      q: created.booking.bookingCode,
+      sort: '-created_at',
+    })
+    const myList = await listMyBookings(context(), {
+      limit: 20,
+      direction: 'forward',
+      upcoming: false,
+    })
+    expect(adminList.rows.map((row) => row.id)).toContain(created.booking.id)
+    expect(myList.rows.map((row) => row.id)).toContain(created.booking.id)
+    expect(myList.pagination.mode).toBe('cursor')
+  })
+
+  it('E-13 / P1-35: expected_total_amount berbeda menolak booking sebelum hold dibuat', async () => {
+    await expect(
+      createBooking(context(), { ...input([17]), expected_total_amount: 1 }),
+    ).rejects.toMatchObject({
+      code: 'CONFLICT',
+      details: { code: 'PRICE_CHANGED' },
+    })
+    expect(await redis.get(redisKeys.holdSlot(ids.court, startsAt(17)))).toBeNull()
+  })
+
+  it('BR-B-11 / BR-B-38 / BR-B-86: staff walk-in memakai direct claim dan check-in otomatis', async () => {
+    const created = await createBooking(staffContext(now), {
+      ...input([17]),
+      channel: 'walk_in',
+      customer_user_id: ids.customer,
+    })
+    const [claim] = await db
+      .select()
+      .from(slotClaims)
+      .where(eq(slotClaims.bookingItemId, created.items[0]?.id ?? ''))
+    expect(created.booking).toMatchObject({ status: 'confirmed', channel: 'walk_in' })
+    expect(created.booking.checkedInAt).toEqual(created.booking.createdAt)
+    expect(claim).toMatchObject({ status: 'confirmed', holdExpiresAt: null })
+  })
+
+  it('BR-B-61 / BR-B-66: cancel pending atomik melepas claim dan hold Redis tanpa refund', async () => {
+    const created = await createBooking(context(), input([14]))
+    const result = await cancelBooking(context(), {
+      bookingId: created.booking.id,
+      reason: 'Jadwal berubah.',
+    })
+    const [claim] = await db
+      .select()
+      .from(slotClaims)
+      .where(eq(slotClaims.bookingItemId, created.items[0]?.id ?? ''))
+    expect(result).toMatchObject({
+      booking: { status: 'cancelled', holdExpiresAt: null },
+      refundEstimateAmount: 0,
+      policyApplied: 'pending_payment_no_refund',
+    })
+    expect(claim).toMatchObject({ status: 'released', releaseReason: 'booking_cancelled' })
+    expect(await redis.get(redisKeys.holdSlot(ids.court, startsAt(14)))).toBeNull()
   })
 })

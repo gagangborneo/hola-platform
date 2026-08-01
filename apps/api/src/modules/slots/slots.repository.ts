@@ -1,5 +1,12 @@
 /** Query PostgreSQL untuk mekanisme kepemilikan slot. */
-import { courtOperatingHours, courts, type HolaDb, slotClaims, specialDates } from '@hola/db'
+import {
+  bookingItems,
+  courtOperatingHours,
+  courts,
+  type HolaDb,
+  slotClaims,
+  specialDates,
+} from '@hola/db'
 import { and, eq, inArray, lt, sql } from 'drizzle-orm'
 import { translateDbError } from '../../lib/errors.ts'
 import type { Tx } from '../../lib/transaction.ts'
@@ -187,6 +194,34 @@ export async function releaseClaimsByMaintenance(
     .where(
       and(
         eq(slotClaims.courtMaintenanceId, input.courtMaintenanceId),
+        inArray(slotClaims.status, ['held', 'confirmed']),
+      ),
+    )
+    .returning()
+}
+
+/** Pelepasan seluruh claim sebuah booking tetap berada di repository slots. */
+export async function releaseClaimsByBooking(
+  tx: Tx,
+  input: { bookingId: string; reason: string; now: Date },
+): Promise<SlotClaimRow[]> {
+  return tx
+    .update(slotClaims)
+    .set({
+      status: 'released',
+      holdExpiresAt: null,
+      releasedAt: input.now,
+      releaseReason: input.reason,
+    })
+    .where(
+      and(
+        inArray(
+          slotClaims.bookingItemId,
+          tx
+            .select({ id: bookingItems.id })
+            .from(bookingItems)
+            .where(eq(bookingItems.bookingId, input.bookingId)),
+        ),
         inArray(slotClaims.status, ['held', 'confirmed']),
       ),
     )

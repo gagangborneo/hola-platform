@@ -14,6 +14,7 @@ import {
   insertSlotClaims,
   lockCourtForShare,
   releaseClaims,
+  releaseClaimsByBooking,
   releaseClaimsByMaintenance,
   releaseExpiredHolds,
   type SlotClaimRow,
@@ -414,6 +415,31 @@ export async function releaseMaintenanceSlotsInTransaction(
   const released = await releaseClaimsByMaintenance(scope.tx, {
     courtMaintenanceId,
     reason: 'maintenance_cancelled',
+    now: ctx.now,
+  })
+  scope.afterCommit(async () => {
+    await Promise.all([
+      invalidateAvailability(ctx, released),
+      releaseReservedHoldKeys(
+        ctx,
+        released.map((claim) =>
+          ctx.redisKeys.holdSlot(claim.courtId, claim.startsAt.toISOString()),
+        ),
+      ),
+    ])
+  })
+  return released.map(toClaimedSlot)
+}
+
+/** Dipakai pembatalan booking agar owner dan claim berubah atomik. */
+export async function releaseBookingSlotsInTransaction(
+  ctx: SlotsServiceContext,
+  bookingId: string,
+  scope: TransactionScope,
+): Promise<ClaimedSlot[]> {
+  const released = await releaseClaimsByBooking(scope.tx, {
+    bookingId,
+    reason: 'booking_cancelled',
     now: ctx.now,
   })
   scope.afterCommit(async () => {

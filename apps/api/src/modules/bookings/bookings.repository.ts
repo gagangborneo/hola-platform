@@ -1,7 +1,8 @@
-import { appSettings, bookingAddons, bookingItems, bookings, type HolaDb } from '@hola/db'
+import { appSettings, bookingAddons, bookingItems, bookings, type HolaDb, users } from '@hola/db'
 import { type Quote, type QuoteLine, SETTINGS_KEY } from '@hola/shared'
-import { and, eq, inArray, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, gte, ilike, inArray, lt, lte, or, type SQL, sql } from 'drizzle-orm'
 import type { Tx } from '../../lib/transaction.ts'
+import type { BookingsQuery, MyBookingsQuery } from './bookings.schema.ts'
 
 type DbExecutor = HolaDb | Tx
 
@@ -109,6 +110,8 @@ export async function insertBooking(
       holdExpiresAt: input.holdExpiresAt,
       customerNote: input.customerNote,
       createdByUserId: input.createdByUserId,
+      createdAt: input.now,
+      updatedAt: input.now,
       ...(input.status === 'confirmed' ? { confirmedAt: input.now } : {}),
       ...(input.channel === 'walk_in' ? { checkedInAt: input.now } : {}),
     })
@@ -188,6 +191,125 @@ export async function markBookingNoShow(
     .update(bookings)
     .set({ status: 'no_show', updatedAt: input.now })
     .where(and(eq(bookings.id, input.bookingId), eq(bookings.status, 'confirmed')))
+    .returning()
+  return booking ?? null
+}
+
+export async function patchBookingNotes(
+  tx: Tx,
+  input: {
+    bookingId: string
+    customerNote?: string | undefined
+    internalNote?: string | undefined
+    now: Date
+  },
+): Promise<BookingRow | null> {
+  const [booking] = await tx
+    .update(bookings)
+    .set({
+      ...(input.customerNote !== undefined ? { customerNote: input.customerNote } : {}),
+      ...(input.internalNote !== undefined ? { internalNote: input.internalNote } : {}),
+      updatedAt: input.now,
+    })
+    .where(eq(bookings.id, input.bookingId))
+    .returning()
+  return booking ?? null
+}
+
+function bookingListWhere(query: BookingsQuery): SQL | undefined {
+  const search = query.q
+    ? or(
+        ilike(bookings.bookingCode, `%${query.q}%`),
+        ilike(bookings.guestName, `%${query.q}%`),
+        ilike(bookings.guestPhone, `%${query.q}%`),
+        ilike(users.fullName, `%${query.q}%`),
+        ilike(users.phone, `%${query.q}%`),
+      )
+    : undefined
+  return and(
+    ...(query.status ? [eq(bookings.status, query.status)] : []),
+    ...(query.booking_date_from ? [gte(bookings.bookingDate, query.booking_date_from)] : []),
+    ...(query.booking_date_to ? [lte(bookings.bookingDate, query.booking_date_to)] : []),
+    ...(query.customer_user_id ? [eq(bookings.customerUserId, query.customer_user_id)] : []),
+    ...(query.channel ? [eq(bookings.channel, query.channel)] : []),
+    ...(query.court_id
+      ? [
+          sql`EXISTS (SELECT 1 FROM ${bookingItems} bi WHERE bi.booking_id = ${bookings.id} AND bi.court_id = ${query.court_id})`,
+        ]
+      : []),
+    ...(search ? [search] : []),
+  )
+}
+
+export async function listBookings(db: HolaDb, query: BookingsQuery): Promise<BookingRow[]> {
+  const order = query.sort === 'booking_date' ? asc(bookings.bookingDate) : desc(bookings.createdAt)
+  return db
+    .select({ booking: bookings })
+    .from(bookings)
+    .leftJoin(users, eq(users.id, bookings.customerUserId))
+    .where(bookingListWhere(query))
+    .orderBy(order, desc(bookings.id))
+    .limit(query.per_page)
+    .offset((query.page - 1) * query.per_page)
+    .then((rows) => rows.map((row) => row.booking))
+}
+
+export async function countBookings(db: HolaDb, query: BookingsQuery): Promise<number> {
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(bookings)
+    .leftJoin(users, eq(users.id, bookings.customerUserId))
+    .where(bookingListWhere(query))
+  return row?.count ?? 0
+}
+
+export async function listCustomerBookings(
+  db: HolaDb,
+  input: MyBookingsQuery & {
+    customerUserId: string
+    nowDate: string
+    decodedCursor?: { createdAt: Date; id: string } | undefined
+  },
+): Promise<BookingRow[]> {
+  const cursor = input.decodedCursor
+    ? or(
+        lt(bookings.createdAt, input.decodedCursor.createdAt),
+        and(
+          eq(bookings.createdAt, input.decodedCursor.createdAt),
+          lt(bookings.id, input.decodedCursor.id),
+        ),
+      )
+    : undefined
+  return db
+    .select()
+    .from(bookings)
+    .where(
+      and(
+        eq(bookings.customerUserId, input.customerUserId),
+        ...(input.status ? [eq(bookings.status, input.status)] : []),
+        ...(input.upcoming ? [gte(bookings.bookingDate, input.nowDate)] : []),
+        ...(cursor ? [cursor] : []),
+      ),
+    )
+    .orderBy(desc(bookings.createdAt), desc(bookings.id))
+    .limit(input.limit + 1)
+}
+
+export async function cancelPendingBooking(
+  tx: Tx,
+  input: { bookingId: string; actorUserId: string; reason: string; now: Date },
+): Promise<BookingRow | null> {
+  const [booking] = await tx
+    .update(bookings)
+    .set({
+      status: 'cancelled',
+      holdExpiresAt: null,
+      cancelledAt: input.now,
+      cancelledByUserId: input.actorUserId,
+      cancellationReason: input.reason,
+      updatedAt: input.now,
+    })
+    .where(and(eq(bookings.id, input.bookingId), eq(bookings.status, 'pending_payment')))
     .returning()
   return booking ?? null
 }
