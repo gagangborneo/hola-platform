@@ -26,7 +26,11 @@ import {
   cancelAdminCourtMaintenance,
   createAdminCourtMaintenance,
 } from './court-maintenance.service.ts'
-import { patchAdminCourt, replaceAdminCourtPhotos } from './courts.service.ts'
+import {
+  patchAdminCourt,
+  replaceAdminCourtOperatingHours,
+  replaceAdminCourtPhotos,
+} from './courts.service.ts'
 import { createAdminSpecialDate, deleteAdminSpecialDate } from './special-dates.service.ts'
 
 const ids = {
@@ -36,6 +40,8 @@ const ids = {
   court: '01920000-0000-7000-8000-000000000104',
   mediaOne: '01920000-0000-7000-8000-000000000105',
   mediaTwo: '01920000-0000-7000-8000-000000000106',
+  maintenance: '01920000-0000-7000-8000-000000000107',
+  claim: '01920000-0000-7000-8000-000000000108',
 } as const
 
 const now = new Date('2026-07-31T00:00:00.000Z')
@@ -126,6 +132,53 @@ describe('admin court, harga, dan special dates dengan PostgreSQL/Redis nyata', 
         { courtId: ids.court, version: 1, patch: { name: 'Stale write' } },
       ),
     ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' })
+  })
+
+  it('P1-26 / S-4: perubahan durasi ditolak saat court memiliki claim aktif mendatang', async () => {
+    const startsAt = new Date('2026-08-01T00:00:00.000Z')
+    await db.insert(courtMaintenances).values({
+      id: ids.maintenance,
+      courtId: ids.court,
+      startsAt,
+      endsAt: new Date('2026-08-01T01:00:00.000Z'),
+      reason: 'Claim penjaga perubahan grid',
+      createdByUserId: ids.user,
+    })
+    await db.insert(slotClaims).values({
+      id: ids.claim,
+      courtId: ids.court,
+      startsAt,
+      endsAt: new Date('2026-08-01T01:00:00.000Z'),
+      slotDate: '2026-08-01',
+      claimType: 'maintenance',
+      status: 'confirmed',
+      courtMaintenanceId: ids.maintenance,
+      createdByUserId: ids.user,
+    })
+
+    await expect(
+      patchAdminCourt(
+        { ...redisContext, now, ...audit },
+        { courtId: ids.court, version: 1, patch: { slot_duration_minutes: 90 } },
+      ),
+    ).rejects.toMatchObject({ code: 'COURT_HAS_FUTURE_CLAIMS' })
+  })
+
+  it('P1-27 / I-8: replace operating hours menulis tujuh hari dan invalidasi cache court', async () => {
+    await redis.set(redisKeys.availability(ids.court, '2026-08-01'), 'cache', 'EX', 60)
+    await replaceAdminCourtOperatingHours({ ...redisContext, now, ...audit }, ids.court, {
+      hours: Array.from({ length: 7 }, (_, dayOfWeek) => ({
+        day_of_week: dayOfWeek,
+        opens_time: '08:00',
+        closes_time: '20:00',
+      })),
+    })
+    const rows = await db
+      .select()
+      .from(courtOperatingHours)
+      .where(eq(courtOperatingHours.courtId, ids.court))
+    expect(rows).toHaveLength(7)
+    expect(await redis.get(redisKeys.availability(ids.court, '2026-08-01'))).toBeNull()
   })
 
   it('P1-27: mengganti daftar foto secara atomik dan mempertahankan urutan', async () => {
