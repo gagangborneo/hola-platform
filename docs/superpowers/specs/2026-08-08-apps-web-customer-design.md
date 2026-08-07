@@ -194,7 +194,9 @@ Penanganan konflik:
 
 `POST /payments` menghasilkan `snap_token` dan `snap_redirect_url`. `snap.js` dimuat lewat `next/script` dari domain yang ditentukan `NEXT_PUBLIC_MIDTRANS_IS_PRODUCTION` (§ 3.5) — variabel yang sama yang membentuk CSP, sehingga skrip yang dimuat selalu berada di dalam daftar izin. `midtrans_client_key` tetap diambil dari `/config/public`. Popup adalah jalur utama; `snap_redirect_url` adalah cadangan bila skrip gagal dimuat.
 
-`/booking/[id]/status` melakukan polling `GET /payments/{id}` tiap 3 detik, berhenti pada status final atau setelah 5 menit. Setelah batas itu, halaman menawarkan pemeriksaan manual yang memanggil `POST /payments/{id}/sync`.
+`/booking/[id]/status` melakukan polling `GET /payments/{id}` tiap 3 detik, berhenti pada status final atau setelah 5 menit.
+
+Setelah batas itu, halaman menawarkan **pemeriksaan ulang manual berupa refetch `GET /payments/{id}`**, bukan `POST /payments/{id}/sync`. Endpoint `sync` dibatasi role `staff`/`admin` (`payments.routes.ts`), jadi customer akan menerima `403`. Keadaan ini menampilkan kode booking dan arahan menghubungi staff; staff-lah yang menjalankan `sync` sesuai runbook P1-95.
 
 `meta.warnings` yang memuat `PROMO_QUOTA_EXHAUSTED` (E-10) atau `PRICE_CHANGED` (E-13) menghentikan alur dan meminta konfirmasi ulang: quote baru ditampilkan berdampingan dengan yang lama, dan pengguna menyetujui secara eksplisit sebelum lanjut. Tidak ada penyesuaian harga diam-diam.
 
