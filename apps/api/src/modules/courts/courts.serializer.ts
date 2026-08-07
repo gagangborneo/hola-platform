@@ -1,4 +1,5 @@
 import type { CourtRow } from './courts.repository.ts'
+import type { SportRow } from './sports.repository.ts'
 
 /** Bentuk publik/admin court memakai snake_case, bukan nama kolom Drizzle. */
 export function serializeCourt(court: CourtRow) {
@@ -20,5 +21,16 @@ export function serializeCourt(court: CourtRow) {
     sort_order: court.sortOrder,
     created_at: court.createdAt.toISOString(),
     updated_at: court.updatedAt.toISOString(),
+  }
+}
+
+/** Bentuk publik olahraga; `is_active` tidak dibocorkan karena hanya yang aktif yang tampil. */
+export function serializeSport(sport: SportRow) {
+  return {
+    id: sport.id,
+    code: sport.code,
+    name: sport.name,
+    icon_media_id: sport.iconMediaId,
+    sort_order: sport.sortOrder,
   }
 }

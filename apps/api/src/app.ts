@@ -21,6 +21,7 @@ import { bookingsRoutes } from './modules/bookings/bookings.routes.ts'
 import { courtMaintenanceRoutes } from './modules/courts/court-maintenance.routes.ts'
 import { courtsRoutes } from './modules/courts/courts.routes.ts'
 import { specialDatesRoutes } from './modules/courts/special-dates.routes.ts'
+import { sportsRoutes } from './modules/courts/sports.routes.ts'
 import { mediaRoutes } from './modules/media/media.routes.ts'
 import { notificationRoutes } from './modules/notifications/notification.routes.ts'
 import { paymentsRoutes } from './modules/payments/payments.routes.ts'
@@ -63,6 +64,7 @@ export const PUBLIC_ROUTE_ALLOWLIST: ReadonlySet<string> = new Set([
   'POST /api/v1/webhooks/midtrans',
   ...(env.APP_ENV === 'local' ? ['POST /api/v1/dev/simulate-webhook'] : []),
   'GET /api/v1/special-dates',
+  'GET /api/v1/sports',
 ])
 
 const API_PREFIX = '/api/v1'
@@ -119,6 +121,7 @@ export function createApp() {
     .route(API_PREFIX, configRoutes)
     .route(API_PREFIX, availabilityRoutes)
     .route(API_PREFIX, bookingsRoutes)
+    .route(API_PREFIX, sportsRoutes)
     .route(API_PREFIX, courtsRoutes)
     .route(API_PREFIX, courtMaintenanceRoutes)
     .route(API_PREFIX, specialDatesRoutes)
