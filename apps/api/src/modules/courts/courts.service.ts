@@ -9,11 +9,15 @@ import {
 } from '../availability/availability-cache.ts'
 import { writeAuditLog } from '../system/audit.repository.ts'
 import {
+  type CourtDetail,
   type CourtRow,
   createCourt,
   findCourt,
+  findCourtDetail,
   findReadyCourtPhotos,
   hasFutureActiveClaims,
+  listPublicCourts,
+  type PublicCourtFilter,
   patchCourt,
   replaceCourtOperatingHours,
   replaceCourtPhotos,
@@ -186,4 +190,20 @@ export async function replaceAdminCourtPhotos(
     },
     { logger: ctx.logger },
   )
+}
+
+export async function listCourts(
+  ctx: Pick<CourtsServiceContext, 'db'>,
+  filter: PublicCourtFilter,
+): Promise<CourtRow[]> {
+  return listPublicCourts(ctx.db, filter)
+}
+
+export async function getCourtDetail(
+  ctx: Pick<CourtsServiceContext, 'db'>,
+  courtId: string,
+): Promise<CourtDetail> {
+  const detail = await findCourtDetail(ctx.db, courtId)
+  if (!detail) throw err.notFound('Lapangan tidak ditemukan.')
+  return detail
 }

@@ -75,3 +75,11 @@ export type CreateCourtInput = z.infer<typeof createCourtSchema>
 export type PatchCourtInput = z.infer<typeof patchCourtSchema>
 export type ReplaceOperatingHoursInput = z.infer<typeof replaceOperatingHoursSchema>
 export type ReplaceCourtPhotosInput = z.infer<typeof replaceCourtPhotosSchema>
+
+export const courtsQuerySchema = z
+  .object({
+    sport_id: idSchema.optional(),
+    status: z.enum(['active', 'inactive', 'maintenance']).optional(),
+    is_indoor: z.enum(['true', 'false']).optional(),
+  })
+  .strict()

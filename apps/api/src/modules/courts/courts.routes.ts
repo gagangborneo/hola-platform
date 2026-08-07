@@ -2,7 +2,7 @@ import { USER_ROLE } from '@hola/shared'
 import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
 import { err } from '../../lib/errors.ts'
-import { ok } from '../../lib/response.ts'
+import { ok, okList } from '../../lib/response.ts'
 import { authenticate } from '../../middleware/authenticate.ts'
 import type { CoreDependencyVariables } from '../../middleware/core-dependencies.ts'
 import type { AuthVariables } from '../../middleware/logger.ts'
@@ -11,14 +11,17 @@ import { registerGuardedRoute, requireRole } from '../../middleware/require-role
 import type { Viewer } from '../auth/auth.types.ts'
 import {
   courtIdParam,
+  courtsQuerySchema,
   createCourtSchema,
   patchCourtSchema,
   replaceCourtPhotosSchema,
   replaceOperatingHoursSchema,
 } from './courts.schema.ts'
-import { serializeCourt } from './courts.serializer.ts'
+import { serializeCourt, serializeCourtDetail } from './courts.serializer.ts'
 import {
   createAdminCourt,
+  getCourtDetail,
+  listCourts,
   patchAdminCourt,
   replaceAdminCourtOperatingHours,
   replaceAdminCourtPhotos,
@@ -64,6 +67,22 @@ registerGuardedRoute('PUT', `${PREFIX}/:id/operating-hours`)
 registerGuardedRoute('PUT', `${PREFIX}/:id/photos`)
 
 export const courtsRoutes = new Hono<{ Variables: Variables }>()
+  .get('/courts', zValidator('query', courtsQuerySchema, validationHook), async (c) => {
+    const query = c.req.valid('query')
+    const rows = await listCourts(
+      { db: c.get('core').db },
+      {
+        sportId: query.sport_id,
+        status: query.status,
+        isIndoor: query.is_indoor === undefined ? undefined : query.is_indoor === 'true',
+      },
+    )
+    return c.json(okList(rows.map(serializeCourt), {}))
+  })
+  .get('/courts/:id', zValidator('param', courtIdParam, validationHook), async (c) => {
+    const detail = await getCourtDetail({ db: c.get('core').db }, c.req.valid('param').id)
+    return c.json(ok(serializeCourtDetail(detail)))
+  })
   .post(
     '/courts',
     authenticate,

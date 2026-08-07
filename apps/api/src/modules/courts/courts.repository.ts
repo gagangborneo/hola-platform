@@ -6,7 +6,7 @@ import {
   mediaFiles,
   slotClaims,
 } from '@hola/db'
-import { and, eq, gte, inArray, sql } from 'drizzle-orm'
+import { and, asc, eq, gte, inArray, sql } from 'drizzle-orm'
 import { translateDbError } from '../../lib/errors.ts'
 import type { Tx } from '../../lib/transaction.ts'
 import type { CreateCourtInput, PatchCourtInput } from './courts.schema.ts'
@@ -138,4 +138,80 @@ export async function replaceCourtPhotos(
       position,
     })),
   )
+}
+
+export interface PublicCourtFilter {
+  sportId?: string | undefined
+  status?: 'active' | 'inactive' | 'maintenance' | undefined
+  isIndoor?: boolean | undefined
+}
+
+export interface CourtOperatingHourRow {
+  dayOfWeek: number
+  opensTime: string
+  closesTime: string
+}
+
+export interface CourtPhotoRow {
+  mediaId: string
+  position: number
+  bucket: string
+  objectKey: string
+}
+
+export interface CourtDetail {
+  court: CourtRow
+  hours: CourtOperatingHourRow[]
+  photos: CourtPhotoRow[]
+}
+
+export async function listPublicCourts(
+  db: DbExecutor,
+  filter: PublicCourtFilter,
+): Promise<CourtRow[]> {
+  const conditions = [
+    filter.sportId === undefined ? undefined : eq(courts.sportId, filter.sportId),
+    filter.status === undefined ? undefined : eq(courts.status, filter.status),
+    filter.isIndoor === undefined ? undefined : eq(courts.isIndoor, filter.isIndoor),
+  ].filter((condition) => condition !== undefined)
+
+  const query = db.select().from(courts)
+  const filtered = conditions.length > 0 ? query.where(and(...conditions)) : query
+  return filtered.orderBy(asc(courts.sortOrder), asc(courts.code))
+}
+
+/**
+ * Detail satu court. Foto dibatasi media berstatus `ready` supaya halaman publik
+ * tidak pernah menautkan objek yang uploadnya belum selesai.
+ */
+export async function findCourtDetail(
+  db: DbExecutor,
+  courtId: string,
+): Promise<CourtDetail | null> {
+  const court = await findCourt(db, courtId)
+  if (!court) return null
+
+  const hours = await db
+    .select({
+      dayOfWeek: courtOperatingHours.dayOfWeek,
+      opensTime: courtOperatingHours.opensTime,
+      closesTime: courtOperatingHours.closesTime,
+    })
+    .from(courtOperatingHours)
+    .where(eq(courtOperatingHours.courtId, courtId))
+    .orderBy(asc(courtOperatingHours.dayOfWeek))
+
+  const photos = await db
+    .select({
+      mediaId: courtPhotos.mediaId,
+      position: courtPhotos.position,
+      bucket: mediaFiles.bucket,
+      objectKey: mediaFiles.objectKey,
+    })
+    .from(courtPhotos)
+    .innerJoin(mediaFiles, eq(mediaFiles.id, courtPhotos.mediaId))
+    .where(and(eq(courtPhotos.courtId, courtId), eq(mediaFiles.status, 'ready')))
+    .orderBy(asc(courtPhotos.position))
+
+  return { court, hours, photos }
 }

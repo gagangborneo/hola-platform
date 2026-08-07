@@ -1,4 +1,4 @@
-import type { CourtRow } from './courts.repository.ts'
+import type { CourtDetail, CourtRow } from './courts.repository.ts'
 import type { SportRow } from './sports.repository.ts'
 
 /** Bentuk publik/admin court memakai snake_case, bukan nama kolom Drizzle. */
@@ -21,6 +21,26 @@ export function serializeCourt(court: CourtRow) {
     sort_order: court.sortOrder,
     created_at: court.createdAt.toISOString(),
     updated_at: court.updatedAt.toISOString(),
+  }
+}
+
+/** Detail publik: court + jam operasional + foto. `bucket` tidak dibocorkan ke klien. */
+export function serializeCourtDetail(detail: CourtDetail): ReturnType<typeof serializeCourt> & {
+  operating_hours: Array<{ day_of_week: number; opens_time: string; closes_time: string }>
+  photos: Array<{ media_id: string; position: number; object_key: string }>
+} {
+  return {
+    ...serializeCourt(detail.court),
+    operating_hours: detail.hours.map((hour) => ({
+      day_of_week: hour.dayOfWeek,
+      opens_time: hour.opensTime,
+      closes_time: hour.closesTime,
+    })),
+    photos: detail.photos.map((photo) => ({
+      media_id: photo.mediaId,
+      position: photo.position,
+      object_key: photo.objectKey,
+    })),
   }
 }
 

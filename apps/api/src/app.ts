@@ -65,6 +65,8 @@ export const PUBLIC_ROUTE_ALLOWLIST: ReadonlySet<string> = new Set([
   ...(env.APP_ENV === 'local' ? ['POST /api/v1/dev/simulate-webhook'] : []),
   'GET /api/v1/special-dates',
   'GET /api/v1/sports',
+  'GET /api/v1/courts',
+  'GET /api/v1/courts/:id',
 ])
 
 const API_PREFIX = '/api/v1'
