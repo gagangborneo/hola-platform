@@ -51,3 +51,5 @@ Thumbs.db
 
 # Runbook artefak sementara (isi runbook sendiri tetap di-commit)
 docs/runbooks/*.tmp
+# Added by code-review-graph
+.code-review-graph/
