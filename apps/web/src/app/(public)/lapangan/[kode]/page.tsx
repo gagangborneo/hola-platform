@@ -2,13 +2,19 @@ import type { Metadata } from 'next'
 import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import type { ReactNode } from 'react'
+import { CourtAvailabilitySection } from '../../../../components/booking/CourtAvailabilitySection.tsx'
 import { Badge } from '../../../../components/ui/badge.tsx'
 import { formatClock, formatDayName } from '../../../../lib/format.ts'
+import { fetchPublicConfig } from '../../../../lib/public-config.ts'
 import { findCourtByCode, mediaUrl } from '../../../../lib/server-api.ts'
 
 interface CourtDetailPageProps {
   params: Promise<{ kode: string }>
 }
+
+// `fetchPublicConfig` memakai `cache: 'no-store'` (server_time berubah tiap
+// permintaan) — halaman ini tidak lagi bisa ISR.
+export const dynamic = 'force-dynamic'
 
 export async function generateMetadata({ params }: CourtDetailPageProps): Promise<Metadata> {
   const { kode } = await params
@@ -24,7 +30,7 @@ export default async function CourtDetailPage({
   params,
 }: CourtDetailPageProps): Promise<ReactNode> {
   const { kode } = await params
-  const court = await findCourtByCode(kode)
+  const [court, config] = await Promise.all([findCourtByCode(kode), fetchPublicConfig()])
   if (!court) notFound()
 
   const cover = court.photos[0]
@@ -94,7 +100,13 @@ export default async function CourtDetailPage({
 
       <section id="ketersediaan" className="mt-12">
         <h2 className="font-display text-2xl font-bold text-foreground">Ketersediaan</h2>
-        <p className="mt-3 text-muted-foreground">Grid ketersediaan dipasang pada Task 12.</p>
+        <div className="mt-4">
+          <CourtAvailabilitySection
+            courtId={court.id}
+            horizonDays={config.booking_horizon_days}
+            serverTime={config.server_time}
+          />
+        </div>
       </section>
     </main>
   )

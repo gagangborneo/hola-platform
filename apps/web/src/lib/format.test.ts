@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatClock, formatDayName, formatRupiah, formatTimeWita } from './format.ts'
+import { formatClock, formatDayName, formatRupiah, formatTimeWita, witaDateKey } from './format.ts'
 
 describe('pemformatan tampilan', () => {
   it('rupiah tanpa desimal dan tanpa aritmetika', () => {
@@ -20,5 +20,10 @@ describe('pemformatan tampilan', () => {
   it('jam operasional dari kolom time dipangkas ke jam dan menit', () => {
     expect(formatClock('08:00:00')).toBe('08.00')
     expect(formatClock('22:30')).toBe('22.30')
+  })
+
+  it('BR-B-01: tanggal bisnis dihitung di WITA, bukan zona peladen', () => {
+    expect(witaDateKey('2026-07-28T23:00:00+08:00')).toBe('2026-07-28')
+    expect(witaDateKey('2026-07-28T16:30:00Z')).toBe('2026-07-29')
   })
 })

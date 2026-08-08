@@ -20,6 +20,13 @@ const dateWita = new Intl.DateTimeFormat('id-ID', {
   year: 'numeric',
 })
 
+const dateKeyWita = new Intl.DateTimeFormat('en-CA', {
+  timeZone: TIMEZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+})
+
 const DAY_NAMES = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'] as const
 
 /**
@@ -47,4 +54,9 @@ export function formatDayName(dayOfWeek: number): string {
 export function formatClock(time: string): string {
   const [hour = '00', minute = '00'] = time.split(':')
   return `${hour}.${minute}`
+}
+
+/** `yyyy-mm-dd` menurut WITA — tanggal bisnis booking (BR-B-01). */
+export function witaDateKey(iso: string): string {
+  return dateKeyWita.format(new Date(iso))
 }
