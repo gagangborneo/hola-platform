@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 
@@ -6,8 +7,14 @@ export function SiteFooter(): ReactNode {
     <footer className="mt-24 border-t bg-secondary/40">
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 md:grid-cols-3">
         <div>
-          <p className="font-display text-lg font-bold text-primary">Hola Sports Center</p>
-          <p className="mt-2 leading-relaxed text-muted-foreground">
+          <Image
+            src="/logo/logo-hola-full.png"
+            alt="HOLA! Hola Sports Center"
+            width={1254}
+            height={268}
+            className="h-8 w-auto object-contain"
+          />
+          <p className="mt-3 leading-relaxed text-muted-foreground">
             Pusat olahraga di Balikpapan. Pesan lapangan online, bayar langsung, main tanpa ribet.
           </p>
         </div>

@@ -1,9 +1,12 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { CourtCard } from '../../components/court/CourtCard.tsx'
-import { Badge } from '../../components/ui/badge.tsx'
+import { AppTeaserSection } from '../../components/home/AppTeaserSection.tsx'
+import { CtaBanner } from '../../components/home/CtaBanner.tsx'
+import { FeaturesSection } from '../../components/home/FeaturesSection.tsx'
+import { HeroSection } from '../../components/home/HeroSection.tsx'
+import { HowItWorksSection } from '../../components/home/HowItWorksSection.tsx'
 import { Button } from '../../components/ui/button.tsx'
-import { Card, CardContent } from '../../components/ui/card.tsx'
 import { fetchCourts, fetchSports } from '../../lib/server-api.ts'
 
 export default async function HomePage(): Promise<ReactNode> {
@@ -12,30 +15,14 @@ export default async function HomePage(): Promise<ReactNode> {
 
   return (
     <main>
-      <section className="bg-primary text-primary-foreground">
-        <div className="mx-auto max-w-6xl px-4 py-20">
-          <Badge variant="accent" className="bg-accent/20 text-accent">
-            Booking online Hola Sports Center
-          </Badge>
-          <h1 className="mt-6 max-w-2xl font-display text-5xl font-semibold leading-tight md:text-6xl">
-            Pesan lapangan, <span className="text-accent">langsung main.</span>
-          </h1>
-          <p className="mt-5 max-w-lg text-lg leading-relaxed text-primary-foreground/80">
-            Lihat slot yang benar-benar kosong, kunci lewat pembayaran online, dan datang tanpa
-            perlu menelepon lebih dulu.
-          </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Button asChild variant="accent" size="lg">
-              <Link href="/lapangan">Pesan lapangan</Link>
-            </Button>
-            <Button asChild variant="outline" size="lg" className="border-white/40 text-white">
-              <Link href="/info">Jam operasional</Link>
-            </Button>
-          </div>
-        </div>
-      </section>
+      <HeroSection
+        courtCount={courtsResult.status === 'ok' ? courtsResult.items.length : 0}
+        sportCount={sportsResult.status === 'ok' ? sportsResult.items.length : 0}
+      />
 
-      <section className="mx-auto max-w-6xl px-4 py-16">
+      <FeaturesSection />
+
+      <section className="mx-auto max-w-6xl px-4 pb-16">
         <h2 className="font-display text-3xl font-bold text-foreground">Olahraga yang tersedia</h2>
         {sportsResult.status === 'failed' ? (
           <p className="mt-4 text-muted-foreground">
@@ -76,26 +63,11 @@ export default async function HomePage(): Promise<ReactNode> {
         )}
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 pb-20">
-        <h2 className="font-display text-3xl font-bold text-foreground">Cara memesan</h2>
-        <div className="mt-6 grid gap-6 md:grid-cols-3">
-          {[
-            ['1', 'Pilih slot', 'Buka lapangan yang diinginkan dan pilih jam yang masih kosong.'],
-            ['2', 'Bayar', 'Slot dikunci 10 menit sementara kamu menyelesaikan pembayaran.'],
-            ['3', 'Datang & main', 'Bukti pemesanan masuk ke halaman Booking Saya.'],
-          ].map(([step, title, description]) => (
-            <Card key={step}>
-              <CardContent className="pt-6">
-                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary font-display text-xl font-bold text-primary-foreground">
-                  {step}
-                </span>
-                <h3 className="mt-4 font-display text-xl font-bold text-foreground">{title}</h3>
-                <p className="mt-2 leading-relaxed text-muted-foreground">{description}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </section>
+      <HowItWorksSection />
+
+      <AppTeaserSection />
+
+      <CtaBanner />
     </main>
   )
 }
