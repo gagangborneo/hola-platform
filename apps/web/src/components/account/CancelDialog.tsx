@@ -17,6 +17,16 @@ import {
 import { Input } from '../ui/input.tsx'
 import { Label } from '../ui/label.tsx'
 
+// BR-B-71 mewajibkan teks kebijakan venue selalu terlihat sebelum konfirmasi —
+// `cancellation_policy_text` boleh null (K-08 belum dikirim klien), tapi slot
+// ketiga ini tidak boleh kosong. Jangan blokir pembatalan (nominal refund di
+// atas tetap berlaku dan tetap harus bisa dieksekusi), dan jangan mengarang
+// isi kebijakan (tidak ada masa berlaku/persentase/kondisi di sini) — hanya
+// nyatakan dengan jujur bahwa teksnya belum tersedia.
+const NO_POLICY_TEXT_FALLBACK =
+  'Venue belum mempublikasikan teks kebijakan pembatalan secara rinci. ' +
+  'Nominal perkiraan pengembalian di atas tetap yang berlaku untuk pembatalan ini.'
+
 const POLICY_LABEL: Record<string, string> = {
   option_a_no_refund: 'Tanpa pengembalian dana',
   option_b_100_percent_minus_gateway_fee: 'Pengembalian penuh dikurangi biaya gateway',
@@ -85,11 +95,9 @@ export function CancelDialog({
           </p>
         </div>
 
-        {cancellationPolicyText ? (
-          <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
-            {cancellationPolicyText}
-          </p>
-        ) : null}
+        <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
+          {cancellationPolicyText ?? NO_POLICY_TEXT_FALLBACK}
+        </p>
 
         <div className="grid gap-1.5">
           <Label htmlFor="cancel-reason">Alasan pembatalan</Label>

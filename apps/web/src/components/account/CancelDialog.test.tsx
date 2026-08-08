@@ -55,6 +55,36 @@ describe('CancelDialog', () => {
     expect(confirmButton.hasAttribute('disabled')).toBe(true)
   })
 
+  it('BR-B-71: saat cancellationPolicyText null (K-08 belum dikirim), menampilkan pernyataan pengganti yang jujur alih-alih slot kosong', async () => {
+    render(
+      <CancelDialog
+        bookingId="booking-1"
+        refundEstimateAmount={150000}
+        policyApplied="option_b_50_percent"
+        cancellationPolicyText={null}
+        onCancelled={vi.fn()}
+      />,
+      { wrapper },
+    )
+
+    await openDialog()
+
+    // Ketiga slot BR-B-71 tetap terisi walau teks kebijakan venue belum ada:
+    // nominal, label kebijakan, dan — di sini — pernyataan pengganti yang
+    // jujur (bukan kosong, bukan kebijakan yang dikarang).
+    expect(screen.getByText('Rp150.000')).toBeDefined()
+    expect(screen.getByText('Pengembalian 50%')).toBeDefined()
+    expect(
+      screen.getByText(
+        'Venue belum mempublikasikan teks kebijakan pembatalan secara rinci. ' +
+          'Nominal perkiraan pengembalian di atas tetap yang berlaku untuk pembatalan ini.',
+      ),
+    ).toBeDefined()
+
+    const confirmButton = screen.getByRole('button', { name: /Ya, batalkan booking/ })
+    expect(confirmButton.hasAttribute('disabled')).toBe(true)
+  })
+
   it('BR-B-63: refund Rp0 tetap ditampilkan, tidak disembunyikan', async () => {
     render(
       <CancelDialog
@@ -86,6 +116,16 @@ describe('CancelDialog', () => {
     )
 
     await openDialog()
+
+    // Teks kebijakan null tidak berarti slot ketiga kosong — pernyataan
+    // pengganti harus tetap terlihat di sini juga, bukan hanya di test
+    // BR-B-71 khusus di atas.
+    expect(
+      screen.getByText(
+        'Venue belum mempublikasikan teks kebijakan pembatalan secara rinci. ' +
+          'Nominal perkiraan pengembalian di atas tetap yang berlaku untuk pembatalan ini.',
+      ),
+    ).toBeDefined()
 
     const confirmButton = screen.getByRole('button', { name: /Ya, batalkan booking/ })
     expect(confirmButton.hasAttribute('disabled')).toBe(true)
