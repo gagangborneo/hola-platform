@@ -8,7 +8,16 @@ export const courtIdParam = z.object({ id: idSchema })
 const courtFieldsSchema = z.object({
   venue_id: idSchema,
   sport_id: idSchema,
-  code: z.string().trim().min(1).max(32),
+  // Kode ini masuk apa adanya ke segmen URL `/lapangan/[kode]` (web) — karakter
+  // `/` di dalamnya akan memecah segmen jadi rute yang salah dan menghasilkan
+  // 404 keras. Dibatasi ke alfanumerik + `_`/`-` supaya nilai ini selalu aman
+  // dipakai di URL tanpa perlu encoding di sisi pembaca.
+  code: z
+    .string()
+    .trim()
+    .min(1)
+    .max(32)
+    .regex(/^[A-Za-z0-9_-]+$/, 'code hanya boleh berisi huruf, angka, "_", dan "-"'),
   name: z.string().trim().min(1).max(120),
   description: optionalText,
   surface: optionalText,

@@ -44,7 +44,7 @@ export function CourtCard({ court, photoKey }: CourtCardProps): ReactNode {
       </CardContent>
       <CardFooter>
         <Button asChild className="w-full">
-          <Link href={`/lapangan/${court.code}`}>Lihat ketersediaan</Link>
+          <Link href={`/lapangan/${encodeURIComponent(court.code)}`}>Lihat ketersediaan</Link>
         </Button>
       </CardFooter>
     </Card>

@@ -22,7 +22,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const courtEntries: MetadataRoute.Sitemap =
     courtsResult.status === 'ok'
       ? courtsResult.items.map((court) => ({
-          url: `${base}/lapangan/${court.code}`,
+          url: `${base}/lapangan/${encodeURIComponent(court.code)}`,
           changeFrequency: 'daily' as const,
           priority: 0.8,
         }))
