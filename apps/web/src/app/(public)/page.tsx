@@ -7,8 +7,8 @@ import { Card, CardContent } from '../../components/ui/card.tsx'
 import { fetchCourts, fetchSports } from '../../lib/server-api.ts'
 
 export default async function HomePage(): Promise<ReactNode> {
-  const [sports, courts] = await Promise.all([fetchSports(), fetchCourts()])
-  const featured = courts.slice(0, 3)
+  const [sportsResult, courtsResult] = await Promise.all([fetchSports(), fetchCourts()])
+  const featured = courtsResult.status === 'ok' ? courtsResult.items.slice(0, 3) : []
 
   return (
     <main>
@@ -37,11 +37,15 @@ export default async function HomePage(): Promise<ReactNode> {
 
       <section className="mx-auto max-w-6xl px-4 py-16">
         <h2 className="font-display text-3xl font-bold text-foreground">Olahraga yang tersedia</h2>
-        {sports.length === 0 ? (
+        {sportsResult.status === 'failed' ? (
+          <p className="mt-4 text-muted-foreground">
+            Daftar olahraga gagal dimuat. Muat ulang halaman ini beberapa saat lagi.
+          </p>
+        ) : sportsResult.items.length === 0 ? (
           <p className="mt-4 text-muted-foreground">Daftar olahraga sedang disiapkan.</p>
         ) : (
           <div className="mt-6 flex flex-wrap gap-3">
-            {sports.map((sport) => (
+            {sportsResult.items.map((sport) => (
               <Button asChild key={sport.id} variant="secondary">
                 <Link href={`/lapangan?olahraga=${sport.id}`}>{sport.name}</Link>
               </Button>
@@ -57,7 +61,11 @@ export default async function HomePage(): Promise<ReactNode> {
             <Link href="/lapangan">Lihat semua</Link>
           </Button>
         </div>
-        {featured.length === 0 ? (
+        {courtsResult.status === 'failed' ? (
+          <p className="mt-4 text-muted-foreground">
+            Daftar lapangan gagal dimuat. Muat ulang halaman ini beberapa saat lagi.
+          </p>
+        ) : featured.length === 0 ? (
           <p className="mt-4 text-muted-foreground">Belum ada lapangan yang dapat dipesan.</p>
         ) : (
           <div className="mt-6 grid gap-6 md:grid-cols-3">
