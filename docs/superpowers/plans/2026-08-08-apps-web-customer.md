@@ -30,7 +30,7 @@ Berlaku untuk **setiap** task di bawah ini.
   |---|---|
   | Test web | `pnpm --filter @hola/web test` |
   | Typecheck web | `pnpm --filter @hola/web typecheck` |
-  | ~~Build web~~ | **TERHALANG** — lihat catatan di bawah |
+  | Build web | `cp apps/web/.env.example apps/web/.env` **lalu** `pnpm --filter @hola/web build` |
   | Test API | `pnpm --filter @hola/api test` |
   | Integration API | `pnpm --filter @hola/api test:integration` |
   | Lint | `pnpm exec biome check .` (perbaiki: `pnpm exec biome check --write <berkas>`) |
@@ -39,7 +39,8 @@ Berlaku untuk **setiap** task di bawah ini.
   | Migrasi DB | `pnpm --filter @hola/db run migrate` |
 
   Jalankan `biome check --write` **hanya pada berkas yang kamu sentuh**; menjalankannya pada seluruh repo akan memformat ulang `references/web/` yang vendored.
-- **`next build` sedang rusak di seluruh repo — bukan disebabkan pekerjaan P1.K.** Sudah diverifikasi gagal pada commit `aaf9df7`, yaitu sebelum baris kode web pertama fase ini ditulis, dan gagal juga di `apps/admin` pada `/_not-found` (halaman bawaan Next tanpa kode aplikasi). Gejala: `TypeError: Cannot read properties of null (reading 'useState')` saat prerender, menunjuk `src/app/providers.tsx`. Sudah dikesampingkan sebagai penyebab: React ganda (hanya satu salinan 19.2.8), pembungkus Sentry, dan `"type": "module"`. **Jangan pakai `pnpm --filter @hola/web build` sebagai gerbang verifikasi** — ia akan selalu gagal dan menyesatkan. Pakai `typecheck` + `test`, dan verifikasi visual lewat `pnpm --filter @hola/web dev` (dev server jalan normal). Masalah ini harus diselesaikan sebelum P1.M go-live dan dilacak terpisah dari P1.K.
+- **`next build` butuh berkas `apps/web/.env` yang sungguhan.** Mengekspor variabel ke shell (`set -a && . ./apps/web/.env.example`) **tidak** setara: Next membaca berkas `.env` saat build untuk meng-inline `NEXT_PUBLIC_*` ke bundle klien. Tanpa berkas itu, build gagal dengan `TypeError: Cannot read properties of null (reading 'useState')` saat prerender — pesan yang menyesatkan dan sama sekali tidak menyebut env. Salin dulu: `cp apps/web/.env.example apps/web/.env` (berkasnya gitignored). Kegagalan yang sama pernah terlihat di `apps/admin` dengan sebab identik.
+- **Terkait: `env.ts` tidak boleh menerima `process.env` utuh.** Next hanya mengganti ekspresi anggota literal `process.env.NEXT_PUBLIC_X` secara statis; menyerahkan objek `process.env` apa adanya ke zod menghasilkan `{}` di bundle klien, parse melempar, dan hidrasi crash di **setiap** halaman. `env.ts` di `apps/web` dan `apps/admin` kini menyebut setiap kunci secara eksplisit. Jangan "disederhanakan" kembali.
 - **Integration test API** butuh infra hidup: `docker compose up -d` sebelum `pnpm --filter @hola/api test:integration`.
 - **Satu pengecualian urutan**: Task 16 Step 1–4 (`RequireSession`) harus dikerjakan sebelum Task 13 Step 8. Selain itu, task dikerjakan berurutan 1 → 18.
 
