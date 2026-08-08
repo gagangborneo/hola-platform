@@ -30,6 +30,7 @@ Berlaku untuk **setiap** task di bawah ini.
   |---|---|
   | Test web | `pnpm --filter @hola/web test` |
   | Typecheck web | `pnpm --filter @hola/web typecheck` |
+  | ~~Build web~~ | **TERHALANG** — lihat catatan di bawah |
   | Test API | `pnpm --filter @hola/api test` |
   | Integration API | `pnpm --filter @hola/api test:integration` |
   | Lint | `pnpm exec biome check .` (perbaiki: `pnpm exec biome check --write <berkas>`) |
@@ -38,6 +39,7 @@ Berlaku untuk **setiap** task di bawah ini.
   | Migrasi DB | `pnpm --filter @hola/db run migrate` |
 
   Jalankan `biome check --write` **hanya pada berkas yang kamu sentuh**; menjalankannya pada seluruh repo akan memformat ulang `references/web/` yang vendored.
+- **`next build` sedang rusak di seluruh repo — bukan disebabkan pekerjaan P1.K.** Sudah diverifikasi gagal pada commit `aaf9df7`, yaitu sebelum baris kode web pertama fase ini ditulis, dan gagal juga di `apps/admin` pada `/_not-found` (halaman bawaan Next tanpa kode aplikasi). Gejala: `TypeError: Cannot read properties of null (reading 'useState')` saat prerender, menunjuk `src/app/providers.tsx`. Sudah dikesampingkan sebagai penyebab: React ganda (hanya satu salinan 19.2.8), pembungkus Sentry, dan `"type": "module"`. **Jangan pakai `pnpm --filter @hola/web build` sebagai gerbang verifikasi** — ia akan selalu gagal dan menyesatkan. Pakai `typecheck` + `test`, dan verifikasi visual lewat `pnpm --filter @hola/web dev` (dev server jalan normal). Masalah ini harus diselesaikan sebelum P1.M go-live dan dilacak terpisah dari P1.K.
 - **Integration test API** butuh infra hidup: `docker compose up -d` sebelum `pnpm --filter @hola/api test:integration`.
 - **Satu pengecualian urutan**: Task 16 Step 1–4 (`RequireSession`) harus dikerjakan sebelum Task 13 Step 8. Selain itu, task dikerjakan berurutan 1 → 18.
 
