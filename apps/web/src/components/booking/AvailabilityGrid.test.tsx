@@ -124,6 +124,27 @@ describe('AvailabilityGrid', () => {
     expect(await screen.findByText(/Belum dibuka untuk pemesanan/)).toBeDefined()
   })
 
+  it('C2: hari tanpa slot (tutup) menampilkan pesan eksplisit, bukan grid kosong', async () => {
+    availabilityGet.mockResolvedValue(
+      Response.json({
+        data: { court_id: 'court-1', days: [{ ...day, slots: [] }] },
+        meta: { generated_at: '2026-08-08T10:00:00+08:00', warnings: [] },
+      }),
+    )
+    render(
+      <AvailabilityGrid
+        courtId="court-1"
+        horizonDays={14}
+        serverTime="2026-08-08T10:00:00+08:00"
+        onSelectionChange={() => undefined}
+      />,
+      { wrapper },
+    )
+
+    expect(await screen.findByText('Lapangan tutup pada tanggal ini')).toBeDefined()
+    expect(screen.queryByText(/Tidak ada slot yang bisa dipesan untuk tanggal ini/)).toBeDefined()
+  })
+
   it('P1-73: waktu pembuatan data ditampilkan agar customer tahu kesegarannya', async () => {
     mockAvailability()
     render(

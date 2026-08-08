@@ -9,10 +9,11 @@ import { useEffect, useMemo, useState } from 'react'
 import { apiClient } from '../../lib/api-client.ts'
 import { cn } from '../../lib/cn.ts'
 import { formatRupiah, formatTimeWita, witaDateKey } from '../../lib/format.ts'
+import { EmptyState } from '../common/EmptyState.tsx'
 import { Badge } from '../ui/badge.tsx'
 import { Button } from '../ui/button.tsx'
 import { Skeleton } from '../ui/skeleton.tsx'
-import { isBeyondHorizon, unavailableLabel } from './availability-labels.ts'
+import { isBeyondHorizon, rateClassLabel, unavailableLabel } from './availability-labels.ts'
 
 type AvailabilityResponse = InferResponseType<
   (typeof apiClient.api.v1.courts)[':court_id']['availability']['$get'],
@@ -26,6 +27,13 @@ interface AvailabilityGridProps {
   horizonDays: number
   serverTime: string
   onSelectionChange: (slots: AvailabilitySlot[]) => void
+  /**
+   * Tanggal awal yang dipilihkan, mis. dari `?tanggal=` saat customer dikirim
+   * kembali ke sini setelah `SLOT_ALREADY_CLAIMED` (I2) — spek § 4.4 mewajibkan
+   * kembali ke grid pada tanggal yang sama, bukan tanggal pertama horizon.
+   * Diabaikan kalau di luar `dateOptions()`.
+   */
+  initialDate?: string
 }
 
 function dateOptions(serverTime: string, horizonDays: number): string[] {
@@ -43,21 +51,29 @@ export function AvailabilityGrid({
   horizonDays,
   serverTime,
   onSelectionChange,
+  initialDate,
 }: AvailabilityGridProps): ReactNode {
   const dates = useMemo(() => dateOptions(serverTime, horizonDays), [serverTime, horizonDays])
-  const [selectedDate, setSelectedDate] = useState(dates[0] ?? witaDateKey(serverTime))
+  const [selectedDate, setSelectedDate] = useState(
+    () =>
+      (initialDate && dates.includes(initialDate) ? initialDate : dates[0]) ??
+      witaDateKey(serverTime),
+  )
   const [selected, setSelected] = useState<AvailabilitySlot[]>([])
 
   const query = useQuery({
     queryKey: ['availability', courtId, selectedDate],
     // 60 detik menyamai TTL cache Redis di peladen (BR-B-41).
     staleTime: 60_000,
+    // `createHolaClient` melempar `HolaApiError` untuk respons non-2xx apa pun —
+    // `$get` di bawah TIDAK PERNAH resolve dengan Response ber-`.ok === false`,
+    // jadi kegagalan sudah ditangani lewat `query.isError` (react-query
+    // menangkap promise yang reject), bukan `if (!response.ok)`.
     queryFn: async () => {
       const response = await apiClient.api.v1.courts[':court_id'].availability.$get({
         param: { court_id: courtId },
         query: { date: selectedDate },
       })
-      if (!response.ok) throw new Error('Ketersediaan tidak dapat dimuat.')
       return response.json()
     },
   })
@@ -146,7 +162,21 @@ export function AvailabilityGrid({
         </p>
       ) : null}
 
-      {day && !beyondHorizon ? (
+      {/* C2: `day.slots` kosong bukan cuma saat "belum dibuka" (`beyondHorizon`) — API
+          (`availability.service.ts`) juga mengembalikan grid kosong saat court tidak
+          punya jam operasional di hari itu, tanggalnya masuk special date "tutup", atau
+          court sedang nonaktif. Tanpa cabang ini, ketiga kondisi tersebut jatuh ke `<div>`
+          kosong tanpa pesan apa pun. */}
+      {day && !beyondHorizon && day.slots.length === 0 ? (
+        <div className="mt-4">
+          <EmptyState
+            title="Lapangan tutup pada tanggal ini"
+            description="Tidak ada slot yang bisa dipesan untuk tanggal ini. Coba pilih tanggal lain di atas."
+          />
+        </div>
+      ) : null}
+
+      {day && !beyondHorizon && day.slots.length > 0 ? (
         <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
           {day.slots.map((slot) => {
             const isSelected = selected.some((item) => item.starts_at === slot.starts_at)
@@ -171,7 +201,7 @@ export function AvailabilityGrid({
                 {slot.is_available ? (
                   <>
                     <Badge variant="outline" className="mt-1">
-                      {slot.rate_class ?? '—'}
+                      {rateClassLabel(slot.rate_class)}
                     </Badge>
                     <span className="mt-2 block font-semibold">
                       {/* Skema mengizinkan `price_amount` null lepas dari `is_available`
