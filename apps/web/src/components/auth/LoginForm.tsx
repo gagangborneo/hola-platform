@@ -7,6 +7,9 @@ import type { FormEvent, ReactNode } from 'react'
 import { useState } from 'react'
 import { apiClient } from '../../lib/api-client.ts'
 import { authStore } from '../../lib/auth.ts'
+import { Button } from '../ui/button.tsx'
+import { Input } from '../ui/input.tsx'
+import { Label } from '../ui/label.tsx'
 import { formErrorMessage, validationErrorMessage } from './auth-form.ts'
 import { isAuthSessionPayload } from './auth-response.ts'
 
@@ -51,22 +54,34 @@ export function LoginForm(): ReactNode {
   }
 
   return (
-    <form className="auth-form" onSubmit={onSubmit} noValidate>
-      <label className="field">
-        <span>Email atau nomor HP</span>
-        <input name="identifier" autoComplete="username" required />
-      </label>
-      <label className="field">
-        <span>Password</span>
-        <input name="password" type="password" autoComplete="current-password" required />
-      </label>
-      {error ? <p className="form-error">{error}</p> : null}
-      <button type="submit" disabled={isSubmitting}>
+    <form className="mt-6 grid gap-4" onSubmit={onSubmit} noValidate>
+      <div className="grid gap-1.5">
+        <Label htmlFor="identifier">Email atau nomor HP</Label>
+        <Input id="identifier" name="identifier" autoComplete="username" required />
+      </div>
+      <div className="grid gap-1.5">
+        <Label htmlFor="password">Password</Label>
+        <Input
+          id="password"
+          name="password"
+          type="password"
+          autoComplete="current-password"
+          required
+        />
+      </div>
+      {error ? (
+        <p className="rounded-lg bg-destructive/10 p-3 leading-snug text-destructive">{error}</p>
+      ) : null}
+      <Button type="submit" disabled={isSubmitting}>
         {isSubmitting ? 'Memproses…' : 'Masuk'}
-      </button>
-      <div className="form-links">
-        <Link href="/lupa-password">Lupa password?</Link>
-        <Link href="/daftar">Belum punya akun? Daftar</Link>
+      </Button>
+      <div className="flex flex-wrap gap-x-4 gap-y-3">
+        <Link className="font-semibold text-primary hover:underline" href="/lupa-password">
+          Lupa password?
+        </Link>
+        <Link className="font-semibold text-primary hover:underline" href="/daftar">
+          Belum punya akun? Daftar
+        </Link>
       </div>
     </form>
   )

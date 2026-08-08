@@ -7,10 +7,14 @@ import { useAuthSession } from '../../lib/auth.ts'
 /** Indikator kecil bahwa refresh cookie sedang/berhasil dipulihkan tanpa localStorage. */
 export function SessionStatus(): ReactNode {
   const session = useAuthSession()
-  if (!session.isReady) return <p className="session-status">Memulihkan sesi aman…</p>
-  if (session.accessToken) return <p className="session-status">Sesi Anda aktif.</p>
+  if (!session.isReady) {
+    return <p className="mt-6 leading-relaxed text-muted-foreground">Memulihkan sesi aman…</p>
+  }
+  if (session.accessToken) {
+    return <p className="mt-6 leading-relaxed text-muted-foreground">Sesi Anda aktif.</p>
+  }
   return (
-    <p className="session-status">
+    <p className="mt-6 leading-relaxed text-muted-foreground">
       Belum masuk. <Link href="/login">Masuk untuk melanjutkan.</Link>
     </p>
   )

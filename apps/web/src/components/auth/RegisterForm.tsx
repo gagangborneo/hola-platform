@@ -5,6 +5,9 @@ import Link from 'next/link'
 import type { FormEvent, ReactNode } from 'react'
 import { useState } from 'react'
 import { apiClient } from '../../lib/api-client.ts'
+import { Button } from '../ui/button.tsx'
+import { Input } from '../ui/input.tsx'
+import { Label } from '../ui/label.tsx'
 import { formErrorMessage, validationErrorMessage } from './auth-form.ts'
 
 function formValue(formData: FormData, key: string): string {
@@ -49,30 +52,36 @@ export function RegisterForm(): ReactNode {
   }
 
   return (
-    <form className="auth-form" onSubmit={onSubmit} noValidate>
-      <label className="field">
-        <span>Nama lengkap</span>
-        <input name="full_name" autoComplete="name" required />
-      </label>
-      <label className="field">
-        <span>Email</span>
-        <input name="email" type="email" autoComplete="email" />
-      </label>
-      <label className="field">
-        <span>Nomor HP (+62…)</span>
-        <input name="phone" type="tel" autoComplete="tel" />
-      </label>
-      <label className="field">
-        <span>Password</span>
-        <input name="password" type="password" autoComplete="new-password" required />
-      </label>
-      {error ? <p className="form-error">{error}</p> : null}
-      {success ? <p className="form-success">{success}</p> : null}
-      <button type="submit" disabled={isSubmitting}>
+    <form className="mt-6 grid gap-4" onSubmit={onSubmit} noValidate>
+      <div className="grid gap-1.5">
+        <Label htmlFor="full_name">Nama lengkap</Label>
+        <Input id="full_name" name="full_name" autoComplete="name" required />
+      </div>
+      <div className="grid gap-1.5">
+        <Label htmlFor="email">Email</Label>
+        <Input id="email" name="email" type="email" autoComplete="email" />
+      </div>
+      <div className="grid gap-1.5">
+        <Label htmlFor="phone">Nomor HP (+62…)</Label>
+        <Input id="phone" name="phone" type="tel" autoComplete="tel" />
+      </div>
+      <div className="grid gap-1.5">
+        <Label htmlFor="password">Password</Label>
+        <Input id="password" name="password" type="password" autoComplete="new-password" required />
+      </div>
+      {error ? (
+        <p className="rounded-lg bg-destructive/10 p-3 leading-snug text-destructive">{error}</p>
+      ) : null}
+      {success ? (
+        <p className="rounded-lg bg-accent/20 p-3 leading-snug text-accent-foreground">{success}</p>
+      ) : null}
+      <Button type="submit" disabled={isSubmitting}>
         {isSubmitting ? 'Mendaftarkan…' : 'Daftar'}
-      </button>
-      <div className="form-links">
-        <Link href="/login">Sudah punya akun? Masuk</Link>
+      </Button>
+      <div className="flex flex-wrap gap-x-4 gap-y-3">
+        <Link className="font-semibold text-primary hover:underline" href="/login">
+          Sudah punya akun? Masuk
+        </Link>
       </div>
     </form>
   )

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import { apiClient } from '../../lib/api-client.ts'
+import { Button } from '../ui/button.tsx'
 import { formErrorMessage, validationErrorMessage } from './auth-form.ts'
 
 export function VerifyEmailForm(): ReactNode {
@@ -41,18 +42,26 @@ export function VerifyEmailForm(): ReactNode {
   }
 
   return (
-    <div className="auth-form">
+    <div className="mt-6 grid gap-4">
       <p>Konfirmasi alamat email Anda untuk menerima e-receipt dan memakai pemulihan password.</p>
-      {error ? <p className="form-error">{error}</p> : null}
-      {success ? <p className="form-success">{success}</p> : null}
-      <button type="button" onClick={onClick} disabled={isSubmitting || token.length === 0}>
-        {isSubmitting ? 'Memverifikasi…' : 'Verifikasi email'}
-      </button>
-      {!token ? (
-        <p className="form-error">Tautan verifikasi tidak memiliki token yang valid.</p>
+      {error ? (
+        <p className="rounded-lg bg-destructive/10 p-3 leading-snug text-destructive">{error}</p>
       ) : null}
-      <div className="form-links">
-        <Link href="/login">Kembali ke masuk</Link>
+      {success ? (
+        <p className="rounded-lg bg-accent/20 p-3 leading-snug text-accent-foreground">{success}</p>
+      ) : null}
+      <Button type="button" onClick={onClick} disabled={isSubmitting || token.length === 0}>
+        {isSubmitting ? 'Memverifikasi…' : 'Verifikasi email'}
+      </Button>
+      {!token ? (
+        <p className="rounded-lg bg-destructive/10 p-3 leading-snug text-destructive">
+          Tautan verifikasi tidak memiliki token yang valid.
+        </p>
+      ) : null}
+      <div className="flex flex-wrap gap-x-4 gap-y-3">
+        <Link className="font-semibold text-primary hover:underline" href="/login">
+          Kembali ke masuk
+        </Link>
       </div>
     </div>
   )

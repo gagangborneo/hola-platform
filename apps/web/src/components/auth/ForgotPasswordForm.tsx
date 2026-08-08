@@ -5,6 +5,9 @@ import Link from 'next/link'
 import type { FormEvent, ReactNode } from 'react'
 import { useState } from 'react'
 import { apiClient } from '../../lib/api-client.ts'
+import { Button } from '../ui/button.tsx'
+import { Input } from '../ui/input.tsx'
+import { Label } from '../ui/label.tsx'
 import { formErrorMessage, validationErrorMessage } from './auth-form.ts'
 
 export function ForgotPasswordForm(): ReactNode {
@@ -38,18 +41,24 @@ export function ForgotPasswordForm(): ReactNode {
   }
 
   return (
-    <form className="auth-form" onSubmit={onSubmit} noValidate>
-      <label className="field">
-        <span>Email akun</span>
-        <input name="email" type="email" autoComplete="email" required />
-      </label>
-      {error ? <p className="form-error">{error}</p> : null}
-      {success ? <p className="form-success">{success}</p> : null}
-      <button type="submit" disabled={isSubmitting}>
+    <form className="mt-6 grid gap-4" onSubmit={onSubmit} noValidate>
+      <div className="grid gap-1.5">
+        <Label htmlFor="email">Email akun</Label>
+        <Input id="email" name="email" type="email" autoComplete="email" required />
+      </div>
+      {error ? (
+        <p className="rounded-lg bg-destructive/10 p-3 leading-snug text-destructive">{error}</p>
+      ) : null}
+      {success ? (
+        <p className="rounded-lg bg-accent/20 p-3 leading-snug text-accent-foreground">{success}</p>
+      ) : null}
+      <Button type="submit" disabled={isSubmitting}>
         {isSubmitting ? 'Mengirim…' : 'Kirim instruksi'}
-      </button>
-      <div className="form-links">
-        <Link href="/login">Kembali ke masuk</Link>
+      </Button>
+      <div className="flex flex-wrap gap-x-4 gap-y-3">
+        <Link className="font-semibold text-primary hover:underline" href="/login">
+          Kembali ke masuk
+        </Link>
       </div>
     </form>
   )
