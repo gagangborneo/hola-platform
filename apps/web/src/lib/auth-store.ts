@@ -44,6 +44,10 @@ function normalizeApiBaseUrl(baseUrl: string): string {
  * `restoreSession` single-flight agar React Strict Mode/tabs tidak merotasi cookie ganda.
  */
 export function createMemoryAuthStore(options: MemoryAuthStoreOptions): MemoryAuthStore {
+  // Dipanggil sebagai variabel lokal, bukan `options.fetch(...)` (method call): native
+  // `fetch` di browser melempar `TypeError: Illegal invocation` saat `this` bukan
+  // `window`/`globalThis` — persis yang terjadi bila dipanggil lewat properti objek.
+  const requestFetch = options.fetch
   const listeners = new Set<() => void>()
   const serverSnapshot: AuthSnapshot = { accessToken: null, isReady: false }
   let snapshot: AuthSnapshot = { accessToken: null, isReady: false }
@@ -66,7 +70,7 @@ export function createMemoryAuthStore(options: MemoryAuthStoreOptions): MemoryAu
     const requestRevision = revision
     const task = (async (): Promise<string | null> => {
       try {
-        const response = await options.fetch(
+        const response = await requestFetch(
           `${normalizeApiBaseUrl(options.apiBaseUrl)}/api/v1/auth/refresh`,
           {
             method: 'POST',

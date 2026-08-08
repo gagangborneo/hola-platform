@@ -40,7 +40,8 @@ export function LoginForm(): ReactNode {
       const body: unknown = await response.json()
       if (!isAuthSessionPayload(body)) throw new Error('Respons login tidak dapat diproses.')
       authStore.setAccessToken(body.data.access_token)
-      router.replace('/')
+      const next = new URLSearchParams(globalThis.location.search).get('next')
+      router.replace(next?.startsWith('/') ? next : '/')
     } catch (submissionError) {
       setError(formErrorMessage(submissionError))
     } finally {
