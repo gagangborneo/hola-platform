@@ -1,0 +1,71 @@
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: #f4f8ff;
+  --foreground: #0a1f5c;
+  --card: #ffffff;
+  --card-foreground: #0a1f5c;
+  --popover: #ffffff;
+  --popover-foreground: #0a1f5c;
+  --primary: #1565c0;
+  --primary-foreground: #ffffff;
+  --secondary: #e3edff;
+  --secondary-foreground: #1565c0;
+  --muted: #dde8ff;
+  --muted-foreground: #4a6fa5;
+  --accent: #96f535;
+  --accent-foreground: #0a2a00;
+  --destructive: #d4183d;
+  --destructive-foreground: #ffffff;
+  --border: rgba(21, 101, 192, 0.13);
+  --input: transparent;
+  --input-background: #eaf0ff;
+  --ring: #1565c0;
+  --radius: 0.875rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-input-background: var(--input-background);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --font-sans: var(--font-dm-sans), system-ui, sans-serif;
+  --font-display: var(--font-fredoka), system-ui, sans-serif;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display font-semibold;
+  }
+}

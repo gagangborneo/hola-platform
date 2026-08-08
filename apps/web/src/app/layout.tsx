@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
+import { fontVariables } from '../lib/fonts.ts'
 import { Providers } from './providers.tsx'
 import '../styles/globals.css'
 
@@ -17,7 +18,7 @@ interface RootLayoutProps {
 
 export default function RootLayout({ children }: RootLayoutProps): ReactNode {
   return (
-    <html lang="id">
+    <html lang="id" className={fontVariables}>
       <body>
         <Providers>{children}</Providers>
       </body>

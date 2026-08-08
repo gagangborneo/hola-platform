@@ -32,6 +32,14 @@
       "trailingCommas": "none"
     }
   },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    },
+    "formatter": {
+      "quoteStyle": "single"
+    }
+  },
   "javascript": {
     "formatter": {
       "quoteStyle": "single",
