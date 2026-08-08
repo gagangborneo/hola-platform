@@ -26,11 +26,14 @@ export function BookingHoldPanel({
   const [offsetMs] = useState(() => serverTimeOffsetMs(serverTime, Date.now()))
   const onExpired = useCallback(() => setExpired(true), [])
 
+  // `createHolaClient` melempar `HolaApiError` untuk respons non-2xx apa pun —
+  // `$get` di bawah TIDAK PERNAH resolve dengan Response ber-`.ok === false`,
+  // jadi kegagalan sudah ditangani lewat `booking.isError` (react-query
+  // menangkap promise yang reject), bukan `if (!response.ok)`.
   const booking = useQuery({
     queryKey: ['booking', bookingId],
     queryFn: async () => {
       const response = await apiClient.api.v1.bookings[':id'].$get({ param: { id: bookingId } })
-      if (!response.ok) throw new Error('Booking tidak dapat dimuat.')
       return response.json()
     },
   })
