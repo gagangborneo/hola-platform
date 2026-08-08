@@ -114,3 +114,23 @@ export async function fetchCourtDetail(courtId: string): Promise<CourtDetail | n
 export function mediaUrl(objectKey: string): string {
   return `${env.NEXT_PUBLIC_MEDIA_BASE_URL.replace(/\/+$/, '')}/${objectKey}`
 }
+
+/**
+ * Slug publik memakai `code` yang enak dibaca, sedangkan API mengambil UUID.
+ * Daftar court kecil (satu gedung), jadi memindai hasil `GET /courts` lebih
+ * murah daripada menambah endpoint lookup baru.
+ *
+ * `null` di sini berarti "court tidak ada" — TIDAK PERNAH dipakai untuk "daftar
+ * court gagal dimuat". Kalau `fetchCourts` mendegradasi ke `{ status: 'failed'
+ * }`, melempar dari sini (bukan mengembalikan `null`) supaya halaman pemanggil
+ * tidak salah memanggil `notFound()` untuk outage API — sama seperti
+ * `fetchCourtDetail` di atas yang juga melempar untuk kegagalan selain 404.
+ */
+export async function findCourtByCode(code: string): Promise<CourtDetail | null> {
+  const result = await fetchCourts()
+  if (result.status === 'failed') {
+    throw new Error(`Gagal memuat daftar lapangan saat mencari kode ${code}`)
+  }
+  const match = result.items.find((court) => court.code.toLowerCase() === code.toLowerCase())
+  return match ? fetchCourtDetail(match.id) : null
+}
