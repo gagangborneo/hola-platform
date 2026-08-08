@@ -18,6 +18,26 @@ function formValue(formData: FormData, key: string): string {
   return typeof value === 'string' ? value : ''
 }
 
+/**
+ * Menerima `next` hanya jika ia resolve ke origin yang sama dengan halaman
+ * login ini. Perbandingan lewat `URL#origin` (parser WHATWG asli) — bukan
+ * pencocokan awalan string — karena `startsWith('/')` lolos diakali oleh
+ * `//evil.example` dan `/\evil.example`: browser menormalkan keduanya jadi
+ * URL absolut ke origin lain (protocol-relative / backslash-as-slash),
+ * memicu pengalihan terbuka dari halaman login sendiri setelah login
+ * berhasil. Nilai yang gagal diparse atau berbeda origin jatuh ke `/`.
+ */
+export function resolveNextPath(next: string | null): string {
+  if (!next) return '/'
+  try {
+    const url = new URL(next, globalThis.location.origin)
+    if (url.origin !== globalThis.location.origin) return '/'
+    return `${url.pathname}${url.search}${url.hash}`
+  } catch {
+    return '/'
+  }
+}
+
 export function LoginForm(): ReactNode {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
@@ -41,7 +61,7 @@ export function LoginForm(): ReactNode {
       if (!isAuthSessionPayload(body)) throw new Error('Respons login tidak dapat diproses.')
       authStore.setAccessToken(body.data.access_token)
       const next = new URLSearchParams(globalThis.location.search).get('next')
-      router.replace(next?.startsWith('/') ? next : '/')
+      router.replace(resolveNextPath(next))
     } catch (submissionError) {
       setError(formErrorMessage(submissionError))
     } finally {
