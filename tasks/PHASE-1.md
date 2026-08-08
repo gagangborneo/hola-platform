@@ -322,16 +322,24 @@ nominal ini.
 
 ## P1.K — `apps/web` (customer) · 9h
 
-- [ ] **P1-71** `1h` ⛔ K-09 — Landing page: hero, daftar olahraga, lapangan unggulan, jam operasional, lokasi, kontak + metadata SEO, `sitemap.xml`, OG image. *acuan:* [01 § 3.2](../docs/01-ARCHITECTURE.md#32-appsweb--nextjs-app-router-customer)
-- [ ] **P1-72** `0,5h` — Halaman daftar lapangan + detail lapangan (foto dari `media.hola.id`, jam operasional, harga per `rate_class`)
-- [ ] **P1-73** `1,5h` 🔒 — Komponen **grid ketersediaan**: pemilih tanggal & lapangan, slot tersedia/terisi (disabled), `rate_class`, harga per slot, penanda `generated_at`, tarik-untuk-menyegarkan. *acuan:* [06 § 5.2](../docs/06-MODULE-BOOKING.md#52-bentuk-response)
-- [ ] **P1-74** `1h` — Layar checkout: pilih 1..`max_slots_per_booking` slot, addon, input kode promo (`POST /promos/validate`), **ringkasan quote persis dari response** — tanpa satu pun perkalian harga di client (BR-B-12)
-- [ ] **P1-75** `1h` 🔒 — `POST /bookings` dengan `Idempotency-Key` (UUID v7 dari client) + **countdown hold** yang dihitung dari `hold_expires_at` dikurangi offset `server_time` (E-23) + penanganan `409 SLOT_ALREADY_CLAIMED` (pesan "slot baru saja diambil" + muat ulang ketersediaan, E-3)
-- [ ] **P1-76** `1h` 🔒 — Integrasi Snap (popup) + halaman status pembayaran + polling `GET /payments/{id}` tiap 3 detik maks 5 menit + konfirmasi ulang harga saat `meta.warnings` memuat `PROMO_QUOTA_EXHAUSTED` (E-10) atau `PRICE_CHANGED` (E-13)
-- [ ] **P1-77** `1h` — `/me/bookings` (mendatang & riwayat, cursor pagination) + detail booking (termasuk `hold_expires_at` untuk melanjutkan checkout, E-4) + tampilan e-receipt
-- [ ] **P1-78** `1h` ⛔ D-01, K-08 — Alur pembatalan: tampilkan `refund_estimate_amount` + `policy_applied` + teks `app_settings.cancellation_policy_text` **sebelum** konfirmasi (BR-B-71); teks kebijakan juga tampil di halaman checkout
-- [ ] **P1-79** `0,5h` — Halaman error/kosong/offline + penanganan `401` (refresh single-flight sudah di `api-client`) + daftar booking `pending_payment` saat customer terkena BR-B-14 (E-20)
-- [ ] **P1-80** `0,5h` 🔴 — Test komponen non-trivial: grid ketersediaan, countdown hold, form checkout dengan validasi kondisional (BR-TT-16)
+- [x] **P1-71** `1h` ⛔ K-09 — Landing page: hero, daftar olahraga, lapangan unggulan, jam operasional, lokasi, kontak + metadata SEO, `sitemap.xml`, OG image. *acuan:* [01 § 3.2](../docs/01-ARCHITECTURE.md#32-appsweb--nextjs-app-router-customer)
+- [x] **P1-72** `0,5h` — Halaman daftar lapangan + detail lapangan (foto dari `media.hola.id`, jam operasional, harga per `rate_class`)
+- [x] **P1-73** `1,5h` 🔒 — Komponen **grid ketersediaan**: pemilih tanggal & lapangan, slot tersedia/terisi (disabled), `rate_class`, harga per slot, penanda `generated_at`, tarik-untuk-menyegarkan. *acuan:* [06 § 5.2](../docs/06-MODULE-BOOKING.md#52-bentuk-response)
+- [x] **P1-74** `1h` — Layar checkout: pilih 1..`max_slots_per_booking` slot, addon, input kode promo (`POST /promos/validate`), **ringkasan quote persis dari response** — tanpa satu pun perkalian harga di client (BR-B-12)
+- [x] **P1-75** `1h` 🔒 — `POST /bookings` dengan `Idempotency-Key` (UUID v7 dari client) + **countdown hold** yang dihitung dari `hold_expires_at` dikurangi offset `server_time` (E-23) + penanganan `409 SLOT_ALREADY_CLAIMED` (pesan "slot baru saja diambil" + muat ulang ketersediaan, E-3)
+- [x] **P1-76** `1h` 🔒 — Integrasi Snap (popup) + halaman status pembayaran + polling `GET /payments/{id}` tiap 3 detik maks 5 menit + konfirmasi ulang harga saat `meta.warnings` memuat `PROMO_QUOTA_EXHAUSTED` (E-10) atau `PRICE_CHANGED` (E-13)
+- [x] **P1-77** `1h` — `/me/bookings` (mendatang & riwayat, cursor pagination) + detail booking (termasuk `hold_expires_at` untuk melanjutkan checkout, E-4) + tampilan e-receipt
+- [x] **P1-78** `1h` ⛔ D-01, K-08 — Alur pembatalan: tampilkan `refund_estimate_amount` + `policy_applied` + teks `app_settings.cancellation_policy_text` **sebelum** konfirmasi (BR-B-71); teks kebijakan juga tampil di halaman checkout
+- [x] **P1-79** `0,5h` — Halaman error/kosong/offline + penanganan `401` (refresh single-flight sudah di `api-client`) + daftar booking `pending_payment` saat customer terkena BR-B-14 (E-20)
+- [x] **P1-80** `0,5h` 🔴 — Test komponen non-trivial: grid ketersediaan, countdown hold, form checkout dengan validasi kondisional (BR-TT-16)
+
+> **Catatan penyelesaian P1.K** — spek [docs/superpowers/specs/2026-08-08-apps-web-customer-design.md](../docs/superpowers/specs/2026-08-08-apps-web-customer-design.md), rencana [docs/superpowers/plans/2026-08-08-apps-web-customer.md](../docs/superpowers/plans/2026-08-08-apps-web-customer.md).
+>
+> **Empat prasyarat API dibangun lebih dulu** karena belum ada padahal P1-71/72/78 membutuhkannya: `GET /sports` (baru, ditambahkan juga ke [04-API-CONTRACT.md](../docs/04-API-CONTRACT.md)), `GET /courts`, `GET /courts/{id}`, dan field `is_cancellable` + `refund_estimate_amount` + `policy_applied` di `GET /bookings/{id}`. Plus `require_contiguous_slots` di `GET /config/public`. Waktunya diambil dari buffer P1-101.
+>
+> **Dua bug produksi ditemukan lewat verifikasi browser**, keduanya tak terlihat oleh typecheck maupun unit test: open redirect pada `?next=` di halaman login (`//evil.example` lolos pemeriksaan `startsWith('/')`), dan `auth-store.ts` memanggil `fetch` sebagai metode sehingga Chrome menolaknya dan setiap refresh gagal memulihkan sesi.
+>
+> **K-08 dan K-09 masih terbuka.** Teks kebijakan pembatalan (K-08) dibaca dari `app_settings`; saat null, dialog pembatalan menampilkan pernyataan jujur bahwa venue belum mempublikasikannya — bukan teks karangan. Identitas badan usaha (K-09) belum ada, jadi footer dan `/info` sengaja tidak memuat alamat, telepon, atau email. Keduanya diisi di P1-93.
 
 ## P1.L — `apps/admin` (minimal, cukup operasional harian) · 9h
 
@@ -358,6 +366,24 @@ nominal ini.
 - [ ] **P1-98** `1h` 🔴 — **DoD-1-01**: transaksi nyata pertama end-to-end di produksi, disaksikan client
 - [ ] **P1-99** `0,5h` 🔴 — Verifikasi **12 butir DoD Phase 1** + kumpulkan bukti. *acuan:* [ROADMAP § 4.1](ROADMAP.md#41-definition-of-done-phase-1-terukur)
 - [ ] **P1-100** `0,5h` — Pemutakhiran `docs/` untuk aturan yang berubah selama implementasi + catat utang teknis Phase 1 yang dibawa ke Phase 2 (reschedule, refund gateway, `GET /availability`)
+
+  <details><summary>Utang teknis yang sudah tercatat dari P1.K — jangan hilang</summary>
+
+  **Menghambat go-live / UAT:**
+  - `packages/db/src/seed.ts` memakai `PASSWORD_PEPPER` yang berbeda dari `apps/api/.env`, sehingga akun seed `customer*@hola.test` tidak bisa login. Menghambat P1-96 (pelatihan staff) dan P1-97 (UAT).
+  - Zod v4 menjalankan codegen lewat `Function(...)`. Sudah diredam dengan `z.config({ jitless: true })` di `packages/shared/src/env/index.ts`; kalau setting itu hilang, CSP produksi (`script-src` tanpa `'unsafe-eval'`) akan memicu `securitypolicyviolation` di hampir setiap halaman.
+  - Build `apps/web` menuntut berkas `apps/web/.env` yang sungguhan. Mengekspor variabel ke shell tidak setara — Next membaca berkas `.env` saat build untuk meng-inline `NEXT_PUBLIC_*`. Tanpa itu build gagal dengan pesan menyesatkan tentang `useState` null.
+
+  **Kualitas, tidak menghambat:**
+  - Tidak ada tombol keluar maupun tautan akun di mana pun; `SessionStatus.tsx` tidak dipakai siapa pun.
+  - Komponen shadcn `accordion`, `checkbox`, `select`, `sheet` dan dependensinya (plus `sonner`) ikut terpasang tapi belum dipakai.
+  - `GET /courts?status=inactive` dapat dienumerasi publik tanpa auth atau rate limit.
+  - `GET /bookings/{id}` mengembalikan `internal_note` dan `guest_phone` ke customer pemilik booking.
+  - `/checkout` tidak memvalidasi bentuk parameter `slots`; URL yang terpotong jatuh ke halaman error umum.
+  - `lapangan/[kode]` memanggil API empat kali per render (`generateMetadata` dan badan halaman masing-masing memuat daftar lapangan lalu detailnya).
+  - Reset persetujuan harga saat quote baru datang benar, tapi belum ada test regresinya.
+
+  </details>
 
 ## P1.N — Buffer · 4h
 
