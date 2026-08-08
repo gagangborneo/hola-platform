@@ -2,6 +2,7 @@
 
 import { useInfiniteQuery } from '@tanstack/react-query'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { apiClient } from '../../lib/api-client.ts'
@@ -21,6 +22,8 @@ const STATUS_LABEL: Record<string, string> = {
 
 export function BookingList(): ReactNode {
   const [upcoming, setUpcoming] = useState(true)
+  const searchParams = useSearchParams()
+  const highlightPending = searchParams.get('pending') === '1'
 
   const bookings = useInfiniteQuery({
     queryKey: ['my-bookings', upcoming],
@@ -46,6 +49,13 @@ export function BookingList(): ReactNode {
 
   return (
     <div>
+      {highlightPending ? (
+        <p className="mb-6 rounded-xl bg-secondary p-4 text-secondary-foreground">
+          Kamu sudah punya 3 booking yang belum dibayar. Selesaikan atau batalkan salah satunya
+          sebelum memesan lagi.
+        </p>
+      ) : null}
+
       <div className="flex gap-2">
         <Button
           size="sm"
