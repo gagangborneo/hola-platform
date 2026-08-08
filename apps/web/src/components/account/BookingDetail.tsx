@@ -6,6 +6,8 @@ import type { ReactNode } from 'react'
 import { useCallback } from 'react'
 import { apiClient } from '../../lib/api-client.ts'
 import { formatDateWita, formatRupiah, formatTimeWita } from '../../lib/format.ts'
+import { bookingStatusLabel } from '../../lib/status-labels.ts'
+import { rateClassLabel } from '../booking/availability-labels.ts'
 import { Badge } from '../ui/badge.tsx'
 import { Button } from '../ui/button.tsx'
 import { CancelDialog } from './CancelDialog.tsx'
@@ -56,14 +58,17 @@ export function BookingDetail({
             {formatDateWita(`${data.booking_date}T00:00:00+08:00`)}
           </p>
         </div>
-        <Badge variant={data.status === 'confirmed' ? 'default' : 'secondary'}>{data.status}</Badge>
+        <Badge variant={data.status === 'confirmed' ? 'default' : 'secondary'}>
+          {bookingStatusLabel(data.status)}
+        </Badge>
       </div>
 
       <ul className="mt-8 grid gap-2">
         {data.items.map((item) => (
           <li key={item.id} className="flex justify-between border-b pb-2">
             <span>
-              {formatTimeWita(item.starts_at)}–{formatTimeWita(item.ends_at)} · {item.rate_class}
+              {formatTimeWita(item.starts_at)}–{formatTimeWita(item.ends_at)} ·{' '}
+              {rateClassLabel(item.rate_class)}
             </span>
             <span className="font-semibold">{formatRupiah(item.line_total_amount)}</span>
           </li>

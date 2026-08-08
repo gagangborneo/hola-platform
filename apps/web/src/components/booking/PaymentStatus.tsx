@@ -5,6 +5,7 @@ import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import { apiClient } from '../../lib/api-client.ts'
+import { paymentStatusLabel } from '../../lib/status-labels.ts'
 import { Button } from '../ui/button.tsx'
 
 const POLL_INTERVAL_MS = 3_000
@@ -67,7 +68,7 @@ export function PaymentStatus({ paymentId, bookingId }: PaymentStatusProps): Rea
       <div className="rounded-xl border bg-card p-8 text-center">
         <h1 className="font-display text-2xl font-bold">Pembayaran tidak selesai</h1>
         <p className="mt-3 text-muted-foreground">
-          Status terakhir: {status}. Slot mungkin sudah dilepas.
+          Status terakhir: {paymentStatusLabel(status)}. Slot mungkin sudah dilepas.
         </p>
         <Button asChild className="mt-6">
           <Link href="/lapangan">Pilih slot lagi</Link>

@@ -7,18 +7,10 @@ import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { apiClient } from '../../lib/api-client.ts'
 import { formatDateWita, formatRupiah } from '../../lib/format.ts'
+import { bookingStatusLabel } from '../../lib/status-labels.ts'
 import { Badge } from '../ui/badge.tsx'
 import { Button } from '../ui/button.tsx'
 import { Card, CardContent } from '../ui/card.tsx'
-
-const STATUS_LABEL: Record<string, string> = {
-  pending_payment: 'Menunggu pembayaran',
-  confirmed: 'Terkonfirmasi',
-  completed: 'Selesai',
-  cancelled: 'Dibatalkan',
-  expired: 'Kedaluwarsa',
-  no_show: 'Tidak hadir',
-}
 
 export function BookingList(): ReactNode {
   const [upcoming, setUpcoming] = useState(true)
@@ -30,13 +22,16 @@ export function BookingList(): ReactNode {
     initialPageParam: undefined as string | undefined,
     queryFn: async ({ pageParam }) => {
       // `myBookingsQuerySchema` menerima `upcoming` sebagai string 'true'/'false'.
+      // `createHolaClient` melempar `HolaApiError` untuk respons non-2xx apa
+      // pun — `$get` di atas TIDAK PERNAH resolve dengan Response ber-
+      // `.ok === false`, jadi kegagalan sudah ditangani lewat `bookings.isError`
+      // (react-query menangkap promise yang reject), bukan `if (!response.ok)`.
       const response = await apiClient.api.v1.me.bookings.$get({
         query: {
           upcoming: upcoming ? 'true' : 'false',
           ...(pageParam ? { cursor: pageParam } : {}),
         },
       })
-      if (!response.ok) throw new Error('Daftar booking tidak dapat dimuat.')
       return response.json()
     },
     getNextPageParam: (lastPage) => {
@@ -100,7 +95,7 @@ export function BookingList(): ReactNode {
               </div>
               <div className="flex items-center gap-3">
                 <Badge variant={booking.status === 'confirmed' ? 'default' : 'secondary'}>
-                  {STATUS_LABEL[booking.status] ?? booking.status}
+                  {bookingStatusLabel(booking.status)}
                 </Badge>
                 <span className="font-semibold">{formatRupiah(booking.total_amount)}</span>
               </div>

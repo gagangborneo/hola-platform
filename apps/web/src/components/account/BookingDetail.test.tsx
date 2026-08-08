@@ -62,6 +62,11 @@ describe('BookingDetail', () => {
     render(<BookingDetail bookingId="booking-1" cancellationPolicyText={null} />, { wrapper })
 
     expect(await screen.findByText('HOLA-0001')).toBeDefined()
+    // I1: status booking dan rate_class harus tampil dalam Bahasa Indonesia,
+    // konsisten dengan label yang sama di BookingList (bukan enum mentah).
+    expect(screen.getByText('Terkonfirmasi')).toBeDefined()
+    expect(screen.queryByText('confirmed')).toBeNull()
+    expect(screen.getByText(/Jam biasa/)).toBeDefined()
     expect(screen.getByText('Rp300.000')).toBeDefined()
     expect(screen.getByRole('button', { name: /Batalkan booking/ })).toBeDefined()
   })

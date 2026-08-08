@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isBeyondHorizon, unavailableLabel } from './availability-labels.ts'
+import { isBeyondHorizon, rateClassLabel, unavailableLabel } from './availability-labels.ts'
 
 describe('label ketersediaan', () => {
   it('P1-73: booking, event, dan match digabung agar identitas pemesan tidak bocor', () => {
@@ -24,5 +24,19 @@ describe('label ketersediaan', () => {
     expect(isBeyondHorizon([{ code: 'BEYOND_BOOKING_HORIZON' }])).toBe(true)
     expect(isBeyondHorizon([{ code: 'PRICE_CHANGED' }])).toBe(false)
     expect(isBeyondHorizon(undefined)).toBe(false)
+  })
+
+  it('I1: rate_class dikenal diterjemahkan ke Bahasa Indonesia', () => {
+    expect(rateClassLabel('peak')).toBe('Jam sibuk')
+    expect(rateClassLabel('offpeak')).toBe('Jam biasa')
+    expect(rateClassLabel('special')).toBe('Tarif khusus')
+  })
+
+  it('I1: rate_class null menampilkan placeholder netral, bukan fallback "tidak dikenal"', () => {
+    expect(rateClassLabel(null)).toBe('—')
+  })
+
+  it('I1: rate_class tak dikenal tidak menampilkan kode mentah ke customer', () => {
+    expect(rateClassLabel('sesuatu_baru')).toBe('Tarif lain')
   })
 })

@@ -22,3 +22,19 @@ export function unavailableLabel(reason: string | null): string {
 export function isBeyondHorizon(warnings: readonly { code: string }[] | undefined): boolean {
   return (warnings ?? []).some((warning) => warning.code === 'BEYOND_BOOKING_HORIZON')
 }
+
+const RATE_CLASS_LABEL: Record<string, string> = {
+  peak: 'Jam sibuk',
+  offpeak: 'Jam biasa',
+  special: 'Tarif khusus',
+}
+
+/**
+ * `null` berarti slot memang belum punya harga (lihat catatan nullability di
+ * `AvailabilityGrid.tsx`) — bukan nilai tak dikenal, jadi diberi placeholder
+ * netral `'—'`, bukan fallback "tidak dikenal".
+ */
+export function rateClassLabel(rateClass: string | null): string {
+  if (rateClass === null) return '—'
+  return RATE_CLASS_LABEL[rateClass] ?? 'Tarif lain'
+}

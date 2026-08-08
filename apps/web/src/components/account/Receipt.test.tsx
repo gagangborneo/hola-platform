@@ -51,7 +51,11 @@ describe('Receipt', () => {
     render(<Receipt bookingId="booking-1" />, { wrapper })
 
     expect(await screen.findByText('HOLA-0001')).toBeDefined()
-    expect(screen.getByText('confirmed')).toBeDefined()
+    // I1: status booking dan rate_class harus tampil dalam Bahasa Indonesia,
+    // bukan nilai enum mentah (regresi: 'confirmed'/'offpeak' apa adanya).
+    expect(screen.getByText('Terkonfirmasi')).toBeDefined()
+    expect(screen.queryByText('confirmed')).toBeNull()
+    expect(screen.getByText(/Jam biasa/)).toBeDefined()
     expect(screen.getAllByText('Rp150.000')).toHaveLength(2)
   })
 

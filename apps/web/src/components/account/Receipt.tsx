@@ -4,6 +4,8 @@ import { useQuery } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { apiClient } from '../../lib/api-client.ts'
 import { formatDateWita, formatRupiah, formatTimeWita } from '../../lib/format.ts'
+import { bookingStatusLabel } from '../../lib/status-labels.ts'
+import { rateClassLabel } from '../booking/availability-labels.ts'
 import { Button } from '../ui/button.tsx'
 
 interface ReceiptProps {
@@ -51,7 +53,7 @@ export function Receipt({ bookingId }: ReceiptProps): ReactNode {
         </div>
         <div className="flex justify-between">
           <dt className="text-muted-foreground">Status</dt>
-          <dd className="font-semibold">{data.status}</dd>
+          <dd className="font-semibold">{bookingStatusLabel(data.status)}</dd>
         </div>
       </dl>
 
@@ -59,7 +61,8 @@ export function Receipt({ bookingId }: ReceiptProps): ReactNode {
         {data.items.map((item) => (
           <li key={item.id} className="flex justify-between border-b pb-2 text-sm">
             <span>
-              {formatTimeWita(item.starts_at)}–{formatTimeWita(item.ends_at)} · {item.rate_class}
+              {formatTimeWita(item.starts_at)}–{formatTimeWita(item.ends_at)} ·{' '}
+              {rateClassLabel(item.rate_class)}
             </span>
             <span className="font-semibold">{formatRupiah(item.line_total_amount)}</span>
           </li>

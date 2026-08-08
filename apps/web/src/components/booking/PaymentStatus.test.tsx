@@ -59,6 +59,14 @@ describe('PaymentStatus', () => {
     expect(paymentsGet.mock.calls.length).toBe(callsAfterFirstRender)
   })
 
+  it('I1: status akhir non-paid diterjemahkan ke Bahasa Indonesia, bukan enum mentah', async () => {
+    mockStatus('failed')
+    render(<PaymentStatus paymentId="payment-1" bookingId="booking-1" />, { wrapper })
+
+    expect(await screen.findByText(/Status terakhir: Gagal/)).toBeDefined()
+    expect(screen.queryByText(/Status terakhir: failed/)).toBeNull()
+  })
+
   it('tidak pernah memanggil POST /payments/{id}/sync — endpoint itu 403 untuk customer', async () => {
     mockStatus('pending')
     render(<PaymentStatus paymentId="payment-1" bookingId="booking-1" />, { wrapper })
