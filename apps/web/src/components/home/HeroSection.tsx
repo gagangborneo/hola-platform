@@ -81,7 +81,7 @@ export function HeroSection({ courtCount, sportCount }: HeroSectionProps): React
               size="lg"
               className="border-white/30 text-white hover:bg-white/10"
             >
-              <Link href="/info">Jam operasional</Link>
+              <Link href="/jam-operasional">Jam operasional</Link>
             </Button>
           </div>
 

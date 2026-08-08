@@ -28,6 +28,11 @@ export function SiteFooter(): ReactNode {
             </li>
             <li>
               <Link className="hover:text-primary" href="/info">
+                Info & event
+              </Link>
+            </li>
+            <li>
+              <Link className="hover:text-primary" href="/jam-operasional">
                 Jam operasional & lokasi
               </Link>
             </li>

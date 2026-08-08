@@ -57,10 +57,10 @@ export default async function InfoPage(): Promise<ReactNode> {
             <ArrowLeft size={16} aria-hidden /> Kembali
           </Link>
           <p className="mb-3 text-xs font-bold uppercase tracking-widest text-accent">
-            Jam Operasional & Kontak
+            Jadwal & Kontak
           </p>
           <h1 className="mb-3 font-display text-5xl font-bold text-white md:text-6xl">
-            Informasi Olahraga
+            Jam Operasional
           </h1>
           <p className="max-w-xl text-blue-200">
             Jam buka tiap lapangan, kebijakan pembatalan, serta lokasi dan kontak Hola Sports Center
