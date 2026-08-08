@@ -24,8 +24,21 @@ Berlaku untuk **setiap** task di bawah ini.
 - **Dilarang menyalin `references/web/src/app/App.tsx`** atau data `COURTS` di dalamnya, dan dilarang menampilkan rating, jumlah ulasan, jumlah booking, atau testimoni — tidak ada sumber datanya dan tidak boleh dikarang.
 - **Slug rute berbahasa Indonesia**, mengikuti `/login`, `/daftar`, `/lupa-password` yang sudah ada.
 - **Environment test**: `vitest.config.ts` di `apps/web` memakai `environment: 'node'` sebagai default; hanya `src/components/**` yang dialihkan ke `happy-dom`. Test lama `src/lib/auth.test.ts` dan `src/lib/security-headers.test.ts` harus tetap hijau.
-- **Perintah verifikasi** dijalankan dari root repo: `pnpm --filter @hola/web test`, `pnpm --filter @hola/web typecheck`, `pnpm --filter @hola/api test`, `pnpm lint`.
-- **Integration test API** butuh infra hidup: `pnpm dev:infra` sebelum `pnpm --filter @hola/api test:integration`.
+- **Perintah verifikasi** dijalankan dari root repo. `package.json` root tidak punya blok `scripts`, jadi pakai bentuk langsung berikut — bukan alias root:
+
+  | Tujuan | Perintah |
+  |---|---|
+  | Test web | `pnpm --filter @hola/web test` |
+  | Typecheck web | `pnpm --filter @hola/web typecheck` |
+  | Test API | `pnpm --filter @hola/api test` |
+  | Integration API | `pnpm --filter @hola/api test:integration` |
+  | Lint | `pnpm exec biome check .` (perbaiki: `pnpm exec biome check --write <berkas>`) |
+  | Infra lokal | `docker compose up -d` |
+  | Validasi env | `node scripts/check-env.ts` |
+  | Migrasi DB | `pnpm --filter @hola/db run migrate` |
+
+  Jalankan `biome check --write` **hanya pada berkas yang kamu sentuh**; menjalankannya pada seluruh repo akan memformat ulang `references/web/` yang vendored.
+- **Integration test API** butuh infra hidup: `docker compose up -d` sebelum `pnpm --filter @hola/api test:integration`.
 - **Satu pengecualian urutan**: Task 16 Step 1–4 (`RequireSession`) harus dikerjakan sebelum Task 13 Step 8. Selain itu, task dikerjakan berurutan 1 → 18.
 
 ---
