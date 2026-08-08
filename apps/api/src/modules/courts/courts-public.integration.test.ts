@@ -9,13 +9,16 @@ const ids = {
   sport: '01920000-0000-7000-8000-0000000002b2',
   courtActive: '01920000-0000-7000-8000-0000000002b3',
   courtInactive: '01920000-0000-7000-8000-0000000002b4',
-  media: '01920000-0000-7000-8000-0000000002b5',
+  mediaReady: '01920000-0000-7000-8000-0000000002b5',
+  mediaPending: '01920000-0000-7000-8000-0000000002b6',
+  missing: '01920000-0000-7000-8000-0000000002b7',
 } as const
 
 async function cleanFixtures(): Promise<void> {
   await db.delete(courtPhotos).where(eq(courtPhotos.courtId, ids.courtActive))
   await db.delete(courtOperatingHours).where(eq(courtOperatingHours.courtId, ids.courtActive))
-  await db.delete(mediaFiles).where(eq(mediaFiles.id, ids.media))
+  await db.delete(mediaFiles).where(eq(mediaFiles.id, ids.mediaReady))
+  await db.delete(mediaFiles).where(eq(mediaFiles.id, ids.mediaPending))
   await db.delete(courts).where(eq(courts.id, ids.courtActive))
   await db.delete(courts).where(eq(courts.id, ids.courtInactive))
   await db.delete(sports).where(eq(sports.id, ids.sport))
@@ -54,23 +57,39 @@ beforeEach(async () => {
     opensTime: '08:00',
     closesTime: '22:00',
   })
-  await db.insert(mediaFiles).values({
-    id: ids.media,
-    bucket: 'hola-media',
-    objectKey: 'fixtures/public-court.jpg',
-    kind: 'court_photo',
-    status: 'ready',
-  })
-  await db.insert(courtPhotos).values({
-    courtId: ids.courtActive,
-    mediaId: ids.media,
-    position: 0,
-  })
+  await db.insert(mediaFiles).values([
+    {
+      id: ids.mediaReady,
+      bucket: 'hola-media',
+      objectKey: 'fixtures/public-court.jpg',
+      kind: 'court_photo',
+      status: 'ready',
+    },
+    {
+      id: ids.mediaPending,
+      bucket: 'hola-media',
+      objectKey: 'fixtures/public-court-pending.jpg',
+      kind: 'court_photo',
+      status: 'pending',
+    },
+  ])
+  await db.insert(courtPhotos).values([
+    { courtId: ids.courtActive, mediaId: ids.mediaReady, position: 0 },
+    { courtId: ids.courtActive, mediaId: ids.mediaPending, position: 1 },
+  ])
 })
 
 afterAll(cleanFixtures)
 
 describe('endpoint publik lapangan', () => {
+  it('P1-72: tanpa filter mengembalikan semua lapangan', async () => {
+    const rows = await listPublicCourts(db, {})
+    const codes = rows.map((row) => row.code)
+
+    expect(codes).toContain('PUB-01')
+    expect(codes).toContain('PUB-02')
+  })
+
   it('P1-72: filter status menyaring lapangan nonaktif', async () => {
     const rows = await listPublicCourts(db, { status: 'active' })
     const codes = rows.map((row) => row.code)
@@ -92,7 +111,7 @@ describe('endpoint publik lapangan', () => {
     expect(detail?.hours).toEqual([{ dayOfWeek: 1, opensTime: '08:00:00', closesTime: '22:00:00' }])
     expect(detail?.photos).toEqual([
       {
-        mediaId: ids.media,
+        mediaId: ids.mediaReady,
         position: 0,
         bucket: 'hola-media',
         objectKey: 'fixtures/public-court.jpg',
@@ -100,10 +119,21 @@ describe('endpoint publik lapangan', () => {
     ])
   })
 
-  it('P1-72: id yang tidak ada mengembalikan null, bukan melempar', async () => {
+  it('P1-72: foto media yang belum siap tidak ikut ditampilkan', async () => {
+    const detail = await findCourtDetail(db, ids.courtActive)
+
+    expect(detail?.photos).toHaveLength(1)
+    expect(detail?.photos.map((photo) => photo.mediaId)).not.toContain(ids.mediaPending)
+  })
+
+  it('P1-72: court yang ada tapi tanpa jam/foto tetap mengembalikan array kosong', async () => {
     await expect(findCourtDetail(db, ids.courtInactive)).resolves.toMatchObject({
       photos: [],
       hours: [],
     })
+  })
+
+  it('P1-72: id yang tidak ada mengembalikan null, bukan melempar', async () => {
+    await expect(findCourtDetail(db, ids.missing)).resolves.toBeNull()
   })
 })

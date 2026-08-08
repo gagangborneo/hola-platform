@@ -6,7 +6,7 @@ import {
   mediaFiles,
   slotClaims,
 } from '@hola/db'
-import { and, asc, eq, gte, inArray, sql } from 'drizzle-orm'
+import { and, asc, eq, gte, inArray, type SQL, sql } from 'drizzle-orm'
 import { translateDbError } from '../../lib/errors.ts'
 import type { Tx } from '../../lib/transaction.ts'
 import type { CreateCourtInput, PatchCourtInput } from './courts.schema.ts'
@@ -165,19 +165,23 @@ export interface CourtDetail {
   photos: CourtPhotoRow[]
 }
 
+function publicCourtFilters(filter: PublicCourtFilter): SQL[] {
+  return [
+    ...(filter.sportId === undefined ? [] : [eq(courts.sportId, filter.sportId)]),
+    ...(filter.status === undefined ? [] : [eq(courts.status, filter.status)]),
+    ...(filter.isIndoor === undefined ? [] : [eq(courts.isIndoor, filter.isIndoor)]),
+  ]
+}
+
 export async function listPublicCourts(
   db: DbExecutor,
   filter: PublicCourtFilter,
 ): Promise<CourtRow[]> {
-  const conditions = [
-    filter.sportId === undefined ? undefined : eq(courts.sportId, filter.sportId),
-    filter.status === undefined ? undefined : eq(courts.status, filter.status),
-    filter.isIndoor === undefined ? undefined : eq(courts.isIndoor, filter.isIndoor),
-  ].filter((condition) => condition !== undefined)
-
-  const query = db.select().from(courts)
-  const filtered = conditions.length > 0 ? query.where(and(...conditions)) : query
-  return filtered.orderBy(asc(courts.sortOrder), asc(courts.code))
+  return db
+    .select()
+    .from(courts)
+    .where(and(...publicCourtFilters(filter)))
+    .orderBy(asc(courts.sortOrder), asc(courts.code))
 }
 
 /**

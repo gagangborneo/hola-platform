@@ -612,7 +612,7 @@ Otorisasi lengkap ada di [05 § 6](05-AUTH.md#6-rbac-matrix-per-endpoint).
 | Metode | Path | Pag | Ringkas |
 |---|---|---|---|
 | GET | `/sports` | — | Olahraga aktif, terurut `sort_order`. Sumber daftar olahraga di landing & filter lapangan |
-| GET | `/courts` | O | Filter: `sport_id`, `status`, `is_indoor`. Sort: `sort_order`, `code` |
+| GET | `/courts` | — | Filter: `sport_id`, `status`, `is_indoor`. Sort: `sort_order`, `code` |
 | GET | `/courts/{court_id}` | — | Detail + foto + jam operasional |
 | GET | `/courts/{court_id}/availability` | — | **Endpoint inti booking.** Query tepat salah satu: `date`, atau `date_from`+`date_to` (maks 14 hari). Response stabil `data.days[]`: grid slot + `is_available` + `rate_class` + `price_amount`. Memakai cache Redis per hari (`X-Cache`) |
 | GET | `/availability` | — | Ketersediaan lintas court. Query: `date` (wajib), `sport_id`, `starts_time`, `ends_time`, `slot_count`. Untuk halaman "cari lapangan kosong" |
