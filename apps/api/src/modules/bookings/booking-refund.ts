@@ -59,3 +59,49 @@ export function computeRefundAmount(
   }
   return { amount: 0, percentage: 0, policyApplied: 'option_b_no_refund_under_24h' }
 }
+
+export interface CancellationPreviewInput {
+  status: 'pending_payment' | 'confirmed' | 'completed' | 'cancelled' | 'expired' | 'no_show'
+  payment: { amount: number; gatewayFeeAmount: number } | null
+  startsAt: Date
+  policy: RefundPolicy
+  now: Date
+}
+
+export interface CancellationPreview {
+  isCancellable: boolean
+  refundEstimateAmount: number
+  policyApplied: string
+}
+
+/**
+ * Pratinjau yang ditampilkan SEBELUM customer menekan batal (BR-B-71).
+ * Memakai `computeRefundAmount` yang sama dengan `cancelBooking` supaya angka
+ * yang dijanjikan di layar tidak pernah berbeda dari yang dieksekusi.
+ */
+export function buildCancellationPreview(input: CancellationPreviewInput): CancellationPreview {
+  if (input.status !== 'pending_payment' && input.status !== 'confirmed') {
+    return { isCancellable: false, refundEstimateAmount: 0, policyApplied: 'not_cancellable' }
+  }
+  if (!input.payment) {
+    return {
+      isCancellable: true,
+      refundEstimateAmount: 0,
+      policyApplied: 'pending_payment_no_refund',
+    }
+  }
+  const refund = computeRefundAmount(
+    {
+      totalAmount: input.payment.amount,
+      startsAt: input.startsAt,
+      gatewayFeeAmount: input.payment.gatewayFeeAmount,
+    },
+    input.policy,
+    input.now,
+  )
+  return {
+    isCancellable: true,
+    refundEstimateAmount: refund.amount,
+    policyApplied: refund.policyApplied,
+  }
+}

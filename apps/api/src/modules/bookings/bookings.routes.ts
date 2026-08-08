@@ -108,6 +108,9 @@ function serializeBooking(booking: CreatedBooking['booking']) {
 function serializeDetail(result: Awaited<ReturnType<typeof getBookingDetail>>) {
   return {
     ...serializeBooking(result.booking),
+    is_cancellable: result.cancellation.isCancellable,
+    refund_estimate_amount: result.cancellation.refundEstimateAmount,
+    policy_applied: result.cancellation.policyApplied,
     quote: result.booking.quoteSnapshot,
     items: result.items.map((item) => ({
       id: item.id,

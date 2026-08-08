@@ -39,7 +39,7 @@ import {
 } from '../slots/slots.service.ts'
 import { writeAuditLog } from '../system/audit.repository.ts'
 import { cancelBookingJobs, scheduleBookingJobs } from './booking-jobs.ts'
-import { computeRefundAmount } from './booking-refund.ts'
+import { buildCancellationPreview, type CancellationPreview } from './booking-refund.ts'
 import {
   type BookingItemRow,
   type BookingRow,
@@ -456,14 +456,32 @@ export async function markBookingAsNoShow(
 }
 
 export async function getBookingDetail(
-  ctx: Pick<BookingsServiceContext, 'db' | 'actor'>,
+  ctx: Pick<BookingsServiceContext, 'db' | 'actor' | 'now'>,
   bookingId: string,
-): Promise<{ booking: BookingRow; items: BookingItemRow[] }> {
+): Promise<{ booking: BookingRow; items: BookingItemRow[]; cancellation: CancellationPreview }> {
   const found = await findBookingWithItems(ctx.db, bookingId)
   if (!found) throw err.notFound('Booking tidak ditemukan.')
   if (ctx.actor.role === 'customer' && found.booking.customerUserId !== ctx.actor.userId)
     throw err.notOwner()
-  return found
+
+  const payment =
+    found.booking.status === 'confirmed' ? await findPaidPaymentForBooking(ctx.db, bookingId) : null
+  const policy = await findRefundPolicy(ctx.db)
+  const startsAt = found.items.reduce(
+    (earliest, item) => (item.startsAt < earliest ? item.startsAt : earliest),
+    found.items[0]?.startsAt ?? ctx.now,
+  )
+  const cancellation = buildCancellationPreview({
+    status: found.booking.status,
+    payment: payment
+      ? { amount: payment.amount, gatewayFeeAmount: payment.gatewayFeeAmount }
+      : null,
+    startsAt,
+    policy,
+    now: ctx.now,
+  })
+
+  return { ...found, cancellation }
 }
 
 export async function updateBookingNotes(
@@ -539,13 +557,15 @@ export async function cancelBooking(
     (earliest, item) => (item.startsAt < earliest ? item.startsAt : earliest),
     found.items[0]?.startsAt ?? ctx.now,
   )
-  const refund = payment
-    ? computeRefundAmount(
-        { totalAmount: payment.amount, startsAt, gatewayFeeAmount: payment.gatewayFeeAmount },
-        policy,
-        ctx.now,
-      )
-    : { amount: 0, percentage: 0 as const, policyApplied: 'pending_payment_no_refund' }
+  const preview = buildCancellationPreview({
+    status: found.booking.status,
+    payment: payment
+      ? { amount: payment.amount, gatewayFeeAmount: payment.gatewayFeeAmount }
+      : null,
+    startsAt,
+    policy,
+    now: ctx.now,
+  })
   const booking = await withTransaction(
     ctx.db,
     async (scope) => {
@@ -558,12 +578,12 @@ export async function cancelBooking(
       if (!updated) throw err.of(ERROR_CODE.BOOKING_NOT_CANCELLABLE)
       await releaseBookingSlotsInTransaction(ctx, input.bookingId, scope)
       await releaseBookingPromo(ctx, input.bookingId, 'booking_cancelled', scope)
-      if (payment && refund.amount > 0) {
+      if (payment && preview.refundEstimateAmount > 0) {
         await createRefundInScope(ctx, scope, {
           paymentId: payment.id,
-          amount: refund.amount,
+          amount: preview.refundEstimateAmount,
           reason: input.reason,
-          policyApplied: refund.policyApplied,
+          policyApplied: preview.policyApplied,
           channel: payment.method === 'cash' ? 'cash' : 'manual_transfer',
           automatic: false,
           requestedByUserId: ctx.actor.userId,
@@ -597,9 +617,10 @@ export async function cancelBooking(
             payload: {
               full_name: recipient.fullName,
               booking_code: updated.bookingCode,
-              refund_amount: refund.amount,
-              policy_applied: refund.policyApplied,
-              refund_timeline: refund.amount > 0 ? '3–14 hari kerja' : 'tidak ada refund',
+              refund_amount: preview.refundEstimateAmount,
+              policy_applied: preview.policyApplied,
+              refund_timeline:
+                preview.refundEstimateAmount > 0 ? '3–14 hari kerja' : 'tidak ada refund',
               reason: input.reason,
             },
           },
@@ -612,5 +633,9 @@ export async function cancelBooking(
     },
     { logger: ctx.logger },
   )
-  return { booking, refundEstimateAmount: refund.amount, policyApplied: refund.policyApplied }
+  return {
+    booking,
+    refundEstimateAmount: preview.refundEstimateAmount,
+    policyApplied: preview.policyApplied,
+  }
 }
