@@ -17,6 +17,11 @@ vi.mock('../../lib/api-client.ts', () => ({
 
 import { CancelDialog } from './CancelDialog.tsx'
 
+// Harus sama persis dengan `NO_POLICY_TEXT_FALLBACK` di CancelDialog.tsx.
+const FALLBACK_TEXT =
+  'Venue belum mempublikasikan teks kebijakan pembatalan secara rinci. ' +
+  'Nominal perkiraan pengembalian di atas tetap yang berlaku untuk pembatalan ini.'
+
 function wrapper({ children }: { children: ReactNode }): ReactNode {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>
@@ -74,16 +79,37 @@ describe('CancelDialog', () => {
     // jujur (bukan kosong, bukan kebijakan yang dikarang).
     expect(screen.getByText('Rp150.000')).toBeDefined()
     expect(screen.getByText('Pengembalian 50%')).toBeDefined()
-    expect(
-      screen.getByText(
-        'Venue belum mempublikasikan teks kebijakan pembatalan secara rinci. ' +
-          'Nominal perkiraan pengembalian di atas tetap yang berlaku untuk pembatalan ini.',
-      ),
-    ).toBeDefined()
+    expect(screen.getByText(FALLBACK_TEXT)).toBeDefined()
 
     const confirmButton = screen.getByRole('button', { name: /Ya, batalkan booking/ })
     expect(confirmButton.hasAttribute('disabled')).toBe(true)
   })
+
+  it.each([
+    ['string kosong', ''],
+    ['string hanya berisi spasi', '   '],
+  ])(
+    'BR-B-71: saat cancellationPolicyText adalah %s, menampilkan pernyataan pengganti — bukan paragraf kosong (regresi ??)',
+    async (_label, blankValue) => {
+      render(
+        <CancelDialog
+          bookingId="booking-1"
+          refundEstimateAmount={150000}
+          policyApplied="option_b_50_percent"
+          cancellationPolicyText={blankValue}
+          onCancelled={vi.fn()}
+        />,
+        { wrapper },
+      )
+
+      await openDialog()
+
+      // `nullableStringSetting` di API mengembalikan `''` (bukan `null`) untuk
+      // setting kosong — `??` tidak menangkap ini, hanya `null`/`undefined`.
+      // Nilai spasi-saja juga harus dianggap kosong, bukan teks kebijakan asli.
+      expect(screen.getByText(FALLBACK_TEXT)).toBeDefined()
+    },
+  )
 
   it('BR-B-63: refund Rp0 tetap ditampilkan, tidak disembunyikan', async () => {
     render(
@@ -120,12 +146,7 @@ describe('CancelDialog', () => {
     // Teks kebijakan null tidak berarti slot ketiga kosong — pernyataan
     // pengganti harus tetap terlihat di sini juga, bukan hanya di test
     // BR-B-71 khusus di atas.
-    expect(
-      screen.getByText(
-        'Venue belum mempublikasikan teks kebijakan pembatalan secara rinci. ' +
-          'Nominal perkiraan pengembalian di atas tetap yang berlaku untuk pembatalan ini.',
-      ),
-    ).toBeDefined()
+    expect(screen.getByText(FALLBACK_TEXT)).toBeDefined()
 
     const confirmButton = screen.getByRole('button', { name: /Ya, batalkan booking/ })
     expect(confirmButton.hasAttribute('disabled')).toBe(true)

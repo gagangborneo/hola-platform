@@ -96,7 +96,7 @@ export function CancelDialog({
         </div>
 
         <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
-          {cancellationPolicyText ?? NO_POLICY_TEXT_FALLBACK}
+          {cancellationPolicyText?.trim() ? cancellationPolicyText : NO_POLICY_TEXT_FALLBACK}
         </p>
 
         <div className="grid gap-1.5">
