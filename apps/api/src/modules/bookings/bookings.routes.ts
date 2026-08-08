@@ -71,15 +71,7 @@ function serializeCreated(result: CreatedBooking) {
     hold_expires_at: result.booking.holdExpiresAt?.toISOString() ?? null,
     total_amount: result.booking.totalAmount,
     quote: result.quote,
-    items: result.items.map((item) => ({
-      id: item.id,
-      court_id: item.courtId,
-      starts_at: item.startsAt.toISOString(),
-      ends_at: item.endsAt.toISOString(),
-      rate_class: item.rateClass,
-      unit_price_amount: item.unitPriceAmount,
-      line_total_amount: item.lineTotalAmount,
-    })),
+    items: serializeItems(result.items),
     created_at: result.booking.createdAt.toISOString(),
   }
 }
@@ -105,6 +97,18 @@ function serializeBooking(booking: CreatedBooking['booking']) {
   }
 }
 
+function serializeItems(items: CreatedBooking['items']) {
+  return items.map((item) => ({
+    id: item.id,
+    court_id: item.courtId,
+    starts_at: item.startsAt.toISOString(),
+    ends_at: item.endsAt.toISOString(),
+    rate_class: item.rateClass,
+    unit_price_amount: item.unitPriceAmount,
+    line_total_amount: item.lineTotalAmount,
+  }))
+}
+
 function serializeDetail(result: Awaited<ReturnType<typeof getBookingDetail>>) {
   return {
     ...serializeBooking(result.booking),
@@ -112,15 +116,7 @@ function serializeDetail(result: Awaited<ReturnType<typeof getBookingDetail>>) {
     refund_estimate_amount: result.cancellation.refundEstimateAmount,
     policy_applied: result.cancellation.policyApplied,
     quote: result.booking.quoteSnapshot,
-    items: result.items.map((item) => ({
-      id: item.id,
-      court_id: item.courtId,
-      starts_at: item.startsAt.toISOString(),
-      ends_at: item.endsAt.toISOString(),
-      rate_class: item.rateClass,
-      unit_price_amount: item.unitPriceAmount,
-      line_total_amount: item.lineTotalAmount,
-    })),
+    items: serializeItems(result.items),
   }
 }
 
@@ -237,8 +233,12 @@ export const bookingsRoutes = new Hono<{ Variables: Variables }>()
     authenticate,
     requireRole([USER_ROLE.CUSTOMER, USER_ROLE.STAFF, USER_ROLE.ADMIN]),
     zValidator('param', bookingIdParam, validationHook),
-    async (c) =>
-      c.json(ok(serializeDetail(await getBookingDetail(context(c), c.req.valid('param').id)))),
+    async (c) => {
+      const result = await getBookingDetail(context(c), c.req.valid('param').id, {
+        withCancellation: true,
+      })
+      return c.json(ok(serializeDetail(result)))
+    },
   )
   .patch(
     '/bookings/:id',
@@ -279,7 +279,7 @@ export const bookingsRoutes = new Hono<{ Variables: Variables }>()
           status: result.booking.status,
           quote: result.booking.quoteSnapshot,
           total_amount: result.booking.totalAmount,
-          items: serializeDetail(result).items,
+          items: serializeItems(result.items),
         }),
       )
     },

@@ -455,14 +455,40 @@ export async function markBookingAsNoShow(
   )
 }
 
+/**
+ * Detail booking tanpa pratinjau pembatalan. Dipakai oleh caller yang tidak
+ * pernah membaca field cancellation (mis. update notes, receipt) supaya
+ * mereka tidak membayar query payment/policy yang tidak mereka perlukan.
+ */
 export async function getBookingDetail(
   ctx: Pick<BookingsServiceContext, 'db' | 'actor' | 'now'>,
   bookingId: string,
-): Promise<{ booking: BookingRow; items: BookingItemRow[]; cancellation: CancellationPreview }> {
+): Promise<{ booking: BookingRow; items: BookingItemRow[] }>
+/**
+ * Varian dengan pratinjau pembatalan (BR-B-71) untuk `GET /bookings/{id}`.
+ * Query payment + policy hanya dijalankan sekali di sini — caller lain
+ * (termasuk `cancelBooking`, yang butuh payment row untuk `createRefundInScope`
+ * juga) menghitung sendiri agar tidak ada round-trip DB yang dobel per request.
+ */
+export async function getBookingDetail(
+  ctx: Pick<BookingsServiceContext, 'db' | 'actor' | 'now'>,
+  bookingId: string,
+  options: { withCancellation: true },
+): Promise<{ booking: BookingRow; items: BookingItemRow[]; cancellation: CancellationPreview }>
+export async function getBookingDetail(
+  ctx: Pick<BookingsServiceContext, 'db' | 'actor' | 'now'>,
+  bookingId: string,
+  options?: { withCancellation?: boolean },
+): Promise<{
+  booking: BookingRow
+  items: BookingItemRow[]
+  cancellation?: CancellationPreview
+}> {
   const found = await findBookingWithItems(ctx.db, bookingId)
   if (!found) throw err.notFound('Booking tidak ditemukan.')
   if (ctx.actor.role === 'customer' && found.booking.customerUserId !== ctx.actor.userId)
     throw err.notOwner()
+  if (!options?.withCancellation) return found
 
   const payment =
     found.booking.status === 'confirmed' ? await findPaidPaymentForBooking(ctx.db, bookingId) : null
