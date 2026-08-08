@@ -1,0 +1,119 @@
+'use client'
+
+import { useMutation } from '@tanstack/react-query'
+import type { ReactNode } from 'react'
+import { useState } from 'react'
+import { apiClient } from '../../lib/api-client.ts'
+import { formatRupiah } from '../../lib/format.ts'
+import { Button } from '../ui/button.tsx'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '../ui/dialog.tsx'
+import { Input } from '../ui/input.tsx'
+import { Label } from '../ui/label.tsx'
+
+const POLICY_LABEL: Record<string, string> = {
+  option_a_no_refund: 'Tanpa pengembalian dana',
+  option_b_100_percent_minus_gateway_fee: 'Pengembalian penuh dikurangi biaya gateway',
+  option_b_50_percent: 'Pengembalian 50%',
+  option_b_no_refund_under_24h: 'Kurang dari 24 jam sebelum main — tanpa pengembalian',
+  option_c_wallet_credit: 'Dikembalikan sebagai kredit',
+  pending_payment_no_refund: 'Belum dibayar — tidak ada dana yang dikembalikan',
+}
+
+interface CancelDialogProps {
+  bookingId: string
+  refundEstimateAmount: number
+  policyApplied: string
+  cancellationPolicyText: string | null
+  onCancelled: () => void
+}
+
+export function CancelDialog({
+  bookingId,
+  refundEstimateAmount,
+  policyApplied,
+  cancellationPolicyText,
+  onCancelled,
+}: CancelDialogProps): ReactNode {
+  const [reason, setReason] = useState('')
+  const [error, setError] = useState<string | null>(null)
+
+  // `createHolaClient` melempar `HolaApiError` untuk respons non-2xx apa pun —
+  // `$post` di bawah TIDAK PERNAH resolve dengan Response ber-`.ok === false`,
+  // jadi kegagalan sudah ditangani lewat `onError` (react-query menangkap
+  // promise yang reject), bukan `if (!response.ok)`.
+  const cancel = useMutation({
+    mutationFn: async () => {
+      const response = await apiClient.api.v1.bookings[':id'].cancel.$post({
+        param: { id: bookingId },
+        json: { reason },
+      })
+      return response.json()
+    },
+    onSuccess: onCancelled,
+    onError: (mutationError: Error) => setError(mutationError.message),
+  })
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="outline">Batalkan booking</Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Batalkan booking ini?</DialogTitle>
+          <DialogDescription>
+            Baca perkiraan pengembalian dana di bawah sebelum melanjutkan.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="rounded-xl bg-secondary p-4">
+          <div className="flex justify-between">
+            <span className="text-secondary-foreground">Perkiraan dikembalikan</span>
+            <span className="font-display text-xl font-bold text-secondary-foreground">
+              {formatRupiah(refundEstimateAmount)}
+            </span>
+          </div>
+          <p className="mt-2 text-sm text-secondary-foreground">
+            {POLICY_LABEL[policyApplied] ?? policyApplied}
+          </p>
+        </div>
+
+        {cancellationPolicyText ? (
+          <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
+            {cancellationPolicyText}
+          </p>
+        ) : null}
+
+        <div className="grid gap-1.5">
+          <Label htmlFor="cancel-reason">Alasan pembatalan</Label>
+          <Input
+            id="cancel-reason"
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
+            placeholder="Wajib diisi"
+            required
+          />
+        </div>
+
+        {error ? (
+          <p className="rounded-lg bg-destructive/10 p-3 text-destructive">{error}</p>
+        ) : null}
+
+        <Button
+          variant="destructive"
+          disabled={reason.trim().length === 0 || cancel.isPending}
+          onClick={() => cancel.mutate()}
+        >
+          {cancel.isPending ? 'Membatalkan…' : 'Ya, batalkan booking'}
+        </Button>
+      </DialogContent>
+    </Dialog>
+  )
+}
