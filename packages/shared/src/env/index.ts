@@ -5,9 +5,23 @@
  * kunci di `apps/<app>/.env.example` dengan kunci di schema — ketidaksinkronan
  * membuat CI gagal (docs/02 § 8, DoD-0-04).
  */
-import type { z } from 'zod'
+import { z } from 'zod'
 import { apiEnvSchema } from './api.ts'
 import { adminEnvSchema, mobileEnvSchema, webEnvSchema } from './frontend.ts'
+
+/**
+ * Zod v4 meng-JIT-compile schema (memakai `Function(...)`) secara default.
+ * `apps/web/src/lib/env.ts` mem-parse schema ini di dalam bundle klien, dan
+ * `script-src` produksi (`createSecurityHeaders`) tidak menyertakan
+ * `'unsafe-eval'` — tanpa `jitless`, setiap hydrate memicu
+ * `securitypolicyviolation` (Zod menangkap kegagalan JIT dan mendegradasi diam-
+ * diam, jadi tidak ada yang rusak, tapi noise-nya menenggelamkan percobaan
+ * injeksi sungguhan). Diset sekali di sini, secara global, supaya berlaku ke
+ * seluruh schema `zod` di proses ini — termasuk yang didefinisikan di
+ * `api.ts`/`frontend.ts` di atas, karena kompilasi JIT baru terjadi saat
+ * `.parse()`/`.safeParse()` dipanggil, bukan saat schema didefinisikan.
+ */
+z.config({ jitless: true })
 
 export { type ApiEnv, apiEnvSchema } from './api.ts'
 export {

@@ -36,7 +36,6 @@ export function HoldCountdown({
     <span
       className="font-display text-3xl font-bold tabular-nums text-primary"
       role="timer"
-      aria-live="polite"
       aria-label="Sisa waktu mengunci slot"
     >
       {formatRemaining(remaining)}

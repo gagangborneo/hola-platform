@@ -55,6 +55,15 @@ export function QuoteSummary({ quote }: QuoteSummaryProps): ReactNode {
           <dd className="font-semibold">{formatRupiah(quote.fee_amount)}</dd>
         </div>
       ) : null}
+      {/* `!== 0`, bukan `> 0`: penyesuaian pembulatan boleh negatif (docs/07 § 3.1) —
+          `> 0` akan menyembunyikan penyesuaian negatif dan baris berhenti tampak
+          menjumlah ke total. */}
+      {quote.rounding_adjustment_amount !== 0 ? (
+        <div className="flex justify-between text-sm">
+          <dt className="text-muted-foreground">Penyesuaian pembulatan</dt>
+          <dd className="font-semibold">{formatRupiah(quote.rounding_adjustment_amount)}</dd>
+        </div>
+      ) : null}
 
       <div className="mt-2 flex justify-between border-t pt-3">
         <dt className="font-display font-bold">Total</dt>
