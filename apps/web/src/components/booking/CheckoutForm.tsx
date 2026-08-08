@@ -146,6 +146,14 @@ export function CheckoutForm({
             <QuoteSummary quote={quote.data.data} />
           </div>
         ) : null}
+        {(quote.data?.data.warnings ?? []).some(
+          (warning) => warning.code === 'PROMO_QUOTA_EXHAUSTED' || warning.code === 'PRICE_CHANGED',
+        ) ? (
+          <p className="mt-4 rounded-lg bg-secondary p-3 text-sm text-secondary-foreground">
+            Harga berubah sejak kamu memilih slot. Periksa ringkasan di atas — angka itulah yang
+            akan ditagihkan.
+          </p>
+        ) : null}
         {error ? (
           <p className="mt-4 rounded-lg bg-destructive/10 p-3 text-destructive">{error}</p>
         ) : null}
