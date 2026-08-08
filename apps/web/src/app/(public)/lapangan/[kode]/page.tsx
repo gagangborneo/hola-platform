@@ -10,6 +10,10 @@ import { findCourtByCode, mediaUrl } from '../../../../lib/server-api.ts'
 
 interface CourtDetailPageProps {
   params: Promise<{ kode: string }>
+  // I2: `diambil`/`tanggal` datang dari `CheckoutForm` saat `SLOT_ALREADY_CLAIMED` —
+  // spek § 4.4 mewajibkan customer kembali ke grid ketersediaan pada tanggal yang
+  // sama dengan pesan yang jelas, bukan ke daftar lapangan tanpa konteks.
+  searchParams: Promise<{ diambil?: string; tanggal?: string }>
 }
 
 // `fetchPublicConfig` memakai `cache: 'no-store'` (server_time berubah tiap
@@ -28,8 +32,10 @@ export async function generateMetadata({ params }: CourtDetailPageProps): Promis
 
 export default async function CourtDetailPage({
   params,
+  searchParams,
 }: CourtDetailPageProps): Promise<ReactNode> {
   const { kode } = await params
+  const { diambil, tanggal } = await searchParams
   const [court, config] = await Promise.all([findCourtByCode(kode), fetchPublicConfig()])
   if (!court) notFound()
 
@@ -105,6 +111,12 @@ export default async function CourtDetailPage({
             courtId={court.id}
             horizonDays={config.booking_horizon_days}
             serverTime={config.server_time}
+            minSlotsPerBooking={court.min_slots_per_booking}
+            maxSlotsPerBooking={court.max_slots_per_booking}
+            slotDurationMinutes={court.slot_duration_minutes}
+            requireContiguousSlots={config.require_contiguous_slots}
+            slotConflictNotice={diambil === '1'}
+            {...(tanggal ? { initialDate: tanggal } : {})}
           />
         </div>
       </section>

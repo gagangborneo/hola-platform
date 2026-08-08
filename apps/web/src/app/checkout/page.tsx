@@ -28,6 +28,7 @@ export default async function CheckoutPage({
         <div className="mt-8">
           <CheckoutForm
             courtId={court.id}
+            courtCode={court.code}
             startsAtList={slots.split(',')}
             limits={[
               {
