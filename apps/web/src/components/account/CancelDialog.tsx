@@ -4,6 +4,7 @@ import { useMutation } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { apiClient } from '../../lib/api-client.ts'
+import { displayErrorMessage } from '../../lib/error-message.ts'
 import { formatRupiah } from '../../lib/format.ts'
 import { Button } from '../ui/button.tsx'
 import {
@@ -67,7 +68,11 @@ export function CancelDialog({
       return response.json()
     },
     onSuccess: onCancelled,
-    onError: (mutationError: Error) => setError(mutationError.message),
+    // I3: `HolaApiError.message` sudah berbahasa Indonesia dan aman
+    // ditampilkan — error lain (mis. jaringan putus, `TypeError: Failed to
+    // fetch`) tidak boleh bocor ke UI dalam bahasa Inggris.
+    onError: (mutationError: Error) =>
+      setError(displayErrorMessage(mutationError, 'Pembatalan gagal. Coba lagi.')),
   })
 
   return (

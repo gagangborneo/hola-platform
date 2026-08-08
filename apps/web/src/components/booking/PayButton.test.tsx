@@ -153,4 +153,14 @@ describe('PayButton', () => {
 
     expect(await screen.findByText(/Halaman pembayaran tidak dapat dibuka/)).toBeDefined()
   })
+
+  it('I3: kegagalan jaringan (bukan HolaApiError) menampilkan fallback Indonesia, bukan teks Inggris mentah', async () => {
+    paymentsPost.mockRejectedValue(new TypeError('Failed to fetch'))
+
+    render(<PayButton bookingId="booking-1" midtransClientKey="client-key" />, { wrapper })
+    await userEvent.click(screen.getByRole('button', { name: /Bayar sekarang/ }))
+
+    expect(await screen.findByText('Pembayaran gagal disiapkan. Coba lagi.')).toBeDefined()
+    expect(screen.queryByText('Failed to fetch')).toBeNull()
+  })
 })

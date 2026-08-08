@@ -7,6 +7,7 @@ import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { apiClient } from '../../lib/api-client.ts'
 import { env } from '../../lib/env.ts'
+import { displayErrorMessage } from '../../lib/error-message.ts'
 import { MIDTRANS_ORIGIN } from '../../lib/security-headers.ts'
 import { Button } from '../ui/button.tsx'
 
@@ -77,7 +78,11 @@ export function PayButton({ bookingId, midtransClientKey }: PayButtonProps): Rea
         onClose: () => router.push(statusPath),
       })
     },
-    onError: (mutationError: Error) => setError(mutationError.message),
+    // I3: `HolaApiError.message` sudah berbahasa Indonesia dan aman
+    // ditampilkan — error lain (mis. jaringan putus, `TypeError: Failed to
+    // fetch`) tidak boleh bocor ke UI dalam bahasa Inggris.
+    onError: (mutationError: Error) =>
+      setError(displayErrorMessage(mutationError, 'Pembayaran gagal disiapkan. Coba lagi.')),
   })
 
   return (

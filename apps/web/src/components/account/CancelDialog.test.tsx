@@ -1,3 +1,4 @@
+import { HolaApiError } from '@hola/api-client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -189,7 +190,15 @@ describe('CancelDialog', () => {
   })
 
   it('menampilkan pesan error dari HolaApiError alih-alih diam saat pembatalan gagal', async () => {
-    bookingsCancelPost.mockRejectedValue(new Error('Booking sudah dibatalkan sebelumnya.'))
+    bookingsCancelPost.mockRejectedValue(
+      new HolaApiError({
+        status: 409,
+        code: 'ALREADY_CANCELLED',
+        message: 'Booking sudah dibatalkan sebelumnya.',
+        details: undefined,
+        requestId: undefined,
+      }),
+    )
 
     render(
       <CancelDialog
@@ -207,5 +216,27 @@ describe('CancelDialog', () => {
     await userEvent.click(screen.getByRole('button', { name: /Ya, batalkan booking/ }))
 
     expect(await screen.findByText('Booking sudah dibatalkan sebelumnya.')).toBeDefined()
+  })
+
+  it('I3: kegagalan jaringan (bukan HolaApiError) menampilkan fallback Indonesia, bukan teks Inggris mentah', async () => {
+    bookingsCancelPost.mockRejectedValue(new TypeError('Failed to fetch'))
+
+    render(
+      <CancelDialog
+        bookingId="booking-1"
+        refundEstimateAmount={150000}
+        policyApplied="option_b_50_percent"
+        cancellationPolicyText={null}
+        onCancelled={vi.fn()}
+      />,
+      { wrapper },
+    )
+
+    await openDialog()
+    await userEvent.type(screen.getByLabelText('Alasan pembatalan'), 'Ganti rencana')
+    await userEvent.click(screen.getByRole('button', { name: /Ya, batalkan booking/ }))
+
+    expect(await screen.findByText('Pembatalan gagal. Coba lagi.')).toBeDefined()
+    expect(screen.queryByText('Failed to fetch')).toBeNull()
   })
 })
