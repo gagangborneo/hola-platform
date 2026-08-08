@@ -8,10 +8,21 @@ import { defineConfig } from 'vitest/config'
 // warning). .tsx implies JSX implies (usually) a DOM, so it gets happy-dom;
 // .ts stays on node. Escape hatch: a .ts test that genuinely needs a DOM adds
 // `// @vitest-environment happy-dom` as the first line of that file.
+// Pinned away from the machine's default zone on purpose: this repo's dev/CI
+// hosts default to Asia/Makassar (WITA, UTC+8), which is exactly the zone
+// `formatTimeWita`/`formatDateWita` hardcode as their `timeZone` option. If a
+// change ever dropped that option, `Intl.DateTimeFormat` would silently fall
+// back to the environment's local zone and, on a UTC+8 runner, produce the
+// same output as the pinned-timezone code path — the regression would pass
+// unnoticed. Setting TZ to a zone several hours off UTC+8 for both projects
+// makes that class of regression fail loudly instead.
+const TZ = 'America/New_York'
+
 export default defineConfig({
   plugins: [react()],
   oxc: { jsx: { runtime: 'automatic' } },
   test: {
+    env: { TZ },
     projects: [
       {
         extends: true,
@@ -19,6 +30,7 @@ export default defineConfig({
           name: 'node',
           environment: 'node',
           globals: true,
+          env: { TZ },
           include: ['src/**/*.{test,spec}.ts'],
         },
       },
@@ -28,6 +40,7 @@ export default defineConfig({
           name: 'components',
           environment: 'happy-dom',
           globals: true,
+          env: { TZ },
           include: ['src/**/*.{test,spec}.tsx'],
         },
       },
