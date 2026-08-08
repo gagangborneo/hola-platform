@@ -31,6 +31,12 @@ const nextConfig: NextConfig = {
   },
   poweredByHeader: false,
   reactStrictMode: true,
+  images: {
+    remotePatterns: [
+      { protocol: 'https', hostname: 'media.hola.id' },
+      { protocol: 'http', hostname: 'localhost', port: '9000' },
+    ],
+  },
   env: {
     NEXT_PUBLIC_SENTRY_RELEASE: release,
   },
@@ -42,6 +48,7 @@ const nextConfig: NextConfig = {
           apiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL,
           isDevelopment: process.env.NODE_ENV === 'development',
           sentryDsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+          midtransIsProduction: process.env.NEXT_PUBLIC_MIDTRANS_IS_PRODUCTION === 'true',
         }),
       },
     ]

@@ -23,6 +23,11 @@ export const webEnvSchema = z.object({
   API_BASE_URL_INTERNAL: z.url().optional(),
   NEXT_PUBLIC_WEB_BASE_URL: z.url(),
   NEXT_PUBLIC_MEDIA_BASE_URL: z.url(),
+  /**
+   * Wajib sama dengan mode Midtrans di API. Nilainya membentuk CSP saat build
+   * sekaligus memilih URL `snap.js`; kalau berbeda, popup Snap terblokir.
+   */
+  NEXT_PUBLIC_MIDTRANS_IS_PRODUCTION: z.enum(['true', 'false']).default('false'),
   NEXT_PUBLIC_SENTRY_DSN: z.string().optional(),
   /** Build-time saja: upload source map. */
   SENTRY_AUTH_TOKEN: z.string().optional(),
