@@ -55,6 +55,9 @@ describe('AccountSidebar', () => {
     // Hanya menu yang halamannya sudah ada yang jadi tautan.
     expect(links.map((link) => link.getAttribute('href'))).toEqual([
       '/akun/booking',
+      '/akun/profil',
+      '/akun/notifikasi',
+      '/akun/keamanan',
       '/jam-operasional',
     ])
     expect(within(desktopMenu).getAllByText('Segera').length).toBeGreaterThan(0)

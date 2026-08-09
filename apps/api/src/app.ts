@@ -26,6 +26,7 @@ import { mediaRoutes } from './modules/media/media.routes.ts'
 import { notificationRoutes } from './modules/notifications/notification.routes.ts'
 import { paymentsRoutes } from './modules/payments/payments.routes.ts'
 import { priceRulesRoutes } from './modules/pricing/price-rules.routes.ts'
+import { profileRoutes } from './modules/profile/profile.routes.ts'
 import { promosRoutes } from './modules/promos/promos.routes.ts'
 import { refundsRoutes } from './modules/refunds/refunds.routes.ts'
 import { slotClaimsRoutes } from './modules/slots/slot-claims.routes.ts'
@@ -134,6 +135,7 @@ export function createApp() {
     .route(API_PREFIX, adminUsersRoutes)
     .route(API_PREFIX, adminSystemRoutes)
     .route(API_PREFIX, notificationRoutes)
+    .route(API_PREFIX, profileRoutes)
     .route(API_PREFIX, paymentsRoutes)
     .route(API_PREFIX, refundsRoutes)
     .route(API_PREFIX, mediaRoutes)

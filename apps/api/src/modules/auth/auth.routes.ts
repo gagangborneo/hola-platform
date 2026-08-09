@@ -215,6 +215,19 @@ function sessionData(
   }
 }
 
+registerGuardedRoute('POST', `${AUTH_ROUTE_PREFIX}/logout`)
+registerGuardedRoute('POST', `${AUTH_ROUTE_PREFIX}/logout-all`)
+registerGuardedRoute('GET', `${AUTH_ROUTE_PREFIX}/sessions`)
+registerGuardedRoute('DELETE', `${AUTH_ROUTE_PREFIX}/sessions/:id`)
+registerGuardedRoute('POST', `${AUTH_ROUTE_PREFIX}/password/change`)
+registerGuardedRoute('POST', `${AUTH_ROUTE_PREFIX}/email/verify/request`)
+
+/**
+ * SEMUA route dirantai ke satu ekspresi. Route yang dipasang terpisah
+ * (`authRoutes.post(...)` sebagai statement) tetap jalan saat runtime, tetapi
+ * tipenya TIDAK ikut ke `AppType` — dan client typed di `packages/api-client`
+ * lalu kehilangan endpoint itu tanpa satu pun error di apps/api.
+ */
 export const authRoutes = new Hono<{ Variables: Variables }>()
   .post(
     '/auth/register',
@@ -310,99 +323,89 @@ export const authRoutes = new Hono<{ Variables: Variables }>()
     await verifyEmail({ ...c.get('core'), now: c.get('now') }, c.req.valid('json').token)
     return c.body(null, 204)
   })
-
-registerGuardedRoute('POST', `${AUTH_ROUTE_PREFIX}/logout`)
-registerGuardedRoute('POST', `${AUTH_ROUTE_PREFIX}/logout-all`)
-registerGuardedRoute('GET', `${AUTH_ROUTE_PREFIX}/sessions`)
-registerGuardedRoute('DELETE', `${AUTH_ROUTE_PREFIX}/sessions/:id`)
-registerGuardedRoute('POST', `${AUTH_ROUTE_PREFIX}/password/change`)
-registerGuardedRoute('POST', `${AUTH_ROUTE_PREFIX}/email/verify/request`)
-
-authRoutes.post('/auth/logout', authenticate, requireRole(AUTHENTICATED_ROLES), async (c) => {
-  const cookieToken = getCookie(c, REFRESH_COOKIE)
-  if (cookieToken) assertCookieOrigin(c)
-  const body = await parseRefreshBody(c)
-  await logout(
-    { ...c.get('core'), now: c.get('now') },
-    viewer(c),
-    accessClaims(c),
-    cookieToken ?? body.refresh_token,
-    { ...requestContext(c), requestId: c.get('requestId') },
-  )
-  clearRefreshCookie(c, c.get('core').env.COOKIE_DOMAIN)
-  return c.body(null, 204)
-})
-
-authRoutes.post('/auth/logout-all', authenticate, requireRole(AUTHENTICATED_ROLES), async (c) => {
-  await logoutAll({ ...c.get('core'), now: c.get('now') }, viewer(c), {
-    ...requestContext(c),
-    requestId: c.get('requestId'),
-  })
-  clearRefreshCookie(c, c.get('core').env.COOKIE_DOMAIN)
-  return c.body(null, 204)
-})
-
-authRoutes.get('/auth/sessions', authenticate, requireRole(AUTHENTICATED_ROLES), async (c) => {
-  const sessions = await listSessions({ ...c.get('core'), now: c.get('now') }, viewer(c))
-  return c.json(ok(sessions.map(serializeSession)))
-})
-
-authRoutes.delete(
-  '/auth/sessions/:id',
-  authenticate,
-  requireRole(AUTHENTICATED_ROLES),
-  zValidator('param', revokeSessionParam, validationHook),
-  async (c) => {
-    await revokeSession(
-      { ...c.get('core'), now: c.get('now') },
-      viewer(c),
-      c.req.valid('param').id,
-      { ...requestContext(c), requestId: c.get('requestId') },
-    )
-    return c.body(null, 204)
-  },
-)
-
-authRoutes.post(
-  '/auth/password/change',
-  authenticate,
-  requireRole(AUTHENTICATED_ROLES),
-  zValidator('json', changePasswordSchema, validationHook),
-  async (c) => {
-    const input = c.req.valid('json')
+  .post('/auth/logout', authenticate, requireRole(AUTHENTICATED_ROLES), async (c) => {
     const cookieToken = getCookie(c, REFRESH_COOKIE)
     if (cookieToken) assertCookieOrigin(c)
-    const data = await changePassword(
+    const body = await parseRefreshBody(c)
+    await logout(
       { ...c.get('core'), now: c.get('now') },
       viewer(c),
-      input,
-      requestContext(c),
+      accessClaims(c),
+      cookieToken ?? body.refresh_token,
+      { ...requestContext(c), requestId: c.get('requestId') },
     )
-    const mobile = isMobile(c)
-    if (!mobile)
-      setRefreshCookie(
-        c,
-        data.refreshToken,
-        c.get('core').env.REFRESH_TOKEN_TTL_DAYS,
-        c.get('core').env.COOKIE_DOMAIN,
+    clearRefreshCookie(c, c.get('core').env.COOKIE_DOMAIN)
+    return c.body(null, 204)
+  })
+  .post('/auth/logout-all', authenticate, requireRole(AUTHENTICATED_ROLES), async (c) => {
+    await logoutAll({ ...c.get('core'), now: c.get('now') }, viewer(c), {
+      ...requestContext(c),
+      requestId: c.get('requestId'),
+    })
+    clearRefreshCookie(c, c.get('core').env.COOKIE_DOMAIN)
+    return c.body(null, 204)
+  })
+  .get('/auth/sessions', authenticate, requireRole(AUTHENTICATED_ROLES), async (c) => {
+    const sessions = await listSessions({ ...c.get('core'), now: c.get('now') }, viewer(c))
+    return c.json(ok(sessions.map(serializeSession)))
+  })
+  .delete(
+    '/auth/sessions/:id',
+    authenticate,
+    requireRole(AUTHENTICATED_ROLES),
+    zValidator('param', revokeSessionParam, validationHook),
+    async (c) => {
+      await revokeSession(
+        { ...c.get('core'), now: c.get('now') },
+        viewer(c),
+        c.req.valid('param').id,
+        { ...requestContext(c), requestId: c.get('requestId') },
       )
-    return c.json(
-      ok({
-        access_token: data.accessToken,
-        expires_in: data.expiresIn,
-        ...(mobile ? { refresh_token: data.refreshToken } : {}),
-      }),
-    )
-  },
-)
-
-authRoutes.post(
-  '/auth/email/verify/request',
-  authenticate,
-  requireRole(AUTHENTICATED_ROLES),
-  zValidator('json', requestEmailVerificationSchema, validationHook),
-  async (c) => {
-    const data = await requestEmailVerification({ ...c.get('core'), now: c.get('now') }, viewer(c))
-    return c.json(ok(data))
-  },
-)
+      return c.body(null, 204)
+    },
+  )
+  .post(
+    '/auth/password/change',
+    authenticate,
+    requireRole(AUTHENTICATED_ROLES),
+    zValidator('json', changePasswordSchema, validationHook),
+    async (c) => {
+      const input = c.req.valid('json')
+      const cookieToken = getCookie(c, REFRESH_COOKIE)
+      if (cookieToken) assertCookieOrigin(c)
+      const data = await changePassword(
+        { ...c.get('core'), now: c.get('now') },
+        viewer(c),
+        input,
+        requestContext(c),
+      )
+      const mobile = isMobile(c)
+      if (!mobile)
+        setRefreshCookie(
+          c,
+          data.refreshToken,
+          c.get('core').env.REFRESH_TOKEN_TTL_DAYS,
+          c.get('core').env.COOKIE_DOMAIN,
+        )
+      return c.json(
+        ok({
+          access_token: data.accessToken,
+          expires_in: data.expiresIn,
+          ...(mobile ? { refresh_token: data.refreshToken } : {}),
+        }),
+      )
+    },
+  )
+  .post(
+    '/auth/email/verify/request',
+    authenticate,
+    requireRole(AUTHENTICATED_ROLES),
+    zValidator('json', requestEmailVerificationSchema, validationHook),
+    async (c) => {
+      const data = await requestEmailVerification(
+        { ...c.get('core'), now: c.get('now') },
+        viewer(c),
+      )
+      return c.json(ok(data))
+    },
+  )

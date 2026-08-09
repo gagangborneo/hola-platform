@@ -80,16 +80,19 @@ export const ACCOUNT_NAV: readonly AccountNavGroup[] = [
         label: 'Profil Saya',
         description: 'Nama, kontak, dan preferensi olahraga',
         icon: UserRound,
+        href: '/akun/profil',
       },
       {
         label: 'Notifikasi',
         description: 'Pengingat jadwal dan status pembayaran',
         icon: BellRing,
+        href: '/akun/notifikasi',
       },
       {
         label: 'Keamanan & Perangkat',
         description: 'Password dan perangkat yang aktif',
         icon: ShieldCheck,
+        href: '/akun/keamanan',
       },
       {
         label: 'Bantuan & Kontak',
