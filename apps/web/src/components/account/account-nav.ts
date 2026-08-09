@@ -28,8 +28,7 @@ export interface AccountNavGroup {
 /**
  * Peta menu akun pelanggan. Item tanpa `href` sengaja belum bisa diklik: ia
  * memperlihatkan arah produk (modul yang sudah direncanakan di `tasks/ROADMAP.md`
- * — pembayaran & refund, promo, event, pertandingan, poin, profil, notifikasi)
- * tanpa menjanjikan halaman yang belum dibangun.
+ * — event, pertandingan, poin) tanpa menjanjikan halaman yang belum dibangun.
  */
 export const ACCOUNT_NAV: readonly AccountNavGroup[] = [
   {
@@ -45,11 +44,13 @@ export const ACCOUNT_NAV: readonly AccountNavGroup[] = [
         label: 'Pembayaran & Refund',
         description: 'Tagihan, bukti bayar, pengembalian dana',
         icon: Wallet,
+        href: '/akun/pembayaran',
       },
       {
         label: 'Voucher & Promo',
-        description: 'Kode promo dan voucher milikmu',
+        description: 'Promo berjalan dan cara pakai kode',
         icon: TicketPercent,
+        href: '/akun/voucher',
       },
     ],
   },

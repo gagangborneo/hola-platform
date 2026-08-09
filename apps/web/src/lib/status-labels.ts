@@ -71,3 +71,51 @@ const PAYMENT_STATUS_LABEL: Record<string, string> = {
 export function paymentStatusLabel(status: string): string {
   return PAYMENT_STATUS_LABEL[status] ?? 'Status tidak dikenal'
 }
+
+const REFUND_STATUS_LABEL: Record<string, string> = {
+  requested: 'Diajukan',
+  approved: 'Disetujui',
+  processing: 'Sedang diproses',
+  completed: 'Dana sudah dikirim',
+  rejected: 'Ditolak',
+  failed: 'Gagal diproses',
+}
+
+export type RefundTone = 'progress' | 'done' | 'closed'
+
+export interface RefundStatus {
+  label: string
+  tone: RefundTone
+}
+
+/**
+ * Refund pelanggan berjalan `requested → approved → processing → completed`
+ * (refunds.service.ts), dan setiap langkah dikerjakan manusia — karena itu
+ * `tone` memisahkan "masih berjalan" dari "sudah selesai" dan "berhenti":
+ * customer yang menunggu uang kembali perlu tahu mana yang masih bergerak.
+ */
+export function refundStatusLabel(status: string): RefundStatus {
+  const label = REFUND_STATUS_LABEL[status]
+  if (label === undefined) return { label: 'Status tidak dikenal', tone: 'closed' }
+  if (status === 'completed') return { label, tone: 'done' }
+  if (status === 'rejected' || status === 'failed') return { label, tone: 'closed' }
+  return { label, tone: 'progress' }
+}
+
+const REFUND_POLICY_LABEL: Record<string, string> = {
+  option_a_no_refund: 'Tanpa pengembalian dana',
+  option_b_100_percent_minus_gateway_fee: 'Pengembalian penuh dikurangi biaya gateway',
+  option_b_50_percent: 'Pengembalian 50%',
+  option_b_no_refund_under_24h: 'Kurang dari 24 jam sebelum main — tanpa pengembalian',
+  option_c_wallet_credit: 'Dikembalikan sebagai kredit',
+  pending_payment_no_refund: 'Belum dibayar — tidak ada dana yang dikembalikan',
+}
+
+/**
+ * Kebijakan yang dipakai saat pembatalan (`policy_applied`), dipakai bersama
+ * oleh dialog pembatalan dan daftar refund supaya pembatalan yang sama tidak
+ * dijelaskan dengan dua kalimat berbeda.
+ */
+export function refundPolicyLabel(policy: string): string {
+  return REFUND_POLICY_LABEL[policy] ?? policy
+}

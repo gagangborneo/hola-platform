@@ -4,6 +4,8 @@ import {
   bookingStatusLabel,
   bookingUsageLabel,
   paymentStatusLabel,
+  refundPolicyLabel,
+  refundStatusLabel,
 } from './status-labels.ts'
 
 describe('I1: label status booking (satu sumber kebenaran lintas BookingList/BookingDetail/Receipt)', () => {
@@ -65,5 +67,41 @@ describe('I1: label status pembayaran (dipakai PaymentStatus)', () => {
 
   it('status tak dikenal tidak menampilkan kode mentah ke customer', () => {
     expect(paymentStatusLabel('sesuatu_baru')).toBe('Status tidak dikenal')
+  })
+})
+
+describe('I1: label status refund (dipakai RefundList)', () => {
+  it('setiap status refund dikenal diterjemahkan ke Bahasa Indonesia', () => {
+    expect(refundStatusLabel('requested').label).toBe('Diajukan')
+    expect(refundStatusLabel('approved').label).toBe('Disetujui')
+    expect(refundStatusLabel('processing').label).toBe('Sedang diproses')
+    expect(refundStatusLabel('completed').label).toBe('Dana sudah dikirim')
+    expect(refundStatusLabel('rejected').label).toBe('Ditolak')
+    expect(refundStatusLabel('failed').label).toBe('Gagal diproses')
+  })
+
+  it('memisahkan refund yang masih berjalan dari yang sudah berhenti', () => {
+    for (const status of ['requested', 'approved', 'processing']) {
+      expect(refundStatusLabel(status).tone).toBe('progress')
+    }
+    expect(refundStatusLabel('completed').tone).toBe('done')
+    expect(refundStatusLabel('rejected').tone).toBe('closed')
+    expect(refundStatusLabel('failed').tone).toBe('closed')
+  })
+
+  it('status tak dikenal tidak menampilkan kode mentah ke customer', () => {
+    expect(refundStatusLabel('sesuatu_baru')).toEqual({
+      label: 'Status tidak dikenal',
+      tone: 'closed',
+    })
+  })
+})
+
+describe('label kebijakan refund (dipakai CancelDialog & RefundList)', () => {
+  it('menerjemahkan kebijakan yang dipakai saat pembatalan', () => {
+    expect(refundPolicyLabel('option_b_50_percent')).toBe('Pengembalian 50%')
+    expect(refundPolicyLabel('pending_payment_no_refund')).toBe(
+      'Belum dibayar — tidak ada dana yang dikembalikan',
+    )
   })
 })

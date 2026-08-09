@@ -6,6 +6,7 @@ import { useState } from 'react'
 import { apiClient } from '../../lib/api-client.ts'
 import { displayErrorMessage } from '../../lib/error-message.ts'
 import { formatRupiah } from '../../lib/format.ts'
+import { refundPolicyLabel } from '../../lib/status-labels.ts'
 import { Button } from '../ui/button.tsx'
 import {
   Dialog,
@@ -27,15 +28,6 @@ import { Label } from '../ui/label.tsx'
 const NO_POLICY_TEXT_FALLBACK =
   'Venue belum mempublikasikan teks kebijakan pembatalan secara rinci. ' +
   'Nominal perkiraan pengembalian di atas tetap yang berlaku untuk pembatalan ini.'
-
-const POLICY_LABEL: Record<string, string> = {
-  option_a_no_refund: 'Tanpa pengembalian dana',
-  option_b_100_percent_minus_gateway_fee: 'Pengembalian penuh dikurangi biaya gateway',
-  option_b_50_percent: 'Pengembalian 50%',
-  option_b_no_refund_under_24h: 'Kurang dari 24 jam sebelum main — tanpa pengembalian',
-  option_c_wallet_credit: 'Dikembalikan sebagai kredit',
-  pending_payment_no_refund: 'Belum dibayar — tidak ada dana yang dikembalikan',
-}
 
 interface CancelDialogProps {
   bookingId: string
@@ -96,7 +88,7 @@ export function CancelDialog({
             </span>
           </div>
           <p className="mt-2 text-sm text-secondary-foreground">
-            {POLICY_LABEL[policyApplied] ?? policyApplied}
+            {refundPolicyLabel(policyApplied)}
           </p>
         </div>
 
