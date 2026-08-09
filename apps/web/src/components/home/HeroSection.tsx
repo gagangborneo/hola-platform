@@ -1,8 +1,8 @@
+import { Button } from '@hola/ui'
 import { ChevronRight } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
-import { Button } from '../ui/button.tsx'
 
 interface HeroSectionProps {
   /** Dipakai untuk strip statistik; 0 berarti data gagal dimuat sehingga angka disembunyikan. */

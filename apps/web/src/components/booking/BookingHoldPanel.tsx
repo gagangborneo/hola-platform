@@ -1,5 +1,6 @@
 'use client'
 
+import { Button } from '@hola/ui'
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
@@ -7,7 +8,6 @@ import { useCallback, useState } from 'react'
 import { apiClient } from '../../lib/api-client.ts'
 import { formatRupiah, formatTimeWita } from '../../lib/format.ts'
 import { serverTimeOffsetMs } from '../../lib/server-time.ts'
-import { Button } from '../ui/button.tsx'
 import { HoldCountdown } from './HoldCountdown.tsx'
 import { PayButton } from './PayButton.tsx'
 

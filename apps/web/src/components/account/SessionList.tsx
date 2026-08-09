@@ -1,5 +1,6 @@
 'use client'
 
+import { Button, Card, Skeleton } from '@hola/ui'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { LogOut, MonitorSmartphone, TriangleAlert } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -10,9 +11,6 @@ import { authStore } from '../../lib/auth.ts'
 import { AUTH_SESSIONS_QUERY_KEY, fetchAuthSessions } from '../../lib/auth-sessions.ts'
 import { displayErrorMessage } from '../../lib/error-message.ts'
 import { formatDateWita, formatTimeWita } from '../../lib/format.ts'
-import { Button } from '../ui/button.tsx'
-import { Card } from '../ui/card.tsx'
-import { Skeleton } from '../ui/skeleton.tsx'
 import { sessionDeviceName } from './session-device.ts'
 
 /**

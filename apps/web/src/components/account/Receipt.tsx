@@ -1,5 +1,6 @@
 'use client'
 
+import { Button } from '@hola/ui'
 import { useQuery } from '@tanstack/react-query'
 import { Download } from 'lucide-react'
 import type { ReactNode } from 'react'
@@ -11,7 +12,6 @@ import { formatDateWita, formatRupiah, formatTimeWita } from '../../lib/format.t
 import { accountDisplayName, accountIdentity } from '../../lib/session-identity.ts'
 import { bookingStatusLabel } from '../../lib/status-labels.ts'
 import { rateClassLabel } from '../booking/availability-labels.ts'
-import { Button } from '../ui/button.tsx'
 import { BookingQr } from './BookingQr.tsx'
 
 interface ReceiptProps {

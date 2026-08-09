@@ -1,10 +1,8 @@
+import { Badge, Button, Card, CardContent, CardFooter } from '@hola/ui'
 import Image from 'next/image'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { type Court, mediaUrl } from '../../lib/server-api.ts'
-import { Badge } from '../ui/badge.tsx'
-import { Button } from '../ui/button.tsx'
-import { Card, CardContent, CardFooter } from '../ui/card.tsx'
 
 interface CourtCardProps {
   court: Court

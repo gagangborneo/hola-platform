@@ -1,10 +1,10 @@
+import { Button } from '@hola/ui'
 import { MessageCircle } from 'lucide-react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { PaymentHistory } from '../../../components/account/PaymentHistory.tsx'
 import { RefundList } from '../../../components/account/RefundList.tsx'
-import { Button } from '../../../components/ui/button.tsx'
 import { fetchPublicConfig } from '../../../lib/public-config.ts'
 
 export const metadata: Metadata = { title: 'Pembayaran & refund' }

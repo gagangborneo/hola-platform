@@ -1,0 +1,47 @@
+/**
+ * Kontrak token @hola/ui.
+ *
+ * Berkas ini TIDAK menetapkan warna. Ia hanya memetakan nama token milik desain
+ * (`--primary`, `--muted-foreground`, …) ke utilitas Tailwind (`bg-primary`,
+ * `text-muted-foreground`, …). Nilainya disediakan masing-masing aplikasi:
+ * apps/web memakai palet brand, apps/admin memakai palet back-office.
+ *
+ * Pemisahan ini yang membuat satu set komponen bisa dipakai dua aplikasi tanpa
+ * salah satunya tampak seperti aplikasi yang lain — komponen menulis peran
+ * ("permukaan kartu", "teks redup"), bukan warna.
+ *
+ * Setiap aplikasi WAJIB mendefinisikan seluruh nama di bawah ini. Token yang
+ * tidak terdefinisi tidak error, ia hanya membuat warnanya hilang — jadi
+ * kelengkapannya dijaga oleh tes token di masing-masing aplikasi.
+ */
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-input-background: var(--input-background);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}

@@ -1,9 +1,9 @@
 'use client'
 
+import { cn } from '@hola/ui'
 import { Check, Copy } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
-import { cn } from '../../lib/cn.ts'
 
 interface CopyButtonProps {
   value: string

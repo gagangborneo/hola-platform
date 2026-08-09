@@ -3,7 +3,7 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { XIcon } from 'lucide-react'
 import type { ComponentProps, ReactNode } from 'react'
-import { cn } from '../../lib/cn.ts'
+import { cn } from '../lib/cn.ts'
 
 export function Dialog({ ...props }: ComponentProps<typeof DialogPrimitive.Root>): ReactNode {
   return <DialogPrimitive.Root data-slot="dialog" {...props} />

@@ -1,5 +1,6 @@
 'use client'
 
+import { Badge, type BadgeProps, Button, Card, Skeleton } from '@hola/ui'
 import { useQuery } from '@tanstack/react-query'
 import { Undo2 } from 'lucide-react'
 import type { ReactNode } from 'react'
@@ -7,10 +8,6 @@ import { apiClient } from '../../lib/api-client.ts'
 import { formatDateWita, formatRupiah, formatTimeWita } from '../../lib/format.ts'
 import { parseRefundList, refundChannelLabel } from '../../lib/refunds.ts'
 import { refundPolicyLabel, refundStatusLabel } from '../../lib/status-labels.ts'
-import { Badge, type BadgeProps } from '../ui/badge.tsx'
-import { Button } from '../ui/button.tsx'
-import { Card } from '../ui/card.tsx'
-import { Skeleton } from '../ui/skeleton.tsx'
 
 /** Cukup untuk seluruh riwayat refund satu pelanggan; batas per_page API 100. */
 const PAGE_SIZE = '50'

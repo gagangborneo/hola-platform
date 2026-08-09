@@ -1,15 +1,12 @@
 'use client'
 
+import { Badge, Button, Card, Skeleton } from '@hola/ui'
 import { useQuery } from '@tanstack/react-query'
 import { CalendarClock, Sparkles, TicketPercent } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { apiClient } from '../../lib/api-client.ts'
 import { formatDateWita, formatRupiah } from '../../lib/format.ts'
 import { EmptyState } from '../common/EmptyState.tsx'
-import { Badge } from '../ui/badge.tsx'
-import { Button } from '../ui/button.tsx'
-import { Card } from '../ui/card.tsx'
-import { Skeleton } from '../ui/skeleton.tsx'
 import { promoAppliesToLabel, promoQuotaLabel, promoValueLabel } from './promo-labels.ts'
 
 function PromoSkeleton(): ReactNode {

@@ -1,9 +1,9 @@
 'use client'
 
+import { Button } from '@hola/ui'
 import { useRouter } from 'next/navigation'
 import type { ReactNode } from 'react'
 import { useCallback, useMemo, useState } from 'react'
-import { Button } from '../ui/button.tsx'
 import { AvailabilityGrid, type AvailabilitySlot } from './AvailabilityGrid.tsx'
 import { type CourtLimits, validateSelection } from './checkout-validation.ts'
 

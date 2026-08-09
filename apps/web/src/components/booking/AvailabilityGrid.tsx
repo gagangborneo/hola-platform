@@ -1,5 +1,6 @@
 'use client'
 
+import { Badge, Button, cn, Skeleton } from '@hola/ui'
 import { useQuery } from '@tanstack/react-query'
 import type { InferResponseType } from 'hono/client'
 import { RefreshCw } from 'lucide-react'
@@ -7,12 +8,8 @@ import type React from 'react'
 import type { ReactNode } from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import { apiClient } from '../../lib/api-client.ts'
-import { cn } from '../../lib/cn.ts'
 import { formatRupiah, formatTimeWita, witaDateKey } from '../../lib/format.ts'
 import { EmptyState } from '../common/EmptyState.tsx'
-import { Badge } from '../ui/badge.tsx'
-import { Button } from '../ui/button.tsx'
-import { Skeleton } from '../ui/skeleton.tsx'
 import { isBeyondHorizon, rateClassLabel, unavailableLabel } from './availability-labels.ts'
 
 type AvailabilityResponse = InferResponseType<

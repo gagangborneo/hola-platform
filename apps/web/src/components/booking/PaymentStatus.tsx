@@ -1,12 +1,12 @@
 'use client'
 
+import { Button } from '@hola/ui'
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import { apiClient } from '../../lib/api-client.ts'
 import { paymentStatusLabel } from '../../lib/status-labels.ts'
-import { Button } from '../ui/button.tsx'
 
 const POLL_INTERVAL_MS = 3_000
 const POLL_LIMIT_MS = 5 * 60_000

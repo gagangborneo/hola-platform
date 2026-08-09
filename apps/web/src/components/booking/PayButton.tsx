@@ -1,5 +1,6 @@
 'use client'
 
+import { Button } from '@hola/ui'
 import { useMutation } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import Script from 'next/script'
@@ -9,7 +10,6 @@ import { apiClient } from '../../lib/api-client.ts'
 import { env } from '../../lib/env.ts'
 import { displayErrorMessage } from '../../lib/error-message.ts'
 import { MIDTRANS_ORIGIN } from '../../lib/security-headers.ts'
-import { Button } from '../ui/button.tsx'
 
 interface SnapCallbacks {
   onSuccess: () => void

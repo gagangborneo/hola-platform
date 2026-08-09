@@ -1,10 +1,10 @@
+import { Button } from '@hola/ui'
 import { CalendarPlus, MessageCircle } from 'lucide-react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { Suspense } from 'react'
 import { BookingList } from '../../../components/account/BookingList.tsx'
-import { Button } from '../../../components/ui/button.tsx'
 
 export const metadata: Metadata = { title: 'Booking saya' }
 

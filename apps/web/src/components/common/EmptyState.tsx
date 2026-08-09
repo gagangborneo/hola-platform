@@ -1,6 +1,6 @@
+import { Button } from '@hola/ui'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
-import { Button } from '../ui/button.tsx'
 
 interface EmptyStateProps {
   title: string

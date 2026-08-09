@@ -1,5 +1,6 @@
 'use client'
 
+import { Badge, Button } from '@hola/ui'
 import { useMutation } from '@tanstack/react-query'
 import { BadgeCheck, MailWarning } from 'lucide-react'
 import type { ReactNode } from 'react'
@@ -9,8 +10,6 @@ import { displayErrorMessage } from '../../lib/error-message.ts'
 import { formatDateWita } from '../../lib/format.ts'
 import type { MyProfile } from '../../lib/my-profile.ts'
 import { accountInitials } from '../../lib/session-identity.ts'
-import { Badge } from '../ui/badge.tsx'
-import { Button } from '../ui/button.tsx'
 
 const ROLE_LABEL: Record<string, string> = {
   customer: 'Pelanggan',

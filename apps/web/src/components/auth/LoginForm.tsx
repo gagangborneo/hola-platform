@@ -1,15 +1,13 @@
 'use client'
 
 import { loginSchema } from '@hola/shared'
+import { Button, Input, Label } from '@hola/ui'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import type { FormEvent, ReactNode } from 'react'
 import { useState } from 'react'
 import { apiClient } from '../../lib/api-client.ts'
 import { authStore, parseAuthSession } from '../../lib/auth.ts'
-import { Button } from '../ui/button.tsx'
-import { Input } from '../ui/input.tsx'
-import { Label } from '../ui/label.tsx'
 import { formErrorMessage, validationErrorMessage } from './auth-form.ts'
 
 function formValue(formData: FormData, key: string): string {

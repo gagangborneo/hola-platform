@@ -1,11 +1,11 @@
 'use client'
 
+import { Button } from '@hola/ui'
 import { ChevronRight, UserRound } from 'lucide-react'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { useAuthSession } from '../../lib/auth.ts'
 import { accountIdentityLabel, accountInitials } from '../../lib/session-identity.ts'
-import { Button } from '../ui/button.tsx'
 
 /**
  * Slot kanan header: tombol "Masuk" untuk tamu, identitas akun untuk yang sudah

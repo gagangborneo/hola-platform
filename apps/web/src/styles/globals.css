@@ -1,2 +1,7 @@
 @import 'tailwindcss';
 @import './theme.css';
+
+/* Komponen bersama tinggal di luar pohon aplikasi ini, dan Tailwind tidak
+   memindai node_modules. Tanpa baris ini, kelas yang hanya muncul di @hola/ui
+   tidak akan pernah dibangkitkan. */
+@source '../../../../packages/ui/src';

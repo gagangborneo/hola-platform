@@ -1,3 +1,4 @@
+import { Button } from '@hola/ui'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { CourtCard } from '../../components/court/CourtCard.tsx'
@@ -6,7 +7,6 @@ import { CtaBanner } from '../../components/home/CtaBanner.tsx'
 import { FeaturesSection } from '../../components/home/FeaturesSection.tsx'
 import { HeroSection } from '../../components/home/HeroSection.tsx'
 import { HowItWorksSection } from '../../components/home/HowItWorksSection.tsx'
-import { Button } from '../../components/ui/button.tsx'
 import { fetchCourts, fetchSports } from '../../lib/server-api.ts'
 
 export default async function HomePage(): Promise<ReactNode> {

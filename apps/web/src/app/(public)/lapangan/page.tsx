@@ -1,8 +1,8 @@
+import { Button } from '@hola/ui'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { CourtCard } from '../../../components/court/CourtCard.tsx'
-import { Button } from '../../../components/ui/button.tsx'
 import { fetchCourts, fetchSports } from '../../../lib/server-api.ts'
 
 export const metadata: Metadata = {

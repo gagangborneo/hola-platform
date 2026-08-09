@@ -1,5 +1,16 @@
 'use client'
 
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  Input,
+  Label,
+} from '@hola/ui'
 import { useMutation } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
@@ -7,17 +18,6 @@ import { apiClient } from '../../lib/api-client.ts'
 import { displayErrorMessage } from '../../lib/error-message.ts'
 import { formatRupiah } from '../../lib/format.ts'
 import { refundPolicyLabel } from '../../lib/status-labels.ts'
-import { Button } from '../ui/button.tsx'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '../ui/dialog.tsx'
-import { Input } from '../ui/input.tsx'
-import { Label } from '../ui/label.tsx'
 
 // BR-B-71 mewajibkan teks kebijakan venue selalu terlihat sebelum konfirmasi —
 // `cancellation_policy_text` boleh null (K-08 belum dikirim klien), tapi slot

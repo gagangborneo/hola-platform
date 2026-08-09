@@ -1,9 +1,9 @@
+import { Button } from '@hola/ui'
 import { CalendarPlus, TicketPercent } from 'lucide-react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { PromoList } from '../../../components/account/PromoList.tsx'
-import { Button } from '../../../components/ui/button.tsx'
 
 export const metadata: Metadata = { title: 'Voucher & promo' }
 

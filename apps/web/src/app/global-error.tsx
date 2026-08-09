@@ -1,9 +1,9 @@
 'use client'
 
+import { Button } from '@hola/ui'
 import * as Sentry from '@sentry/nextjs'
 import type { ReactNode } from 'react'
 import { useEffect } from 'react'
-import { Button } from '../components/ui/button.tsx'
 
 interface GlobalErrorProps {
   error: Error & { digest?: string }

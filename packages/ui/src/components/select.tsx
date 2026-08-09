@@ -3,7 +3,7 @@
 import * as SelectPrimitive from '@radix-ui/react-select'
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from 'lucide-react'
 import type { ComponentProps, ReactNode } from 'react'
-import { cn } from '../../lib/cn.ts'
+import { cn } from '../lib/cn.ts'
 
 export function Select({ ...props }: ComponentProps<typeof SelectPrimitive.Root>): ReactNode {
   return <SelectPrimitive.Root data-slot="select" {...props} />

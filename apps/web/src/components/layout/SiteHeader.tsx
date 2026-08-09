@@ -1,7 +1,7 @@
+import { Button } from '@hola/ui'
 import Image from 'next/image'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
-import { Button } from '../ui/button.tsx'
 import { HeaderAccountButton } from './HeaderAccountButton.tsx'
 
 export function SiteHeader(): ReactNode {

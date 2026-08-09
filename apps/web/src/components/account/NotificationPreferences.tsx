@@ -1,15 +1,13 @@
 'use client'
 
 import type { NotificationPrefs } from '@hola/shared'
+import { Checkbox, Label, Skeleton } from '@hola/ui'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { apiClient } from '../../lib/api-client.ts'
 import { displayErrorMessage } from '../../lib/error-message.ts'
 import { fetchMyProfile, MY_PROFILE_QUERY_KEY } from '../../lib/my-profile.ts'
-import { Checkbox } from '../ui/checkbox.tsx'
-import { Label } from '../ui/label.tsx'
-import { Skeleton } from '../ui/skeleton.tsx'
 
 interface ChannelCopy {
   key: keyof NotificationPrefs

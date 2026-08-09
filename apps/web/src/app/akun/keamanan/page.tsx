@@ -1,9 +1,9 @@
+import { Button } from '@hola/ui'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { PasswordChangeForm } from '../../../components/account/PasswordChangeForm.tsx'
 import { SessionList } from '../../../components/account/SessionList.tsx'
-import { Button } from '../../../components/ui/button.tsx'
 
 export const metadata: Metadata = { title: 'Keamanan & perangkat' }
 

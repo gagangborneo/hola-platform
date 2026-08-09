@@ -1,6 +1,7 @@
 'use client'
 
 import { changePasswordSchema } from '@hola/shared'
+import { Button, Input, Label } from '@hola/ui'
 import { useQueryClient } from '@tanstack/react-query'
 import type { FormEvent, ReactNode } from 'react'
 import { useState } from 'react'
@@ -9,9 +10,6 @@ import { authStore, useAuthSession } from '../../lib/auth.ts'
 import { AUTH_SESSIONS_QUERY_KEY } from '../../lib/auth-sessions.ts'
 import { displayErrorMessage } from '../../lib/error-message.ts'
 import { validationErrorMessage } from '../auth/auth-form.ts'
-import { Button } from '../ui/button.tsx'
-import { Input } from '../ui/input.tsx'
-import { Label } from '../ui/label.tsx'
 
 function formValue(formData: FormData, key: string): string {
   const value = formData.get(key)

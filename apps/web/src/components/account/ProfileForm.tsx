@@ -6,18 +6,14 @@ import {
   type UpdateMyProfileInput,
   updateMyProfileSchema,
 } from '@hola/shared'
+import { Button, cn, Input, Label, Skeleton } from '@hola/ui'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { FormEvent, ReactNode, SelectHTMLAttributes } from 'react'
 import { useState } from 'react'
 import { apiClient } from '../../lib/api-client.ts'
-import { cn } from '../../lib/cn.ts'
 import { displayErrorMessage } from '../../lib/error-message.ts'
 import { fetchMyProfile, MY_PROFILE_QUERY_KEY, type MyProfile } from '../../lib/my-profile.ts'
 import { validationErrorMessage } from '../auth/auth-form.ts'
-import { Button } from '../ui/button.tsx'
-import { Input } from '../ui/input.tsx'
-import { Label } from '../ui/label.tsx'
-import { Skeleton } from '../ui/skeleton.tsx'
 import { AccountIdentityCard } from './AccountIdentityCard.tsx'
 
 const GENDER_LABEL: Record<(typeof GENDER_VALUES)[number], string> = {

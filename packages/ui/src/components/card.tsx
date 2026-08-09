@@ -1,5 +1,5 @@
 import type { HTMLAttributes, ReactNode } from 'react'
-import { cn } from '../../lib/cn.ts'
+import { cn } from '../lib/cn.ts'
 
 export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>): ReactNode {
   return (

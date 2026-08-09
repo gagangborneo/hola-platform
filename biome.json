@@ -65,6 +65,14 @@
     },
     "rules": {
       "preset": "recommended",
+      "a11y": {
+        "noLabelWithoutControl": {
+          "level": "error",
+          "options": {
+            "inputComponents": ["Input", "NativeSelect", "Textarea", "Checkbox", "SelectTrigger"]
+          }
+        }
+      },
       "suspicious": {
         "noExplicitAny": "error"
       },

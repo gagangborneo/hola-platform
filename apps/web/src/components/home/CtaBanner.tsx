@@ -1,7 +1,7 @@
+import { Button } from '@hola/ui'
 import { ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
-import { Button } from '../ui/button.tsx'
 
 /** Banner penutup "SIAP MAIN PADEL?" mengikuti referensi desain di `references/web`. */
 export function CtaBanner(): ReactNode {

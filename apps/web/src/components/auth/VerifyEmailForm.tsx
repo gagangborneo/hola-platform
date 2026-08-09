@@ -1,11 +1,11 @@
 'use client'
 
 import { verifyEmailSchema } from '@hola/shared'
+import { Button } from '@hola/ui'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import { apiClient } from '../../lib/api-client.ts'
-import { Button } from '../ui/button.tsx'
 import { formErrorMessage, validationErrorMessage } from './auth-form.ts'
 
 export function VerifyEmailForm(): ReactNode {

@@ -1,13 +1,11 @@
 'use client'
 
 import { resetPasswordSchema } from '@hola/shared'
+import { Button, Input, Label } from '@hola/ui'
 import Link from 'next/link'
 import type { FormEvent, ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import { apiClient } from '../../lib/api-client.ts'
-import { Button } from '../ui/button.tsx'
-import { Input } from '../ui/input.tsx'
-import { Label } from '../ui/label.tsx'
 import { formErrorMessage, validationErrorMessage } from './auth-form.ts'
 
 export function ResetPasswordForm(): ReactNode {

@@ -1,5 +1,6 @@
 'use client'
 
+import { Button, Skeleton } from '@hola/ui'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { CalendarDays, Clock3, Download, FileText, MapPin, UserRound } from 'lucide-react'
 import Link from 'next/link'
@@ -13,8 +14,6 @@ import { accountDisplayName, accountIdentity } from '../../lib/session-identity.
 import { bookingChannelLabel } from '../../lib/status-labels.ts'
 import { rateClassLabel } from '../booking/availability-labels.ts'
 import { CopyButton } from '../common/CopyButton.tsx'
-import { Button } from '../ui/button.tsx'
-import { Skeleton } from '../ui/skeleton.tsx'
 import { BookingQr } from './BookingQr.tsx'
 import { BookingStatusBadges } from './BookingStatusBadges.tsx'
 import { CancelDialog } from './CancelDialog.tsx'

@@ -1,6 +1,6 @@
+import { Badge, type BadgeProps } from '@hola/ui'
 import type { ReactNode } from 'react'
 import { bookingStatusLabel, bookingUsageLabel } from '../../lib/status-labels.ts'
-import { Badge, type BadgeProps } from '../ui/badge.tsx'
 
 /** Menunggu pembayaran perlu menonjol karena ada tenggat; sisanya cukup netral. */
 function statusVariant(status: string): BadgeProps['variant'] {

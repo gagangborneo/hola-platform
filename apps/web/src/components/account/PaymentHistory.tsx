@@ -1,19 +1,15 @@
 'use client'
 
+import { Badge, Button, Card, cn, Skeleton } from '@hola/ui'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { ChevronRight, Clock3, FileText } from 'lucide-react'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { apiClient } from '../../lib/api-client.ts'
-import { cn } from '../../lib/cn.ts'
 import { formatDateWita, formatRupiah, formatTimeWita } from '../../lib/format.ts'
 import { bookingStatusLabel } from '../../lib/status-labels.ts'
 import { EmptyState } from '../common/EmptyState.tsx'
-import { Badge } from '../ui/badge.tsx'
-import { Button } from '../ui/button.tsx'
-import { Card } from '../ui/card.tsx'
-import { Skeleton } from '../ui/skeleton.tsx'
 
 const TABS = [
   { label: 'Semua transaksi', value: 'all' },

@@ -1,15 +1,14 @@
 'use client'
 
+import { Badge, cn } from '@hola/ui'
 import { LogOut } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { useAuthSession } from '../../lib/auth.ts'
-import { cn } from '../../lib/cn.ts'
 import { logout } from '../../lib/logout.ts'
 import { accountDisplayName, accountIdentity, accountInitials } from '../../lib/session-identity.ts'
-import { Badge } from '../ui/badge.tsx'
 import { ACCOUNT_NAV, type AccountNavItem, isAccountNavItemActive } from './account-nav.ts'
 
 function SoonBadge(): ReactNode {
