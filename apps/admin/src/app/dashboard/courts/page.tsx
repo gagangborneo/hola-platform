@@ -1,5 +1,6 @@
 'use client'
 
+import { Button } from '@hola/ui'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { QueryState } from '../../../components/common/QueryState.tsx'
@@ -45,15 +46,14 @@ function CourtEditor({ courtId, onSaved }: { courtId: string; onSaved: () => voi
 
             <div className="tab-bar" role="tablist">
               {TABS.map((item) => (
-                <button
+                <Button
                   aria-selected={tab === item.id}
                   key={item.id}
                   role="tab"
-                  type="button"
                   onClick={() => setTab(item.id)}
                 >
                   {item.label}
-                </button>
+                </Button>
               ))}
             </div>
 
@@ -95,15 +95,14 @@ function CourtsPage(): ReactNode {
             perubahannya langsung terlihat customer.
           </p>
         </div>
-        <button
-          type="button"
+        <Button
           onClick={() => {
             setIsCreating((current) => !current)
             setSelectedId(null)
           }}
         >
           {isCreating ? 'Tutup formulir' : 'Tambah lapangan'}
-        </button>
+        </Button>
       </div>
 
       {isCreating ? (
@@ -166,16 +165,16 @@ function CourtsPage(): ReactNode {
                       <StatusChip {...labels.courtStatus(court.status)} />
                     </td>
                     <td>
-                      <button
-                        className="button-secondary button-small"
-                        type="button"
+                      <Button
                         onClick={() => {
                           setIsCreating(false)
                           setSelectedId((current) => (current === court.id ? null : court.id))
                         }}
+                        variant="secondary"
+                        size="sm"
                       >
                         {selectedId === court.id ? 'Tutup' : 'Kelola'}
-                      </button>
+                      </Button>
                     </td>
                   </tr>
                 ))}

@@ -1,0 +1,22 @@
+/*
+  Urutan layer ditetapkan lebih dulu, dan `legacy` sengaja diletakkan SEBELUM
+  `utilities`.
+
+  CSS tanpa layer selalu mengalahkan CSS ber-layer. Kalau 2.200 baris gaya lama
+  dibiarkan tanpa layer, setiap utilitas Tailwind pada komponen baru akan kalah
+  oleh selektor seperti `button { background: … }` — dan kegagalannya diam:
+  komponen terpasang benar, hanya warnanya tidak pernah muncul. Dengan
+  membungkusnya di layer `legacy`, layar lama tetap bergaya seperti semula
+  sementara komponen @hola/ui menang di mana pun keduanya bertemu.
+*/
+@layer theme, base, legacy, components, utilities;
+
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/preflight.css' layer(base);
+@import 'tailwindcss/utilities.css' layer(utilities);
+@import './theme.css';
+@import './legacy.css' layer(legacy);
+
+/* Tailwind tidak memindai node_modules, sedangkan @hola/ui tinggal di sana
+   lewat symlink workspace. Tanpa baris ini kelasnya tidak pernah dibangkitkan. */
+@source '../../../../packages/ui/src';

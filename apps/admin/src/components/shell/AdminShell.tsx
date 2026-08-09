@@ -1,5 +1,6 @@
 'use client'
 
+import { Button } from '@hola/ui'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import type { ReactNode } from 'react'
@@ -276,26 +277,28 @@ export function AdminShell({ children }: AdminShellProps): ReactNode {
             Satu tombol yang berganti arti mengikuti lebar layar berarti menebak
             breakpoint di JavaScript, dan tebakan itu salah saat render pertama.
           */}
-          <button
+          <Button
             aria-controls="admin-side-nav"
             aria-expanded={!isRail}
             aria-label={isRail ? 'Bentangkan menu samping' : 'Kuncupkan menu samping'}
-            className="button-secondary nav-toggle nav-toggle-rail"
+            className="mr-auto hidden min-[52rem]:inline-flex"
             onClick={() => setRail(!isRail)}
-            type="button"
+            size="icon"
+            variant="secondary"
           >
             <MenuIcon />
-          </button>
-          <button
+          </Button>
+          <Button
             aria-controls="admin-side-nav"
             aria-expanded={isMobileNavOpen}
             aria-label={isMobileNavOpen ? 'Tutup menu' : 'Buka menu'}
-            className="button-secondary nav-toggle nav-toggle-drawer"
+            className="mr-auto inline-flex min-[52rem]:hidden"
             onClick={() => setOpenedAtPath(isMobileNavOpen ? null : pathname)}
-            type="button"
+            size="icon"
+            variant="secondary"
           >
             <MenuIcon />
-          </button>
+          </Button>
           <UserMenu
             email={user.email ?? null}
             fullName={user.fullName}

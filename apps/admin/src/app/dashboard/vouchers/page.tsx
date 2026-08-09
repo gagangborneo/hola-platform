@@ -1,5 +1,6 @@
 'use client'
 
+import { Button, NativeSelect } from '@hola/ui'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
@@ -115,15 +116,14 @@ function VouchersPage(): ReactNode {
             terpakai dihitung dari penukaran yang benar-benar terjadi.
           </p>
         </div>
-        <button
-          type="button"
+        <Button
           onClick={() => {
             setIsCreating((current) => !current)
             setEditing(null)
           }}
         >
           {isCreating ? 'Tutup formulir' : 'Tambah voucher'}
-        </button>
+        </Button>
       </div>
 
       {isCreating ? (
@@ -153,7 +153,7 @@ function VouchersPage(): ReactNode {
         <div className="table-controls">
           <label className="table-filter" htmlFor="voucher-status">
             <span>Status</span>
-            <select
+            <NativeSelect
               id="voucher-status"
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value)}
@@ -164,7 +164,7 @@ function VouchersPage(): ReactNode {
               <option value="paused">Dijeda</option>
               <option value="expired">Kedaluwarsa</option>
               <option value="archived">Diarsipkan</option>
-            </select>
+            </NativeSelect>
           </label>
         </div>
 
@@ -215,9 +215,7 @@ function VouchersPage(): ReactNode {
                     </td>
                     <td>
                       <div className="row">
-                        <button
-                          className="button-secondary button-small"
-                          type="button"
+                        <Button
                           onClick={() => {
                             setIsCreating(false)
                             setEditing(promo)
@@ -228,36 +226,38 @@ function VouchersPage(): ReactNode {
                               ? 'Voucher slot gratis dikelola di luar formulir Phase 1.'
                               : undefined
                           }
+                          variant="secondary"
+                          size="sm"
                         >
                           Ubah
-                        </button>
+                        </Button>
                         {promo.status === 'active' ? (
-                          <button
-                            className="button-secondary button-small"
-                            type="button"
+                          <Button
                             onClick={() => void run('pause', promo)}
                             disabled={changeStatus.isPending}
+                            variant="secondary"
+                            size="sm"
                           >
                             Jeda
-                          </button>
+                          </Button>
                         ) : (
-                          <button
-                            className="button-secondary button-small"
-                            type="button"
+                          <Button
                             onClick={() => void run('activate', promo)}
                             disabled={changeStatus.isPending || promo.status === 'archived'}
+                            variant="secondary"
+                            size="sm"
                           >
                             Aktifkan
-                          </button>
+                          </Button>
                         )}
-                        <button
-                          className="button-danger button-small"
-                          type="button"
+                        <Button
                           onClick={() => void run('archive', promo)}
                           disabled={changeStatus.isPending || promo.status === 'archived'}
+                          variant="destructive"
+                          size="sm"
                         >
                           Arsipkan
-                        </button>
+                        </Button>
                       </div>
                     </td>
                   </tr>

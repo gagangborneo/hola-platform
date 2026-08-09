@@ -1,5 +1,6 @@
 'use client'
 
+import { buttonVariants } from '@hola/ui'
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
@@ -176,7 +177,7 @@ function BookingsPage(): ReactNode {
           <h1>Booking</h1>
           <p>Seluruh kanal dalam satu tabel. Klik kode booking untuk detail dan tindakan.</p>
         </div>
-        <Link className="button-link" href="/dashboard/bookings/new">
+        <Link className={buttonVariants()} href="/dashboard/bookings/new">
           Booking manual
         </Link>
       </div>

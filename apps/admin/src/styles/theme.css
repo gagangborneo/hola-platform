@@ -1,0 +1,41 @@
+/**
+ * Nilai token apps/admin.
+ *
+ * Kontrak token → utilitas Tailwind ada di @hola/ui; berkas ini mengisi
+ * nilainya dengan palet back-office. Warna status (sukses/peringatan/bahaya)
+ * TIDAK ikut biru: itu makna, bukan aksen, dan mewarnainya seperti aksen
+ * membuat "berhasil" dan "tombol utama" terlihat sama.
+ */
+@import '@hola/ui/styles/tokens.css';
+
+:root {
+  --background: #f4f7f8;
+  --foreground: #172126;
+  --card: #ffffff;
+  --card-foreground: #172126;
+  --popover: #ffffff;
+  --popover-foreground: #172126;
+  --primary: #175aa8;
+  --primary-foreground: #ffffff;
+  --secondary: #e7eef8;
+  --secondary-foreground: #123f77;
+  --muted: #edf1f7;
+  --muted-foreground: #5b6870;
+  --accent: #e9f0fa;
+  --accent-foreground: #123f77;
+  --destructive: #a52020;
+  --destructive-foreground: #ffffff;
+  --success: #14634a;
+  --success-foreground: #ffffff;
+  --warning: #7a4d05;
+  --warning-foreground: #ffffff;
+  --border: #d6e0ee;
+  --input: #c3cede;
+  --input-background: #ffffff;
+  --ring: #175aa8;
+  --radius: 0.6rem;
+}
+
+@theme inline {
+  --font-sans: Arial, Helvetica, sans-serif;
+}

@@ -1,6 +1,7 @@
 'use client'
 
 import { buildSlotGrid } from '@hola/shared'
+import { Button, Input, NativeSelect } from '@hola/ui'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 import type { Court, CourtDetail } from '../../lib/courts.ts'
@@ -77,25 +78,25 @@ export function PriceCoverageAudit({
       <div className="form-grid">
         <label className="field">
           <span>Lapangan</span>
-          <select value={courtId} onChange={(event) => setCourtId(event.target.value)}>
+          <NativeSelect value={courtId} onChange={(event) => setCourtId(event.target.value)}>
             <option value="">Pilih lapangan</option>
             {courts.map((court) => (
               <option value={court.id} key={court.id}>
                 {court.name}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </label>
         <label className="field">
           <span>Tanggal</span>
-          <input type="date" value={dateKey} onChange={(event) => setDateKey(event.target.value)} />
+          <Input type="date" value={dateKey} onChange={(event) => setDateKey(event.target.value)} />
         </label>
       </div>
 
       <div className="form-actions">
-        <button type="button" onClick={() => void run()} disabled={isRunning}>
+        <Button onClick={() => void run()} disabled={isRunning}>
           {isRunning ? 'Memeriksa…' : 'Periksa harga sehari penuh'}
-        </button>
+        </Button>
       </div>
 
       {error ? <p className="form-error">{error}</p> : null}

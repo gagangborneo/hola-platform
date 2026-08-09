@@ -1,6 +1,7 @@
 'use client'
 
 import { witaToInstant } from '@hola/shared'
+import { buttonVariants } from '@hola/ui'
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
@@ -267,10 +268,10 @@ function OperationsDashboard(): ReactNode {
           <p className="muted">{rangeLabel} · waktu WITA</p>
         </div>
         <div className="analytics-filters">
-          <Link className="button-link" href="/dashboard/bookings/new">
+          <Link className={buttonVariants()} href="/dashboard/bookings/new">
             Booking manual
           </Link>
-          <Link className="button-link button-secondary" href="/dashboard/schedule">
+          <Link className={buttonVariants({ variant: 'secondary' })} href="/dashboard/schedule">
             Jadwal slot
           </Link>
         </div>

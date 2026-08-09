@@ -1,5 +1,6 @@
 'use client'
 
+import { Button, Input, NativeSelect } from '@hola/ui'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
@@ -105,7 +106,7 @@ function PaymentsPanel(): ReactNode {
       <div className="table-controls">
         <label className="table-search">
           <span className="sr-only">Pencarian</span>
-          <input
+          <Input
             value={search}
             placeholder="Cari kode pembayaran atau kode booking"
             onChange={(event) => setSearch(event.target.value)}
@@ -113,7 +114,7 @@ function PaymentsPanel(): ReactNode {
         </label>
         <label className="table-filter" htmlFor="payment-status">
           <span>Status</span>
-          <select
+          <NativeSelect
             id="payment-status"
             value={status}
             onChange={(event) => setStatus(event.target.value)}
@@ -124,7 +125,7 @@ function PaymentsPanel(): ReactNode {
             <option value="expired">Kedaluwarsa</option>
             <option value="failed">Gagal</option>
             <option value="cancelled">Dibatalkan</option>
-          </select>
+          </NativeSelect>
         </label>
       </div>
 
@@ -176,14 +177,14 @@ function PaymentsPanel(): ReactNode {
                     <Link href={`/dashboard/bookings/${payment.bookingId}`}>Buka booking</Link>
                   </td>
                   <td>
-                    <button
-                      className="button-secondary button-small"
-                      type="button"
+                    <Button
                       onClick={() => void onSync(payment.id)}
                       disabled={sync.isPending}
+                      variant="secondary"
+                      size="sm"
                     >
                       Sinkronkan
-                    </button>
+                    </Button>
                   </td>
                 </tr>
               ))}
@@ -206,7 +207,7 @@ function RefundsPanel({ isAdmin }: { isAdmin: boolean }): ReactNode {
       <div className="table-controls">
         <label className="table-filter" htmlFor="refund-status">
           <span>Status</span>
-          <select
+          <NativeSelect
             id="refund-status"
             value={status}
             onChange={(event) => setStatus(event.target.value)}
@@ -218,7 +219,7 @@ function RefundsPanel({ isAdmin }: { isAdmin: boolean }): ReactNode {
             <option value="completed">Selesai</option>
             <option value="rejected">Ditolak</option>
             <option value="failed">Gagal</option>
-          </select>
+          </NativeSelect>
         </label>
       </div>
 

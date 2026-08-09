@@ -2,6 +2,7 @@
 
 import { HolaApiError } from '@hola/api-client'
 import { buildSlotGrid, ERROR_CODE } from '@hola/shared'
+import { Button, Input, NativeSelect } from '@hola/ui'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { FormEvent, ReactNode } from 'react'
 import { useState } from 'react'
@@ -210,7 +211,7 @@ function MaintenanceForm({ isAdmin }: { isAdmin: boolean }): ReactNode {
       <div className="form-grid">
         <label className="field">
           <span>Lapangan</span>
-          <select
+          <NativeSelect
             value={draft.courtId}
             onChange={(event) => update({ courtId: event.target.value, startsAt: '', endsAt: '' })}
             required
@@ -221,11 +222,11 @@ function MaintenanceForm({ isAdmin }: { isAdmin: boolean }): ReactNode {
                 {court.name}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </label>
         <label className="field">
           <span>Tanggal</span>
-          <input
+          <Input
             type="date"
             value={draft.dateKey}
             onChange={(event) => update({ dateKey: event.target.value, startsAt: '', endsAt: '' })}
@@ -234,7 +235,7 @@ function MaintenanceForm({ isAdmin }: { isAdmin: boolean }): ReactNode {
         </label>
         <label className="field">
           <span>Mulai</span>
-          <select
+          <NativeSelect
             value={draft.startsAt}
             onChange={(event) => update({ startsAt: event.target.value })}
             disabled={slots.length === 0}
@@ -246,11 +247,11 @@ function MaintenanceForm({ isAdmin }: { isAdmin: boolean }): ReactNode {
                 {formatTimeWita(slot.startsAt.toISOString())}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </label>
         <label className="field">
           <span>Selesai</span>
-          <select
+          <NativeSelect
             value={draft.endsAt}
             onChange={(event) => update({ endsAt: event.target.value })}
             disabled={slots.length === 0}
@@ -262,12 +263,12 @@ function MaintenanceForm({ isAdmin }: { isAdmin: boolean }): ReactNode {
                 {formatTimeWita(slot.endsAt.toISOString())}
               </option>
             ))}
-          </select>
+          </NativeSelect>
           <small>Rentang harus jatuh tepat di batas slot lapangan.</small>
         </label>
         <label className="field field-wide">
           <span>Alasan</span>
-          <input
+          <Input
             value={draft.reason}
             onChange={(event) => update({ reason: event.target.value })}
             placeholder="Perbaikan jaring, pengecatan lantai, …"
@@ -311,18 +312,17 @@ function MaintenanceForm({ isAdmin }: { isAdmin: boolean }): ReactNode {
       ) : null}
 
       <div className="form-actions">
-        <button type="submit" disabled={create.isPending}>
+        <Button type="submit" disabled={create.isPending}>
           {create.isPending ? 'Memproses…' : 'Blokir lapangan'}
-        </button>
+        </Button>
         {conflicts && conflicts.length > 0 && isAdmin ? (
-          <button
-            className="button-danger"
-            type="button"
+          <Button
             onClick={() => void submit(true)}
             disabled={create.isPending}
+            variant="destructive"
           >
             Blokir paksa &amp; batalkan {conflicts.length} klaim
-          </button>
+          </Button>
         ) : null}
       </div>
     </form>
@@ -369,7 +369,7 @@ function MaintenanceList(): ReactNode {
       <div className="table-controls">
         <label className="table-filter" htmlFor="maintenance-court">
           <span>Lapangan</span>
-          <select
+          <NativeSelect
             id="maintenance-court"
             value={courtFilter}
             onChange={(event) => setCourtFilter(event.target.value)}
@@ -380,7 +380,7 @@ function MaintenanceList(): ReactNode {
                 {court.name}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </label>
       </div>
 
@@ -420,14 +420,14 @@ function MaintenanceList(): ReactNode {
                     {maintenance.cancelledAt ? (
                       '—'
                     ) : (
-                      <button
-                        className="button-secondary button-small"
-                        type="button"
+                      <Button
                         onClick={() => void onCancel(maintenance)}
                         disabled={cancel.isPending}
+                        variant="secondary"
+                        size="sm"
                       >
                         Batalkan blokir
-                      </button>
+                      </Button>
                     )}
                   </td>
                 </tr>

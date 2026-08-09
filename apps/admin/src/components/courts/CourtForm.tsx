@@ -1,5 +1,6 @@
 'use client'
 
+import { Button, Input, NativeSelect } from '@hola/ui'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import type { FormEvent, ReactNode } from 'react'
 import { useState } from 'react'
@@ -186,7 +187,7 @@ export function CourtForm({ court, defaultVenueId, onDone, sports }: CourtFormPr
       <div className="form-grid">
         <label className="field">
           <span>Kode</span>
-          <input
+          <Input
             value={draft.code}
             onChange={(event) => update({ code: event.target.value })}
             placeholder="PDL-01"
@@ -196,7 +197,7 @@ export function CourtForm({ court, defaultVenueId, onDone, sports }: CourtFormPr
         </label>
         <label className="field">
           <span>Nama</span>
-          <input
+          <Input
             value={draft.name}
             onChange={(event) => update({ name: event.target.value })}
             required
@@ -206,7 +207,7 @@ export function CourtForm({ court, defaultVenueId, onDone, sports }: CourtFormPr
           <>
             <label className="field">
               <span>Olahraga</span>
-              <select
+              <NativeSelect
                 value={draft.sportId}
                 onChange={(event) => update({ sportId: event.target.value })}
                 required
@@ -217,11 +218,11 @@ export function CourtForm({ court, defaultVenueId, onDone, sports }: CourtFormPr
                     {sport.name}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
             </label>
             <label className="field">
               <span>Venue</span>
-              <input
+              <Input
                 value={draft.venueId}
                 onChange={(event) => update({ venueId: event.target.value })}
                 required
@@ -234,18 +235,18 @@ export function CourtForm({ court, defaultVenueId, onDone, sports }: CourtFormPr
         ) : null}
         <label className="field">
           <span>Status</span>
-          <select
+          <NativeSelect
             value={draft.status}
             onChange={(event) => update({ status: event.target.value as CourtStatusValue })}
           >
             <option value="active">Aktif — dijual</option>
             <option value="maintenance">Maintenance</option>
             <option value="inactive">Nonaktif — tidak dijual</option>
-          </select>
+          </NativeSelect>
         </label>
         <label className="field">
           <span>Durasi slot</span>
-          <select
+          <NativeSelect
             value={String(draft.slotDurationMinutes)}
             onChange={(event) =>
               update({ slotDurationMinutes: Number(event.target.value) as SlotDuration })
@@ -256,12 +257,12 @@ export function CourtForm({ court, defaultVenueId, onDone, sports }: CourtFormPr
                 {duration} menit
               </option>
             ))}
-          </select>
+          </NativeSelect>
           <small>Mengubahnya menggeser seluruh grid slot lapangan ini.</small>
         </label>
         <label className="field">
           <span>Minimal slot per booking</span>
-          <input
+          <Input
             type="number"
             min="1"
             value={draft.minSlotsPerBooking}
@@ -270,7 +271,7 @@ export function CourtForm({ court, defaultVenueId, onDone, sports }: CourtFormPr
         </label>
         <label className="field">
           <span>Maksimal slot per booking</span>
-          <input
+          <Input
             type="number"
             min="1"
             value={draft.maxSlotsPerBooking}
@@ -279,7 +280,7 @@ export function CourtForm({ court, defaultVenueId, onDone, sports }: CourtFormPr
         </label>
         <label className="field">
           <span>Permukaan</span>
-          <input
+          <Input
             value={draft.surface}
             onChange={(event) => update({ surface: event.target.value })}
             placeholder="artificial_grass"
@@ -287,7 +288,7 @@ export function CourtForm({ court, defaultVenueId, onDone, sports }: CourtFormPr
         </label>
         <label className="field">
           <span>Maksimal pemain</span>
-          <input
+          <Input
             type="number"
             min="1"
             value={draft.maxPlayers}
@@ -297,7 +298,7 @@ export function CourtForm({ court, defaultVenueId, onDone, sports }: CourtFormPr
         </label>
         <label className="field">
           <span>Urutan tampil</span>
-          <input
+          <Input
             type="number"
             value={draft.sortOrder}
             onChange={(event) => update({ sortOrder: event.target.value })}
@@ -313,7 +314,7 @@ export function CourtForm({ court, defaultVenueId, onDone, sports }: CourtFormPr
         </label>
         <label className="field field-wide">
           <span>Deskripsi</span>
-          <input
+          <Input
             value={draft.description}
             onChange={(event) => update({ description: event.target.value })}
           />
@@ -323,9 +324,9 @@ export function CourtForm({ court, defaultVenueId, onDone, sports }: CourtFormPr
       {error ? <p className="form-error">{error}</p> : null}
 
       <div className="form-actions">
-        <button type="submit" disabled={save.isPending}>
+        <Button type="submit" disabled={save.isPending}>
           {save.isPending ? 'Menyimpan…' : isCreate ? 'Buat lapangan' : 'Simpan perubahan'}
-        </button>
+        </Button>
       </div>
     </form>
   )

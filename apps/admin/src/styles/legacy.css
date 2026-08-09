@@ -24,36 +24,18 @@ textarea {
   font: inherit;
 }
 
-button,
-.button-link {
-  background: #175aa8;
-  border: 0;
-  border-radius: 0.6rem;
-  color: #ffffff;
-  cursor: pointer;
-  font-weight: 700;
-  padding: 0.65rem 0.9rem;
-  text-decoration: none;
-}
+/*
+  Aturan `button { background: … }` yang dulu ada di sini sengaja DIHAPUS.
+  Selektor elemen telanjang mewarnai setiap tombol di halaman, termasuk tombol
+  yang komponennya justru mengandalkan latar transparan — pemicu dropdown,
+  tombol tanggal di kalender, tombol ikon. Kegagalannya pun diam: komponennya
+  terpasang benar, hanya saja tiap selnya muncul biru pekat.
 
-button:disabled {
-  cursor: wait;
-  opacity: 0.65;
-}
-
-/* `.button-link` dipakai pada elemen `<a>`, jadi varian sekunder tidak boleh
-   dikunci ke selektor `button` — kalau tidak, tautan sekunder tetap tampil
-   sebagai tombol utama dan dua aksi berbeda terlihat sama pentingnya. */
-button.button-secondary,
-.button-link.button-secondary {
-  background: #e7eef8;
-  color: #123f77;
-}
-
-.button-link.button-secondary:hover,
-button.button-secondary:hover {
-  background: #d9e6f6;
-}
+  Cascade layer tidak menyelesaikannya, karena persoalannya bukan dua utilitas
+  yang bertabrakan melainkan utilitas yang memang tidak ditulis. Jadi gaya
+  tombol sekarang sepenuhnya milik komponen `Button` di @hola/ui, dan tautan
+  yang tampil sebagai tombol memakai `buttonVariants()`.
+*/
 
 .sr-only {
   height: 1px;
@@ -129,55 +111,14 @@ button.button-secondary:hover {
   gap: 0.4rem;
 }
 
-.field input,
-.field textarea,
-.table-controls input,
-.table-controls select,
-.table-pagination select,
-.table-filter select,
-.date-control {
-  background: #ffffff;
-  border: 1px solid #c3cede;
-  border-radius: 0.55rem;
-  color: #172126;
-  min-height: 2.6rem;
-  padding: 0.55rem 0.7rem;
-  transition:
-    border-color 0.12s ease,
-    box-shadow 0.12s ease;
-}
-
-.field input:hover,
-.table-controls input:hover,
-.table-controls select:hover,
-.table-filter select:hover,
-.date-control:hover {
-  border-color: #9fb0c8;
-}
-
-/* Satu cincin fokus untuk semua kontrol, termasuk yang fokusnya jatuh ke anak
-   (input tanggal duduk di dalam `.date-control`, jadi cincinnya dipasang lewat
-   `:focus-within` — kalau tidak, kotaknya tidak ikut menyala saat difokus). */
-.field input:focus-visible,
-.field textarea:focus-visible,
-.table-controls input:focus-visible,
-.table-controls select:focus-visible,
-.table-filter select:focus-visible,
-.table-pagination select:focus-visible,
-.date-control:focus-within {
-  border-color: #175aa8;
-  box-shadow: 0 0 0 3px rgb(23 90 168 / 18%);
-  outline: none;
-}
-
-.date-control input:focus-visible {
-  outline: none;
-}
-
+/* Gaya kontrol formulir tidak lagi ada di sini: input, select, dan textarea
+   sekarang komponen @hola/ui yang membawa kotak, cincin fokus, serta keadaan
+   `aria-invalid`-nya sendiri. Yang tersisa hanyalah tata letak pembungkusnya. */
 :root {
   accent-color: #175aa8;
 }
 
+/* Editor JSON pengaturan: monospace membuat kurung dan indentasi sejajar. */
 .field textarea {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   min-height: 12rem;
@@ -263,6 +204,7 @@ button.button-secondary:hover {
 
 .nav-group-toggle {
   align-items: center;
+  cursor: pointer;
   background: transparent;
   border-radius: 0.55rem;
   color: #edf3fb;
@@ -464,22 +406,9 @@ a.nav-link:hover,
   width: 1rem;
 }
 
-.nav-toggle {
-  align-items: center;
-  border-radius: 0.55rem;
-  display: inline-flex;
-  justify-content: center;
-  margin-right: auto;
-  padding: 0.5rem;
-}
-
 .menu-icon {
   height: 1.15rem;
   width: 1.15rem;
-}
-
-.nav-toggle-drawer {
-  display: none;
 }
 
 .main-shell {
@@ -585,21 +514,30 @@ a.nav-link:hover,
   overflow-x: auto;
 }
 
-table {
+/*
+  Aturan tabel dilingkupi `.admin-content`.
+
+  Tanpa lingkup itu, `table { min-width: 48rem }` juga mengenai grid tanggal
+  react-day-picker — tiap bulan dipaksa selebar 768px dan kalendernya melebar
+  keluar layar. Popover Radix dirender lewat portal di luar `.admin-content`,
+  jadi melingkupinya di sini memisahkan tabel data dari tabel yang kebetulan
+  dipakai komponen lain.
+*/
+.admin-content table {
   border-collapse: collapse;
   min-width: 48rem;
   width: 100%;
 }
 
-th,
-td {
+.admin-content th,
+.admin-content td {
   border-bottom: 1px solid #e4eaf3;
   padding: 0.85rem 1rem;
   text-align: left;
   vertical-align: top;
 }
 
-th {
+.admin-content th {
   background: #f7fafd;
   color: #42597a;
   font-size: 0.78rem;
@@ -609,6 +547,7 @@ th {
 
 .sort-button {
   background: transparent;
+  cursor: pointer;
   border-radius: 0;
   color: inherit;
   padding: 0;
@@ -638,24 +577,6 @@ th {
   display: flex;
   gap: 1rem;
   justify-content: center;
-}
-
-.table-pagination {
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-  justify-content: flex-end;
-  padding: 0.85rem 1rem;
-}
-
-.table-pagination span:first-child {
-  color: #5b6870;
-  margin-right: auto;
-}
-
-.table-pagination select {
-  min-height: 2.25rem;
 }
 
 .settings-list {
@@ -756,14 +677,6 @@ th {
   .side-nav-open .nav-group-toggle {
     justify-content: flex-start;
     padding: 0.62rem 0.6rem;
-  }
-
-  .nav-toggle-rail {
-    display: none;
-  }
-
-  .nav-toggle-drawer {
-    display: inline-flex;
   }
 
   .admin-header {
@@ -977,22 +890,6 @@ th {
   padding-left: 1.1rem;
 }
 
-.button-danger {
-  background: #a52020;
-}
-
-.button-ghost {
-  background: transparent;
-  border: 1px solid #a9b6c9;
-  color: #123f77;
-}
-
-.button-small {
-  border-radius: 0.45rem;
-  font-size: 0.82rem;
-  padding: 0.4rem 0.6rem;
-}
-
 .calendar-scroll {
   overflow-x: auto;
 }
@@ -1155,6 +1052,7 @@ th {
 
 .tab-bar button {
   background: transparent;
+  cursor: pointer;
   border-radius: 0.5rem 0.5rem 0 0;
   color: #5b6870;
   padding: 0.6rem 0.9rem;
@@ -1212,31 +1110,6 @@ th {
   display: flex;
   flex-wrap: wrap;
   gap: 0.7rem;
-}
-
-.filter-chip {
-  background: #ffffff;
-  border: 1px solid #d6e0ee;
-  border-radius: 0.5rem;
-  color: #42597a;
-  font-size: 0.82rem;
-  font-weight: 600;
-  padding: 0.62rem 0.7rem;
-}
-
-.filter-meta {
-  display: grid;
-  gap: 0.1rem;
-  text-align: right;
-}
-
-.filter-meta small {
-  color: #717e8e;
-  font-size: 0.72rem;
-}
-
-.filter-meta strong {
-  font-size: 0.82rem;
 }
 
 .demo-notice {
@@ -1911,157 +1784,21 @@ th {
 
 /* ── Filter rentang tanggal ──────────────────────────────────────────────── */
 
-.range-filter {
-  align-items: flex-end;
-  background: #ffffff;
-  border: 1px solid #d6e0ee;
-  border-radius: 0.8rem;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.9rem;
-  padding: 0.85rem 1rem;
-}
-
 /* Preset sebagai satu tombol tersegmentasi: batas antar-tombol dibawa border
    kiri, bukan jarak, supaya keempatnya terbaca sebagai satu pilihan. */
-.range-presets {
-  background: #f3f6fa;
-  border: 1px solid #d6e0ee;
-  border-radius: 0.6rem;
-  display: flex;
-  flex-wrap: wrap;
-  margin: 0;
-  min-width: 0;
-  overflow: hidden;
-  padding: 0;
-}
-
-.range-preset {
-  background: transparent;
-  border-radius: 0;
-  color: #42597a;
-  font-size: 0.82rem;
-  font-weight: 600;
-  padding: 0.6rem 0.85rem;
-  white-space: nowrap;
-}
-
-.range-preset + .range-preset {
-  border-left: 1px solid #d6e0ee;
-}
-
-.range-preset:hover {
-  background: #e9f0fa;
-  color: #123f77;
-}
-
 .range-preset.is-active {
   background: #175aa8;
   color: #ffffff;
 }
 
-.range-dates {
-  align-items: flex-end;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.date-field {
-  display: grid;
-  gap: 0.3rem;
-}
-
-.date-field > span:first-child {
-  color: #5b6870;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-.date-control {
-  align-items: center;
-  display: inline-flex;
-  gap: 0.45rem;
-  padding: 0.4rem 0.6rem;
-}
-
-.field-icon {
-  color: #7d8ea6;
-  flex: none;
-  height: 1.05rem;
-  width: 1.05rem;
-}
-
 /* Input tanggal dibiarkan native — ia membawa kalender dan format lokal sistem —
    tapi chrome-nya dilucuti supaya yang terlihat adalah kotak `.date-control`. */
-.date-control input[type='date'] {
-  background: transparent;
-  border: 0;
-  color: #172126;
-  font-variant-numeric: tabular-nums;
-  min-height: 1.7rem;
-  padding: 0;
-  width: 7.4rem;
-}
-
-.date-control input[type='date']::-webkit-calendar-picker-indicator {
-  cursor: pointer;
-  opacity: 0.55;
-}
-
-.date-control input[type='date']::-webkit-calendar-picker-indicator:hover {
-  opacity: 1;
-}
-
-.range-dash {
-  color: #a9b6c9;
-  padding-bottom: 0.75rem;
-}
-
-.range-notice {
-  background: #fdf5e6;
-  border-radius: 0.5rem;
-  color: #7a4d05;
-  font-size: 0.8rem;
-  margin: 0;
-  padding: 0.5rem 0.7rem;
-  width: 100%;
-}
-
 /* Select pada baris filter dashboard mengikuti tinggi kontrol yang sama. */
 .table-filter select {
   min-height: 2.6rem;
 }
 
 /* ── Menu user di header ─────────────────────────────────────────────────── */
-
-.user-menu {
-  margin-left: auto;
-  position: relative;
-}
-
-.user-menu-trigger {
-  align-items: center;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 0.6rem;
-  color: #172126;
-  display: flex;
-  font-weight: 400;
-  gap: 0.6rem;
-  padding: 0.4rem 0.55rem;
-  text-align: left;
-}
-
-.user-menu-trigger:hover {
-  background: #f3f6fa;
-  border-color: #d6e0ee;
-}
-
-.user-menu-trigger[aria-expanded='true'] {
-  background: #f3f6fa;
-  border-color: #a9b6c9;
-}
 
 .user-menu-trigger .nav-chevron {
   color: #717e8e;
@@ -2070,119 +1807,6 @@ th {
 
 .user-menu-trigger[aria-expanded='true'] .nav-chevron {
   transform: rotate(-90deg);
-}
-
-.user-avatar {
-  align-items: center;
-  background: #175aa8;
-  border-radius: 50%;
-  color: #ffffff;
-  display: flex;
-  flex: none;
-  font-size: 0.82rem;
-  font-weight: 800;
-  height: 2.3rem;
-  justify-content: center;
-  letter-spacing: 0.02em;
-  width: 2.3rem;
-}
-
-.user-identity {
-  display: grid;
-  gap: 0.1rem;
-  min-width: 0;
-}
-
-.user-identity strong {
-  font-size: 0.9rem;
-}
-
-.user-identity > span {
-  color: #5b6870;
-  font-size: 0.8rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.user-menu-panel {
-  background: #ffffff;
-  border: 1px solid #d6e0ee;
-  border-radius: 0.7rem;
-  box-shadow: 0 0.8rem 2rem rgb(16 31 54 / 14%);
-  display: grid;
-  min-width: 15rem;
-  overflow: hidden;
-  padding: 0.35rem;
-  position: absolute;
-  right: 0;
-  top: calc(100% + 0.4rem);
-  z-index: 20;
-}
-
-.user-menu-head {
-  border-bottom: 1px solid #e4eaf3;
-  display: grid;
-  gap: 0.12rem;
-  margin-bottom: 0.3rem;
-  padding: 0.6rem 0.65rem 0.7rem;
-}
-
-.user-menu-head strong {
-  font-size: 0.9rem;
-}
-
-.user-menu-head span {
-  color: #5b6870;
-  font-size: 0.8rem;
-  overflow-wrap: anywhere;
-}
-
-.user-menu-head em {
-  color: #175aa8;
-  font-size: 0.7rem;
-  font-style: normal;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  margin-top: 0.2rem;
-  text-transform: uppercase;
-}
-
-.user-menu-item {
-  align-items: center;
-  background: transparent;
-  border-radius: 0.45rem;
-  color: #172126;
-  display: flex;
-  font-size: 0.88rem;
-  font-weight: 400;
-  gap: 0.5rem;
-  justify-content: space-between;
-  margin: 0;
-  padding: 0.55rem 0.65rem;
-  text-align: left;
-  width: 100%;
-}
-
-button.user-menu-item:hover {
-  background: #e9f0fa;
-  color: #123f77;
-}
-
-.user-menu-item-planned {
-  color: #717e8e;
-}
-
-.user-menu-item-planned em {
-  background: #edf1f7;
-  border-radius: 999px;
-  color: #5b6870;
-  font-size: 0.62rem;
-  font-style: normal;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  padding: 0.1rem 0.4rem;
-  text-transform: uppercase;
 }
 
 /* Header baris (`th scope="row"`) memakai gaya `th` yang dirancang untuk header

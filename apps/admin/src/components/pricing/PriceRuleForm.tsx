@@ -1,5 +1,6 @@
 'use client'
 
+import { Button, Input, NativeSelect } from '@hola/ui'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import type { FormEvent, ReactNode } from 'react'
 import { useState } from 'react'
@@ -149,7 +150,7 @@ export function PriceRuleForm({ courts, onDone, rule, sports }: PriceRuleFormPro
       <div className="form-grid">
         <label className="field">
           <span>Lapangan</span>
-          <select
+          <NativeSelect
             value={draft.courtId}
             onChange={(event) => update({ courtId: event.target.value })}
           >
@@ -159,12 +160,12 @@ export function PriceRuleForm({ courts, onDone, rule, sports }: PriceRuleFormPro
                 {court.name}
               </option>
             ))}
-          </select>
+          </NativeSelect>
           <small>Aturan per lapangan mengalahkan aturan per olahraga.</small>
         </label>
         <label className="field">
           <span>Olahraga</span>
-          <select
+          <NativeSelect
             value={draft.sportId}
             onChange={(event) => update({ sportId: event.target.value })}
           >
@@ -174,11 +175,11 @@ export function PriceRuleForm({ courts, onDone, rule, sports }: PriceRuleFormPro
                 {sport.name}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </label>
         <label className="field">
           <span>Jenis hari</span>
-          <select
+          <NativeSelect
             value={draft.dayType}
             onChange={(event) =>
               update({
@@ -191,12 +192,12 @@ export function PriceRuleForm({ courts, onDone, rule, sports }: PriceRuleFormPro
             <option value="weekend">Akhir pekan</option>
             <option value="holiday">Hari libur</option>
             <option value="specific_date">Tanggal tertentu</option>
-          </select>
+          </NativeSelect>
         </label>
         {draft.dayType === 'specific_date' ? (
           <label className="field">
             <span>Tanggal</span>
-            <input
+            <Input
               type="date"
               value={draft.specificDate}
               onChange={(event) => update({ specificDate: event.target.value })}
@@ -206,7 +207,7 @@ export function PriceRuleForm({ courts, onDone, rule, sports }: PriceRuleFormPro
         ) : null}
         <label className="field">
           <span>Jam mulai</span>
-          <input
+          <Input
             type="time"
             value={draft.startsTime}
             onChange={(event) => update({ startsTime: event.target.value })}
@@ -215,7 +216,7 @@ export function PriceRuleForm({ courts, onDone, rule, sports }: PriceRuleFormPro
         </label>
         <label className="field">
           <span>Jam selesai</span>
-          <input
+          <Input
             type="time"
             value={draft.endsTime}
             onChange={(event) => update({ endsTime: event.target.value })}
@@ -224,18 +225,18 @@ export function PriceRuleForm({ courts, onDone, rule, sports }: PriceRuleFormPro
         </label>
         <label className="field">
           <span>Kelas tarif</span>
-          <select
+          <NativeSelect
             value={draft.rateClass}
             onChange={(event) => update({ rateClass: event.target.value as RateClassValue })}
           >
             <option value="offpeak">Off-peak</option>
             <option value="peak">Peak</option>
             <option value="special">Spesial</option>
-          </select>
+          </NativeSelect>
         </label>
         <label className="field">
           <span>Harga per jam (Rp)</span>
-          <input
+          <Input
             type="number"
             min="0"
             step="1"
@@ -247,7 +248,7 @@ export function PriceRuleForm({ courts, onDone, rule, sports }: PriceRuleFormPro
         </label>
         <label className="field">
           <span>Prioritas</span>
-          <input
+          <Input
             type="number"
             value={draft.priority}
             onChange={(event) => update({ priority: event.target.value })}
@@ -256,7 +257,7 @@ export function PriceRuleForm({ courts, onDone, rule, sports }: PriceRuleFormPro
         </label>
         <label className="field">
           <span>Berlaku dari</span>
-          <input
+          <Input
             type="date"
             value={draft.activeFrom}
             onChange={(event) => update({ activeFrom: event.target.value })}
@@ -264,7 +265,7 @@ export function PriceRuleForm({ courts, onDone, rule, sports }: PriceRuleFormPro
         </label>
         <label className="field">
           <span>Berlaku sampai</span>
-          <input
+          <Input
             type="date"
             value={draft.activeTo}
             onChange={(event) => update({ activeTo: event.target.value })}
@@ -283,17 +284,12 @@ export function PriceRuleForm({ courts, onDone, rule, sports }: PriceRuleFormPro
       {error ? <p className="form-error">{error}</p> : null}
 
       <div className="form-actions">
-        <button type="submit" disabled={save.isPending}>
+        <Button type="submit" disabled={save.isPending}>
           {save.isPending ? 'Menyimpan…' : rule ? 'Simpan perubahan' : 'Buat aturan harga'}
-        </button>
-        <button
-          className="button-secondary"
-          type="button"
-          onClick={onDone}
-          disabled={save.isPending}
-        >
+        </Button>
+        <Button onClick={onDone} disabled={save.isPending} variant="secondary">
           Batal
-        </button>
+        </Button>
       </div>
     </form>
   )

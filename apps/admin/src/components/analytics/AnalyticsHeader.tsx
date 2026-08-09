@@ -1,5 +1,7 @@
 'use client'
 
+import { Button, SelectField } from '@hola/ui'
+import { Printer } from 'lucide-react'
 import type { ReactNode } from 'react'
 import type { PeriodKey } from '../../lib/analytics/periods.ts'
 import { PERIOD_OPTIONS } from '../../lib/analytics/periods.ts'
@@ -34,28 +36,26 @@ export function AnalyticsHeader({
         <p className="muted">{subtitle}</p>
       </div>
 
-      <div className="analytics-filters">
-        <label className="table-filter">
-          Periode
-          <select
-            onChange={(event) => onPeriodChange(event.target.value as PeriodKey)}
-            value={period}
-          >
-            {PERIOD_OPTIONS.map((option) => (
-              <option key={option.key} value={option.key}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <span className="filter-chip">Hola Sports Center · Balikpapan</span>
-        <div className="filter-meta">
-          <small>Update terakhir</small>
-          <strong>{updatedAt}</strong>
+      <div className="flex flex-wrap items-end gap-3">
+        <SelectField
+          className="min-w-56"
+          label="Periode"
+          onChange={(value) => onPeriodChange(value as PeriodKey)}
+          options={PERIOD_OPTIONS.map((option) => ({ label: option.label, value: option.key }))}
+          triggerClassName="h-10"
+          value={period}
+        />
+        <span className="rounded-lg border border-border bg-card px-3 py-2.5 text-sm font-medium text-secondary-foreground">
+          Hola Sports Center · Balikpapan
+        </span>
+        <div className="grid gap-0.5 text-right">
+          <span className="text-[0.7rem] text-muted-foreground">Update terakhir</span>
+          <strong className="text-xs">{updatedAt}</strong>
         </div>
-        <button className="button-secondary" onClick={() => globalThis.print?.()} type="button">
+        <Button onClick={() => globalThis.print?.()} variant="secondary">
+          <Printer />
           Cetak / PDF
-        </button>
+        </Button>
       </div>
     </header>
   )

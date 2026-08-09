@@ -1,8 +1,15 @@
 'use client'
 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@hola/ui'
+import { ChevronDown, LogOut, UserRound } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { useEffect, useId, useRef, useState } from 'react'
-import { ChevronIcon } from './NavIcon.tsx'
 
 interface UserMenuProps {
   readonly email: string | null
@@ -11,7 +18,7 @@ interface UserMenuProps {
   readonly roleLabel: string
 }
 
-/** Inisial dari satu atau dua kata pertama; sisanya jadi bising di lingkaran 2,4rem. */
+/** Inisial dari satu atau dua kata pertama; sisanya jadi bising di lingkaran 2,3rem. */
 function initialsOf(fullName: string): string {
   const words = fullName.trim().split(/\s+/).filter(Boolean)
   const first = words[0]?.[0] ?? '?'
@@ -19,83 +26,58 @@ function initialsOf(fullName: string): string {
   return `${first}${second}`.toUpperCase()
 }
 
+/**
+ * Menu akun.
+ *
+ * Dibangun di atas Radix DropdownMenu, bukan panel buatan sendiri: klik di
+ * luar, Escape, pengembalian fokus, penguncian scroll, dan navigasi panah
+ * semuanya sudah benar di sana. Versi tulisan tangan sebelumnya menangani dua
+ * yang pertama dan diam-diam melewatkan sisanya.
+ */
 export function UserMenu({ email, fullName, onLogout, roleLabel }: UserMenuProps): ReactNode {
-  const [isOpen, setOpen] = useState(false)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const triggerRef = useRef<HTMLButtonElement>(null)
-  const menuId = useId()
-
-  /**
-   * Menutup lewat klik di luar dan Escape.
-   *
-   * Listener dipasang saat `pointerdown`, bukan `click`: kalau menunggu `click`,
-   * menekan tombol lain di header akan menutup menu SETELAH tombol itu bereaksi,
-   * dan urutannya terasa seperti klik yang terlewat.
-   */
-  useEffect(() => {
-    if (!isOpen) return
-
-    const onPointerDown = (event: globalThis.PointerEvent): void => {
-      const target = event.target
-      if (target instanceof Node && containerRef.current?.contains(target) === true) return
-      setOpen(false)
-    }
-    const onKeyDown = (event: globalThis.KeyboardEvent): void => {
-      if (event.key !== 'Escape') return
-      setOpen(false)
-      triggerRef.current?.focus()
-    }
-
-    document.addEventListener('pointerdown', onPointerDown)
-    document.addEventListener('keydown', onKeyDown)
-    return () => {
-      document.removeEventListener('pointerdown', onPointerDown)
-      document.removeEventListener('keydown', onKeyDown)
-    }
-  }, [isOpen])
-
   return (
-    <div className="user-menu" ref={containerRef}>
-      <button
-        aria-controls={menuId}
-        aria-expanded={isOpen}
-        aria-haspopup="menu"
-        className="user-menu-trigger"
-        onClick={() => setOpen((open) => !open)}
-        ref={triggerRef}
-        type="button"
-      >
-        <span aria-hidden="true" className="user-avatar">
+    <DropdownMenu>
+      <DropdownMenuTrigger className="flex items-center gap-2.5 rounded-lg border border-transparent px-2 py-1.5 text-left transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/30 data-[state=open]:border-border data-[state=open]:bg-muted">
+        <span
+          aria-hidden="true"
+          className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground"
+        >
           {initialsOf(fullName)}
         </span>
-        <span className="user-identity">
-          <strong>{fullName}</strong>
-          <span>{email ?? roleLabel}</span>
+        <span className="grid min-w-0 gap-0.5">
+          <span className="truncate text-sm font-semibold text-foreground">{fullName}</span>
+          <span className="truncate text-xs text-muted-foreground">{email ?? roleLabel}</span>
         </span>
-        <ChevronIcon />
-      </button>
+        <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+      </DropdownMenuTrigger>
 
-      {isOpen ? (
-        <div className="user-menu-panel" id={menuId}>
-          <div className="user-menu-head">
-            <strong>{fullName}</strong>
-            <span>{email ?? 'Akun operasional'}</span>
-            <em>{roleLabel}</em>
-          </div>
-          {/*
-            Profil belum punya halaman, jadi ia teks — bukan tombol mati. Item
-            menu yang bisa diklik tapi tidak melakukan apa pun lebih buruk
-            daripada item yang jelas-jelas belum tersedia.
-          */}
-          <p className="user-menu-item user-menu-item-planned">
-            Profil
-            <em>Segera</em>
-          </p>
-          <button className="user-menu-item" onClick={onLogout} type="button">
-            Keluar
-          </button>
-        </div>
-      ) : null}
-    </div>
+      <DropdownMenuContent className="min-w-60">
+        <DropdownMenuLabel className="grid gap-0.5">
+          <span className="text-sm font-semibold text-foreground">{fullName}</span>
+          <span className="text-xs break-words text-muted-foreground">
+            {email ?? 'Akun operasional'}
+          </span>
+          <span className="mt-1 text-[0.68rem] font-bold tracking-wider text-primary uppercase">
+            {roleLabel}
+          </span>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {/*
+          Profil belum punya halaman, jadi ia item nonaktif dengan penanda —
+          bukan item hidup yang tidak melakukan apa pun saat diklik.
+        */}
+        <DropdownMenuItem disabled>
+          <UserRound />
+          Profil
+          <span className="ml-auto rounded-full bg-muted px-2 py-0.5 text-[0.62rem] font-bold tracking-wide text-muted-foreground uppercase">
+            Segera
+          </span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={onLogout}>
+          <LogOut />
+          Keluar
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }

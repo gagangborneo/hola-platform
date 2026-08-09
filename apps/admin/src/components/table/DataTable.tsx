@@ -1,5 +1,6 @@
 'use client'
 
+import { Button, Input, SelectField } from '@hola/ui'
 import type { ReactNode } from 'react'
 
 export interface TablePagination {
@@ -81,53 +82,47 @@ export function DataTable<Row>({
 
   return (
     <section className="data-table-shell" aria-label="Tabel data">
-      <div className="table-controls">
+      <div className="flex flex-wrap items-end gap-3 border-b border-border p-4">
         {searchPlaceholder ? (
-          <label className="table-search">
+          <label className="min-w-64 flex-1">
             <span className="sr-only">Pencarian</span>
-            <input
-              value={query.q}
-              placeholder={searchPlaceholder}
+            <Input
               onChange={(event) => update({ q: event.target.value })}
+              placeholder={searchPlaceholder}
+              type="search"
+              value={query.q}
             />
           </label>
         ) : null}
         {filters?.map((filter) => {
           const value = query.filters[filter.key] ?? ''
           const controlId = `table-filter-${filter.key}`
-          return (
-            <label className="table-filter" htmlFor={controlId} key={filter.key}>
-              <span>{filter.label}</span>
-              {filter.options ? (
-                <select
-                  id={controlId}
-                  value={value}
-                  onChange={(event) =>
-                    update({
-                      filters: { ...query.filters, [filter.key]: event.target.value },
-                    })
-                  }
-                >
-                  <option value="">Semua</option>
-                  {filter.options.map((option) => (
-                    <option value={option.value} key={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <input
-                  id={controlId}
-                  value={value}
-                  placeholder={filter.placeholder ?? filter.label}
-                  onChange={(event) =>
-                    update({
-                      filters: { ...query.filters, [filter.key]: event.target.value },
-                    })
-                  }
-                />
-              )}
-            </label>
+          const onFilterChange = (next: string): void =>
+            update({ filters: { ...query.filters, [filter.key]: next } })
+
+          return filter.options ? (
+            <SelectField
+              className="min-w-40"
+              id={controlId}
+              key={filter.key}
+              label={filter.label}
+              onChange={onFilterChange}
+              options={[{ label: 'Semua', value: '' }, ...filter.options]}
+              triggerClassName="h-10"
+              value={value}
+            />
+          ) : (
+            <div className="grid min-w-40 gap-1.5" key={filter.key}>
+              <label className="text-sm font-semibold text-foreground" htmlFor={controlId}>
+                {filter.label}
+              </label>
+              <Input
+                id={controlId}
+                onChange={(event) => onFilterChange(event.target.value)}
+                placeholder={filter.placeholder ?? filter.label}
+                value={value}
+              />
+            </div>
           )
         })}
       </div>
@@ -135,9 +130,9 @@ export function DataTable<Row>({
       {error ? (
         <div className="table-state table-error" role="alert">
           <p>{error.message}</p>
-          <button type="button" onClick={onRetry}>
+          <Button onClick={onRetry} size="sm">
             Coba lagi
-          </button>
+          </Button>
         </div>
       ) : (
         <div className="table-scroll">
@@ -195,40 +190,41 @@ export function DataTable<Row>({
         </div>
       )}
 
-      <footer className="table-pagination">
-        <span>{totalLabel}</span>
-        <label>
-          <span className="sr-only">Baris per halaman</span>
-          <select
-            value={query.perPage}
-            onChange={(event) => update({ perPage: Number(event.target.value) })}
-          >
-            {[25, 50, 100].map((size) => (
-              <option value={size} key={size}>
-                {size}/halaman
-              </option>
-            ))}
-          </select>
-        </label>
-        <button
-          type="button"
-          onClick={() => update({ page: Math.max(1, query.page - 1) }, false)}
+      <footer className="flex flex-wrap items-center justify-end gap-2.5 border-t border-border p-3">
+        <span className="mr-auto text-sm text-muted-foreground">{totalLabel}</span>
+        <SelectField
+          className="w-36"
+          label="Baris per halaman"
+          labelHidden
+          onChange={(next) => update({ perPage: Number(next) })}
+          options={[25, 50, 100].map((size) => ({
+            label: `${size}/halaman`,
+            value: String(size),
+          }))}
+          size="sm"
+          value={String(query.perPage)}
+        />
+        <Button
           disabled={isLoading || query.page <= 1}
+          onClick={() => update({ page: Math.max(1, query.page - 1) }, false)}
+          size="sm"
+          variant="outline"
         >
           Sebelumnya
-        </button>
-        <button
-          type="button"
-          onClick={() => update({ page: query.page + 1 }, false)}
+        </Button>
+        <Button
           disabled={
             isLoading ||
             (pagination?.totalPages !== null &&
               pagination?.totalPages !== undefined &&
               query.page >= pagination.totalPages)
           }
+          onClick={() => update({ page: query.page + 1 }, false)}
+          size="sm"
+          variant="outline"
         >
           Berikutnya
-        </button>
+        </Button>
       </footer>
     </section>
   )

@@ -1,5 +1,6 @@
 'use client'
 
+import { Button } from '@hola/ui'
 import * as Sentry from '@sentry/nextjs'
 import type { ReactNode } from 'react'
 import { useEffect } from 'react'
@@ -23,9 +24,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps): ReactNo
             <p className="eyebrow">Hola Back Office</p>
             <h1>Terjadi gangguan</h1>
             <p className="muted">Coba ulangi halaman ini beberapa saat lagi.</p>
-            <button type="button" onClick={reset}>
-              Coba lagi
-            </button>
+            <Button onClick={reset}>Coba lagi</Button>
           </section>
         </main>
       </body>

@@ -1,6 +1,7 @@
 'use client'
 
 import { MEDIA_KIND } from '@hola/shared'
+import { Button } from '@hola/ui'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import type { ChangeEvent, ReactNode } from 'react'
 import { useState } from 'react'
@@ -136,29 +137,25 @@ export function CourtPhotosForm({ court }: CourtPhotosFormProps): ReactNode {
               <img src={mediaUrl(photo.objectKey)} alt={`Foto ${index + 1} ${court.name}`} />
               <figcaption>Posisi {index + 1}</figcaption>
               <div className="row">
-                <button
-                  className="button-secondary button-small"
-                  type="button"
+                <Button
                   onClick={() => move(index, -1)}
                   disabled={index === 0}
+                  variant="secondary"
+                  size="sm"
                 >
                   ←
-                </button>
-                <button
-                  className="button-secondary button-small"
-                  type="button"
+                </Button>
+                <Button
                   onClick={() => move(index, 1)}
                   disabled={index === drafts.length - 1}
+                  variant="secondary"
+                  size="sm"
                 >
                   →
-                </button>
-                <button
-                  className="button-danger button-small"
-                  type="button"
-                  onClick={() => remove(photo.mediaId)}
-                >
+                </Button>
+                <Button onClick={() => remove(photo.mediaId)} variant="destructive" size="sm">
                   Hapus
-                </button>
+                </Button>
               </div>
             </figure>
           ))}
@@ -169,16 +166,10 @@ export function CourtPhotosForm({ court }: CourtPhotosFormProps): ReactNode {
       {isSaved ? <p className="notice notice-success">Daftar foto tersimpan.</p> : null}
 
       <div className="form-actions">
-        <button
-          type="button"
-          onClick={() => void submit()}
-          disabled={save.isPending || isUploading}
-        >
+        <Button onClick={() => void submit()} disabled={save.isPending || isUploading}>
           {save.isPending ? 'Menyimpan…' : 'Simpan urutan foto'}
-        </button>
-        <button
-          className="button-secondary"
-          type="button"
+        </Button>
+        <Button
           onClick={() => {
             setDrafts(
               court.photos.map((photo) => ({
@@ -190,9 +181,10 @@ export function CourtPhotosForm({ court }: CourtPhotosFormProps): ReactNode {
             setIsSaved(false)
           }}
           disabled={save.isPending || isUploading}
+          variant="secondary"
         >
           Kembalikan
-        </button>
+        </Button>
       </div>
     </div>
   )

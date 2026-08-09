@@ -1,6 +1,7 @@
 'use client'
 
 import { MEDIA_KIND } from '@hola/shared'
+import { Button, Input } from '@hola/ui'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import type { ChangeEvent, ReactNode } from 'react'
 import { useState } from 'react'
@@ -130,28 +131,25 @@ export function RefundActions({ isAdmin, refund }: RefundActionsProps): ReactNod
       <div className="row">
         {canDecide ? (
           <>
-            <button
-              className="button-small"
-              type="button"
+            <Button
               onClick={() => setPanel(panel === 'approve' ? null : 'approve')}
               disabled={isPending}
+              size="sm"
             >
               Setujui
-            </button>
-            <button
-              className="button-danger button-small"
-              type="button"
+            </Button>
+            <Button
               onClick={() => setPanel(panel === 'reject' ? null : 'reject')}
               disabled={isPending}
+              variant="destructive"
+              size="sm"
             >
               Tolak
-            </button>
+            </Button>
           </>
         ) : null}
         {canComplete ? (
-          <button
-            className="button-secondary button-small"
-            type="button"
+          <Button
             onClick={() =>
               void run(
                 () => complete.mutateAsync(proofMediaId),
@@ -159,9 +157,11 @@ export function RefundActions({ isAdmin, refund }: RefundActionsProps): ReactNod
               )
             }
             disabled={isPending || isUploading}
+            variant="secondary"
+            size="sm"
           >
             Tandai selesai
-          </button>
+          </Button>
         ) : null}
         {!canDecide && !canComplete ? <span className="muted">Tidak ada tindakan.</span> : null}
       </div>
@@ -175,29 +175,28 @@ export function RefundActions({ isAdmin, refund }: RefundActionsProps): ReactNod
           <div className="form-grid">
             <label className="field">
               <span>Bank tujuan</span>
-              <input value={bankName} onChange={(event) => setBankName(event.target.value)} />
+              <Input value={bankName} onChange={(event) => setBankName(event.target.value)} />
             </label>
             <label className="field">
               <span>Nomor rekening</span>
-              <input
+              <Input
                 value={accountNumber}
                 onChange={(event) => setAccountNumber(event.target.value)}
               />
             </label>
             <label className="field">
               <span>Nama pemilik rekening</span>
-              <input value={accountName} onChange={(event) => setAccountName(event.target.value)} />
+              <Input value={accountName} onChange={(event) => setAccountName(event.target.value)} />
             </label>
           </div>
           <div className="form-actions">
-            <button
-              className="button-small"
-              type="button"
+            <Button
               onClick={() => void run(() => approve.mutateAsync(), 'Refund disetujui.')}
               disabled={isPending}
+              size="sm"
             >
               Konfirmasi persetujuan
-            </button>
+            </Button>
           </div>
         </div>
       ) : null}
@@ -206,21 +205,21 @@ export function RefundActions({ isAdmin, refund }: RefundActionsProps): ReactNod
         <div className="stack-tight">
           <label className="field">
             <span>Alasan penolakan</span>
-            <input
+            <Input
               value={rejectReason}
               onChange={(event) => setRejectReason(event.target.value)}
               required
             />
           </label>
           <div className="form-actions">
-            <button
-              className="button-danger button-small"
-              type="button"
+            <Button
               onClick={() => void onReject()}
               disabled={isPending}
+              variant="destructive"
+              size="sm"
             >
               Konfirmasi penolakan
-            </button>
+            </Button>
           </div>
         </div>
       ) : null}

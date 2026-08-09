@@ -1,5 +1,6 @@
 'use client'
 
+import { Button } from '@hola/ui'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
@@ -187,14 +188,14 @@ function PaymentsPanel({
                   </td>
                   <td>{payment.paidAt ? formatDateTimeWita(payment.paidAt) : '—'}</td>
                   <td>
-                    <button
-                      className="button-secondary button-small"
-                      type="button"
+                    <Button
                       onClick={() => void onSync(payment.id)}
                       disabled={sync.isPending}
+                      variant="secondary"
+                      size="sm"
                     >
                       Sinkronkan
-                    </button>
+                    </Button>
                   </td>
                 </tr>
               ))}

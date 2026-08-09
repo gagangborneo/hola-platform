@@ -1,3 +1,4 @@
+import { Button } from '@hola/ui'
 import type { ReactNode } from 'react'
 import { formErrorMessage } from './form-error.ts'
 
@@ -29,9 +30,7 @@ export function QueryState({
     return (
       <div className="table-state table-error" role="alert">
         <p>{formErrorMessage(error)}</p>
-        <button type="button" onClick={onRetry}>
-          Coba lagi
-        </button>
+        <Button onClick={onRetry}>Coba lagi</Button>
       </div>
     )
   }

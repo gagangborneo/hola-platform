@@ -1,5 +1,6 @@
 'use client'
 
+import { Button, Input } from '@hola/ui'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
@@ -115,16 +116,13 @@ export function BookingActions({ booking }: BookingActionsProps): ReactNode {
   return (
     <div className="stack">
       <div className="row">
-        <button
-          type="button"
+        <Button
           onClick={() => void run(() => checkIn.mutateAsync(false), 'Customer tercatat check-in.')}
           disabled={isPending || isClosed || booking.checkedInAt !== null}
         >
           Check-in
-        </button>
-        <button
-          className="button-ghost"
-          type="button"
+        </Button>
+        <Button
           onClick={() =>
             void run(
               () => checkIn.mutateAsync(true),
@@ -133,29 +131,28 @@ export function BookingActions({ booking }: BookingActionsProps): ReactNode {
           }
           disabled={isPending || isClosed || booking.checkedInAt !== null}
           title="Untuk customer yang datang di luar jendela check-in normal."
+          variant="outline"
         >
           Check-in paksa
-        </button>
-        <button
-          className="button-secondary"
-          type="button"
+        </Button>
+        <Button
           onClick={() => void run(() => noShow.mutateAsync(), 'Booking ditandai tidak hadir.')}
           disabled={isPending || isClosed || booking.status !== 'confirmed'}
+          variant="secondary"
         >
           Tandai tidak hadir
-        </button>
-        <button
-          className="button-danger"
-          type="button"
+        </Button>
+        <Button
           onClick={() => {
             setIsCancelOpen((current) => !current)
             setError(null)
             setNotice(null)
           }}
           disabled={isPending || !booking.isCancellable || isConfirmedWithoutPayment}
+          variant="destructive"
         >
           {isCancelOpen ? 'Tutup pembatalan' : 'Batalkan booking'}
-        </button>
+        </Button>
       </div>
 
       {!booking.isCancellable && !isClosed ? (
@@ -186,7 +183,7 @@ export function BookingActions({ booking }: BookingActionsProps): ReactNode {
           )}
           <label className="field">
             <span>Alasan pembatalan</span>
-            <input
+            <Input
               value={reason}
               onChange={(event) => setReason(event.target.value)}
               placeholder="Diminta customer, lapangan tergenang, …"
@@ -195,14 +192,9 @@ export function BookingActions({ booking }: BookingActionsProps): ReactNode {
             <small>Masuk ke audit log dan email pemberitahuan customer.</small>
           </label>
           <div className="form-actions">
-            <button
-              className="button-danger"
-              type="button"
-              onClick={() => void onCancel()}
-              disabled={isPending}
-            >
+            <Button onClick={() => void onCancel()} disabled={isPending} variant="destructive">
               {cancel.isPending ? 'Membatalkan…' : 'Konfirmasi pembatalan'}
-            </button>
+            </Button>
           </div>
         </div>
       ) : null}

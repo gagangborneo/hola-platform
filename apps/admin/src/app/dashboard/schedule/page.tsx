@@ -1,6 +1,7 @@
 'use client'
 
 import { buildSlotGrid } from '@hola/shared'
+import { Button, Input, NativeSelect } from '@hola/ui'
 import { useQuery } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { useMemo, useState } from 'react'
@@ -232,7 +233,7 @@ function SchedulePage(): ReactNode {
         <div className="table-controls">
           <label className="table-filter" htmlFor="schedule-date">
             <span>Tanggal</span>
-            <input
+            <Input
               id="schedule-date"
               type="date"
               value={dateKey}
@@ -241,7 +242,7 @@ function SchedulePage(): ReactNode {
           </label>
           <label className="table-filter" htmlFor="schedule-court">
             <span>Lapangan</span>
-            <select
+            <NativeSelect
               id="schedule-court"
               value={courtId}
               onChange={(event) => setCourtId(event.target.value)}
@@ -252,30 +253,24 @@ function SchedulePage(): ReactNode {
                   {court.name}
                 </option>
               ))}
-            </select>
+            </NativeSelect>
           </label>
           <div className="row">
-            <button
-              className="button-secondary"
-              type="button"
+            <Button
               onClick={() => setDateKey((current) => shiftDateKey(current, -1))}
+              variant="secondary"
             >
               ← Kemarin
-            </button>
-            <button
-              className="button-secondary"
-              type="button"
-              onClick={() => setDateKey(todayWita(new Date()))}
-            >
+            </Button>
+            <Button onClick={() => setDateKey(todayWita(new Date()))} variant="secondary">
               Hari ini
-            </button>
-            <button
-              className="button-secondary"
-              type="button"
+            </Button>
+            <Button
               onClick={() => setDateKey((current) => shiftDateKey(current, 1))}
+              variant="secondary"
             >
               Besok →
-            </button>
+            </Button>
           </div>
         </div>
 

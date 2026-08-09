@@ -1,6 +1,7 @@
 'use client'
 
 import { buildSlotGrid, type Quote } from '@hola/shared'
+import { Button, buttonVariants, Input, NativeSelect } from '@hola/ui'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
@@ -282,7 +283,7 @@ function ManualBookingPage(): ReactNode {
           <div className="form-grid">
             <label className="field">
               <span>Lapangan</span>
-              <select
+              <NativeSelect
                 value={courtId}
                 onChange={(event) => {
                   setCourtId(event.target.value)
@@ -299,11 +300,11 @@ function ManualBookingPage(): ReactNode {
                       {court.name}
                     </option>
                   ))}
-              </select>
+              </NativeSelect>
             </label>
             <label className="field">
               <span>Tanggal main</span>
-              <input
+              <Input
                 type="date"
                 value={dateKey}
                 onChange={(event) => {
@@ -335,17 +336,16 @@ function ManualBookingPage(): ReactNode {
                 const isTaken = taken.data?.has(iso) ?? false
                 const isSelected = selected.includes(iso)
                 return (
-                  <button
+                  <Button
                     className={isSelected ? 'button-small' : 'button-secondary button-small'}
                     disabled={isTaken}
                     key={iso}
                     title={isTaken ? 'Slot sudah diklaim' : undefined}
-                    type="button"
                     onClick={() => toggleSlot(iso)}
                   >
                     {formatTimeWita(iso)}
                     {isTaken ? ' · terisi' : ''}
-                  </button>
+                  </Button>
                 )
               })}
             </div>
@@ -374,7 +374,7 @@ function ManualBookingPage(): ReactNode {
         <div className="form-grid">
           <label className="field">
             <span>Kanal</span>
-            <select
+            <NativeSelect
               value={channel}
               onChange={(event) => {
                 setChannel(event.target.value as BookingChannel)
@@ -383,7 +383,7 @@ function ManualBookingPage(): ReactNode {
             >
               <option value="admin">Admin — catat pembayaran tunai (disarankan)</option>
               <option value="walk_in">Walk-in — langsung terkonfirmasi, tanpa catatan uang</option>
-            </select>
+            </NativeSelect>
             <small>
               Kanal admin menahan slot lalu dilunasi lewat pencatatan tunai, sehingga uangnya
               tercatat, masuk laporan harian, dan booking tetap dapat dibatalkan.
@@ -391,7 +391,7 @@ function ManualBookingPage(): ReactNode {
           </label>
           <label className="field">
             <span>Nama tamu</span>
-            <input
+            <Input
               value={guestName}
               onChange={(event) => setGuestName(event.target.value)}
               disabled={customerUserId.trim().length > 0}
@@ -399,7 +399,7 @@ function ManualBookingPage(): ReactNode {
           </label>
           <label className="field">
             <span>Nomor HP tamu</span>
-            <input
+            <Input
               value={guestPhone}
               onChange={(event) => setGuestPhone(event.target.value)}
               disabled={customerUserId.trim().length > 0}
@@ -409,7 +409,7 @@ function ManualBookingPage(): ReactNode {
           {session.user?.role === 'admin' ? (
             <label className="field">
               <span>ID akun customer</span>
-              <input
+              <Input
                 value={customerUserId}
                 onChange={(event) => setCustomerUserId(event.target.value)}
                 placeholder="Kosongkan untuk booking tamu"
@@ -422,7 +422,7 @@ function ManualBookingPage(): ReactNode {
           ) : null}
           <label className="field">
             <span>Kode promo</span>
-            <input
+            <Input
               value={promoCode}
               onChange={(event) => {
                 setPromoCode(event.target.value)
@@ -432,7 +432,7 @@ function ManualBookingPage(): ReactNode {
           </label>
           <label className="field field-wide">
             <span>Catatan</span>
-            <input value={note} onChange={(event) => setNote(event.target.value)} />
+            <Input value={note} onChange={(event) => setNote(event.target.value)} />
           </label>
         </div>
       </div>
@@ -449,29 +449,24 @@ function ManualBookingPage(): ReactNode {
         </div>
         <div className="stack">
           <div className="form-actions">
-            <button
-              className="button-secondary"
-              type="button"
+            <Button
               onClick={() => void onPreview()}
               disabled={previewQuote.isPending || selected.length === 0}
+              variant="secondary"
             >
               {previewQuote.isPending ? 'Menghitung…' : `Hitung harga ${selected.length} slot`}
-            </button>
+            </Button>
           </div>
 
           {quote ? (
             <>
               <QuoteSummary quote={quote} />
               <div className="form-actions">
-                <button
-                  type="button"
-                  onClick={() => void onCreate()}
-                  disabled={createBooking.isPending}
-                >
+                <Button onClick={() => void onCreate()} disabled={createBooking.isPending}>
                   {createBooking.isPending
                     ? 'Membuat booking…'
                     : `Buat booking ${formatRupiah(quote.total_amount)}`}
-                </button>
+                </Button>
               </div>
             </>
           ) : null}
@@ -566,12 +561,12 @@ function CashPaymentStep({
               ini. Untuk mencatat uang tunai, buat booking lewat kanal admin.
             </p>
             <div className="form-actions">
-              <Link className="button-link" href={`/dashboard/bookings/${booking.id}`}>
+              <Link className={buttonVariants()} href={`/dashboard/bookings/${booking.id}`}>
                 Buka detail booking
               </Link>
-              <button className="button-secondary" type="button" onClick={onStartOver}>
+              <Button onClick={onStartOver} variant="secondary">
                 Booking manual berikutnya
-              </button>
+              </Button>
             </div>
           </div>
         ) : isPaid ? (
@@ -580,12 +575,12 @@ function CashPaymentStep({
               Pembayaran tercatat. Booking sudah lunas dan slotnya terkunci.
             </p>
             <div className="form-actions">
-              <Link className="button-link" href={`/dashboard/bookings/${booking.id}`}>
+              <Link className={buttonVariants()} href={`/dashboard/bookings/${booking.id}`}>
                 Buka detail booking
               </Link>
-              <button className="button-secondary" type="button" onClick={onStartOver}>
+              <Button onClick={onStartOver} variant="secondary">
                 Booking manual berikutnya
-              </button>
+              </Button>
             </div>
           </div>
         ) : (
@@ -593,7 +588,7 @@ function CashPaymentStep({
             <div className="form-grid">
               <label className="field">
                 <span>Nominal diterima (Rp)</span>
-                <input
+                <Input
                   type="number"
                   min="0"
                   step="1"
@@ -603,22 +598,22 @@ function CashPaymentStep({
               </label>
               <label className="field">
                 <span>Metode</span>
-                <select
+                <NativeSelect
                   value={method}
                   onChange={(event) => setMethod(event.target.value as PaymentMethod)}
                 >
                   <option value="cash">Tunai</option>
                   <option value="manual_transfer">Transfer manual</option>
-                </select>
+                </NativeSelect>
               </label>
             </div>
             {error ? <p className="form-error">{error}</p> : null}
             <div className="form-actions">
-              <button type="button" onClick={() => void onRecord()} disabled={record.isPending}>
+              <Button onClick={() => void onRecord()} disabled={record.isPending}>
                 {record.isPending ? 'Mencatat…' : 'Catat pembayaran'}
-              </button>
+              </Button>
               <Link
-                className="button-link button-secondary"
+                className={buttonVariants({ variant: 'secondary' })}
                 href={`/dashboard/bookings/${booking.id}`}
               >
                 Lewati — bayar nanti

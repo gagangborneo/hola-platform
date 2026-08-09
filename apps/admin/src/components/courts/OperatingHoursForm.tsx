@@ -1,5 +1,6 @@
 'use client'
 
+import { Button, Input } from '@hola/ui'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import type { FormEvent, ReactNode } from 'react'
 import { useState } from 'react'
@@ -96,7 +97,7 @@ export function OperatingHoursForm({ court }: OperatingHoursFormProps): ReactNod
             <span>{formatDayName(draft.dayOfWeek)}</span>
             <label className="field">
               <span className="sr-only">Jam buka {formatDayName(draft.dayOfWeek)}</span>
-              <input
+              <Input
                 type="time"
                 value={draft.opensTime}
                 onChange={(event) => update(draft.dayOfWeek, { opensTime: event.target.value })}
@@ -105,7 +106,7 @@ export function OperatingHoursForm({ court }: OperatingHoursFormProps): ReactNod
             </label>
             <label className="field">
               <span className="sr-only">Jam tutup {formatDayName(draft.dayOfWeek)}</span>
-              <input
+              <Input
                 type="time"
                 value={draft.closesTime}
                 onChange={(event) => update(draft.dayOfWeek, { closesTime: event.target.value })}
@@ -118,21 +119,20 @@ export function OperatingHoursForm({ court }: OperatingHoursFormProps): ReactNod
       {error ? <p className="form-error">{error}</p> : null}
       {isSaved ? <p className="notice notice-success">Jam operasional tersimpan.</p> : null}
       <div className="form-actions">
-        <button type="submit" disabled={save.isPending}>
+        <Button type="submit" disabled={save.isPending}>
           {save.isPending ? 'Menyimpan…' : 'Simpan jam operasional'}
-        </button>
-        <button
-          className="button-secondary"
-          type="button"
+        </Button>
+        <Button
           onClick={() => {
             setDrafts(toDrafts(court.operatingHours))
             setError(null)
             setIsSaved(false)
           }}
           disabled={save.isPending}
+          variant="secondary"
         >
           Kembalikan
-        </button>
+        </Button>
       </div>
     </form>
   )

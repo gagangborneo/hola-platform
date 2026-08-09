@@ -1,5 +1,6 @@
 'use client'
 
+import { Button, Input, NativeSelect } from '@hola/ui'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import type { FormEvent, ReactNode } from 'react'
 import { useState } from 'react'
@@ -185,7 +186,7 @@ export function VoucherForm({ onDone, promo }: VoucherFormProps): ReactNode {
       <div className="form-grid">
         <label className="field">
           <span>Kode voucher</span>
-          <input
+          <Input
             value={draft.code}
             onChange={(event) => update({ code: event.target.value.toUpperCase() })}
             disabled={promo !== undefined}
@@ -196,7 +197,7 @@ export function VoucherForm({ onDone, promo }: VoucherFormProps): ReactNode {
         </label>
         <label className="field">
           <span>Nama</span>
-          <input
+          <Input
             value={draft.name}
             onChange={(event) => update({ name: event.target.value })}
             required
@@ -204,18 +205,18 @@ export function VoucherForm({ onDone, promo }: VoucherFormProps): ReactNode {
         </label>
         <label className="field">
           <span>Jenis diskon</span>
-          <select
+          <NativeSelect
             value={draft.type}
             onChange={(event) => update({ type: event.target.value as VoucherType })}
           >
             <option value="percent">Persen</option>
             <option value="fixed">Nominal tetap</option>
-          </select>
+          </NativeSelect>
         </label>
         {draft.type === 'percent' ? (
           <label className="field">
             <span>Persentase diskon (%)</span>
-            <input
+            <Input
               type="number"
               min="1"
               max="100"
@@ -227,7 +228,7 @@ export function VoucherForm({ onDone, promo }: VoucherFormProps): ReactNode {
         ) : (
           <label className="field">
             <span>Nominal diskon (Rp)</span>
-            <input
+            <Input
               type="number"
               min="1"
               step="1"
@@ -239,7 +240,7 @@ export function VoucherForm({ onDone, promo }: VoucherFormProps): ReactNode {
         )}
         <label className="field">
           <span>Batas nominal diskon (Rp)</span>
-          <input
+          <Input
             type="number"
             min="1"
             step="1"
@@ -255,7 +256,7 @@ export function VoucherForm({ onDone, promo }: VoucherFormProps): ReactNode {
         </label>
         <label className="field">
           <span>Minimal transaksi (Rp)</span>
-          <input
+          <Input
             type="number"
             min="0"
             step="1"
@@ -265,7 +266,7 @@ export function VoucherForm({ onDone, promo }: VoucherFormProps): ReactNode {
         </label>
         <label className="field">
           <span>Kuota total</span>
-          <input
+          <Input
             type="number"
             min="1"
             value={draft.quotaTotal}
@@ -275,7 +276,7 @@ export function VoucherForm({ onDone, promo }: VoucherFormProps): ReactNode {
         </label>
         <label className="field">
           <span>Kuota per customer</span>
-          <input
+          <Input
             type="number"
             min="1"
             value={draft.quotaPerUser}
@@ -285,7 +286,7 @@ export function VoucherForm({ onDone, promo }: VoucherFormProps): ReactNode {
         </label>
         <label className="field">
           <span>Berlaku dari (WITA)</span>
-          <input
+          <Input
             type="datetime-local"
             value={draft.validFrom}
             onChange={(event) => update({ validFrom: event.target.value })}
@@ -294,7 +295,7 @@ export function VoucherForm({ onDone, promo }: VoucherFormProps): ReactNode {
         </label>
         <label className="field">
           <span>Berlaku sampai (WITA)</span>
-          <input
+          <Input
             type="datetime-local"
             value={draft.validUntil}
             onChange={(event) => update({ validUntil: event.target.value })}
@@ -303,18 +304,18 @@ export function VoucherForm({ onDone, promo }: VoucherFormProps): ReactNode {
         </label>
         <label className="field">
           <span>Status</span>
-          <select
+          <NativeSelect
             value={draft.status}
             onChange={(event) => update({ status: event.target.value as PromoStatusValue })}
           >
             <option value="draft">Draft — belum dapat dipakai</option>
             <option value="active">Aktif</option>
             <option value="paused">Dijeda</option>
-          </select>
+          </NativeSelect>
         </label>
         <label className="field field-wide">
           <span>Deskripsi</span>
-          <input
+          <Input
             value={draft.description}
             onChange={(event) => update({ description: event.target.value })}
           />
@@ -324,17 +325,12 @@ export function VoucherForm({ onDone, promo }: VoucherFormProps): ReactNode {
       {error ? <p className="form-error">{error}</p> : null}
 
       <div className="form-actions">
-        <button type="submit" disabled={save.isPending}>
+        <Button type="submit" disabled={save.isPending}>
           {save.isPending ? 'Menyimpan…' : promo ? 'Simpan perubahan' : 'Buat voucher'}
-        </button>
-        <button
-          className="button-secondary"
-          type="button"
-          onClick={onDone}
-          disabled={save.isPending}
-        >
+        </Button>
+        <Button onClick={onDone} disabled={save.isPending} variant="secondary">
           Batal
-        </button>
+        </Button>
       </div>
     </form>
   )

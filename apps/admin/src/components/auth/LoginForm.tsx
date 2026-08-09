@@ -1,6 +1,7 @@
 'use client'
 
 import { loginSchema } from '@hola/shared'
+import { Button, Field, Input } from '@hola/ui'
 import { useRouter } from 'next/navigation'
 import type { FormEvent, ReactNode } from 'react'
 import { useState } from 'react'
@@ -54,19 +55,23 @@ export function LoginForm(): ReactNode {
   }
 
   return (
-    <form className="auth-form" onSubmit={onSubmit} noValidate>
-      <label className="field">
-        <span>Email atau nomor HP</span>
-        <input name="identifier" autoComplete="username" required />
-      </label>
-      <label className="field">
-        <span>Password</span>
-        <input name="password" type="password" autoComplete="current-password" required />
-      </label>
-      {error ? <p className="form-error">{error}</p> : null}
-      <button type="submit" disabled={isSubmitting}>
+    <form className="mt-6 grid gap-4" onSubmit={onSubmit} noValidate>
+      <Field label="Email atau nomor HP" required>
+        {({ id }) => <Input autoComplete="username" id={id} name="identifier" required />}
+      </Field>
+      <Field label="Password" required>
+        {({ id }) => (
+          <Input autoComplete="current-password" id={id} name="password" required type="password" />
+        )}
+      </Field>
+      {error ? (
+        <p className="rounded-md bg-destructive/10 px-3 py-2.5 text-sm leading-relaxed text-destructive">
+          {error}
+        </p>
+      ) : null}
+      <Button disabled={isSubmitting} size="lg" type="submit">
         {isSubmitting ? 'Memproses…' : 'Masuk ke back-office'}
-      </button>
+      </Button>
     </form>
   )
 }

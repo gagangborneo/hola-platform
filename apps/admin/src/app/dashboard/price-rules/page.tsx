@@ -1,5 +1,6 @@
 'use client'
 
+import { Button, NativeSelect } from '@hola/ui'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
@@ -88,15 +89,14 @@ function PriceRulesPage(): ReactNode {
             akan menolak booking customer — periksa cakupannya setiap kali daftar harga berubah.
           </p>
         </div>
-        <button
-          type="button"
+        <Button
           onClick={() => {
             setIsCreating((current) => !current)
             setEditing(null)
           }}
         >
           {isCreating ? 'Tutup formulir' : 'Tambah aturan'}
-        </button>
+        </Button>
       </div>
 
       {isCreating ? (
@@ -135,7 +135,7 @@ function PriceRulesPage(): ReactNode {
         <div className="table-controls">
           <label className="table-filter" htmlFor="rules-court">
             <span>Lapangan</span>
-            <select
+            <NativeSelect
               id="rules-court"
               value={courtFilter}
               onChange={(event) => setCourtFilter(event.target.value)}
@@ -146,7 +146,7 @@ function PriceRulesPage(): ReactNode {
                   {court.name}
                 </option>
               ))}
-            </select>
+            </NativeSelect>
           </label>
         </div>
 
@@ -208,24 +208,24 @@ function PriceRulesPage(): ReactNode {
                     </td>
                     <td>
                       <div className="row">
-                        <button
-                          className="button-secondary button-small"
-                          type="button"
+                        <Button
                           onClick={() => {
                             setIsCreating(false)
                             setEditing(rule)
                           }}
+                          variant="secondary"
+                          size="sm"
                         >
                           Ubah
-                        </button>
-                        <button
-                          className="button-danger button-small"
-                          type="button"
+                        </Button>
+                        <Button
                           onClick={() => void onDelete(rule)}
                           disabled={remove.isPending}
+                          variant="destructive"
+                          size="sm"
                         >
                           Hapus
-                        </button>
+                        </Button>
                       </div>
                     </td>
                   </tr>

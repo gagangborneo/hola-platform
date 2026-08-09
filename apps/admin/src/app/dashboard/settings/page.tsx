@@ -6,6 +6,7 @@ import {
   SETTINGS_KEY,
   type SettingsKey,
 } from '@hola/shared'
+import { Button, Textarea } from '@hola/ui'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { FormEvent, ReactNode } from 'react'
 import { useState } from 'react'
@@ -128,9 +129,7 @@ function SettingsPanel(): ReactNode {
     return (
       <div className="table-state table-error" role="alert">
         <p>{formErrorMessage(query.error)}</p>
-        <button type="button" onClick={() => void query.refetch()}>
-          Coba lagi
-        </button>
+        <Button onClick={() => void query.refetch()}>Coba lagi</Button>
       </div>
     )
   }
@@ -152,32 +151,31 @@ function SettingsPanel(): ReactNode {
               <p>{setting.description ?? 'Tidak ada deskripsi.'}</p>
               <small>Terakhir diperbarui {formatDate(setting.updatedAt)}</small>
             </div>
-            <button className="button-secondary" type="button" onClick={() => beginEdit(setting)}>
+            <Button onClick={() => beginEdit(setting)} variant="secondary">
               Ubah JSON
-            </button>
+            </Button>
           </div>
           {editingKey === setting.key ? (
             <form className="setting-editor" onSubmit={(event) => void submitEdit(event)}>
               <label className="field">
                 <span>Nilai JSON</span>
-                <textarea
+                <Textarea
                   value={jsonValue}
                   onChange={(event) => setJsonValue(event.target.value)}
                 />
               </label>
               {editError ? <p className="form-error">{editError}</p> : null}
               <div className="form-actions">
-                <button type="submit" disabled={update.isPending}>
+                <Button type="submit" disabled={update.isPending}>
                   {update.isPending ? 'Menyimpan…' : 'Simpan'}
-                </button>
-                <button
-                  className="button-secondary"
-                  type="button"
+                </Button>
+                <Button
                   onClick={() => setEditingKey(null)}
                   disabled={update.isPending}
+                  variant="secondary"
                 >
                   Batal
-                </button>
+                </Button>
               </div>
             </form>
           ) : (
