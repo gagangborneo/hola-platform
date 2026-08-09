@@ -14,7 +14,23 @@ vi.mock('../../lib/api-client.ts', () => ({
   },
 }))
 
+vi.mock('../../lib/auth.ts', () => ({
+  useAuthSession: () => ({
+    accessToken: 'token',
+    isReady: true,
+    user: {
+      id: 'user-1',
+      role: 'customer',
+      email: 'pemain@hola.test',
+      phone: null,
+      fullName: 'Rangga Bayu',
+    },
+  }),
+}))
+
 import { Receipt } from './Receipt.tsx'
+
+const COURTS = { 'court-1': { name: 'Padel Court 3', code: 'PDL-03' } }
 
 function wrapper({ children }: { children: ReactNode }): ReactNode {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -38,6 +54,7 @@ describe('Receipt', () => {
           items: [
             {
               id: 'item-1',
+              court_id: 'court-1',
               starts_at: '2026-08-10T06:00:00+08:00',
               ends_at: '2026-08-10T07:00:00+08:00',
               rate_class: 'offpeak',
@@ -48,7 +65,7 @@ describe('Receipt', () => {
       }),
     )
 
-    render(<Receipt bookingId="booking-1" />, { wrapper })
+    render(<Receipt bookingId="booking-1" courts={COURTS} />, { wrapper })
 
     expect(await screen.findByText('HOLA-0001')).toBeDefined()
     // I1: status booking dan rate_class harus tampil dalam Bahasa Indonesia,
@@ -62,7 +79,7 @@ describe('Receipt', () => {
   it('menampilkan pesan error saat e-receipt gagal dimuat', async () => {
     receiptGet.mockRejectedValue(new Error('E-receipt tidak dapat dimuat.'))
 
-    render(<Receipt bookingId="booking-1" />, { wrapper })
+    render(<Receipt bookingId="booking-1" courts={COURTS} />, { wrapper })
 
     expect(await screen.findByText('E-receipt belum tersedia.')).toBeDefined()
   })

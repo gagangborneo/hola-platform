@@ -2,7 +2,9 @@ import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { BookingDetail } from '../../../../components/account/BookingDetail.tsx'
+import { courtSummaryMap } from '../../../../lib/court-summary.ts'
 import { fetchPublicConfig } from '../../../../lib/public-config.ts'
+import { fetchCourts } from '../../../../lib/server-api.ts'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,7 +15,13 @@ interface BookingDetailPageProps {
 export default async function BookingDetailPage({
   params,
 }: BookingDetailPageProps): Promise<ReactNode> {
-  const [{ id }, config] = await Promise.all([params, fetchPublicConfig()])
+  // Detail booking hanya membawa `court_id`; nama lapangannya datang dari
+  // katalog publik yang sudah ber-ISR, jadi tidak menambah beban per request.
+  const [{ id }, config, courtsResult] = await Promise.all([
+    params,
+    fetchPublicConfig(),
+    fetchCourts(),
+  ])
 
   return (
     <div>
@@ -24,8 +32,12 @@ export default async function BookingDetailPage({
         <ArrowLeft className="size-4" aria-hidden />
         Kembali ke Booking Saya
       </Link>
-      <div className="mt-4 rounded-xl border bg-card p-5 sm:p-6">
-        <BookingDetail bookingId={id} cancellationPolicyText={config.cancellation_policy_text} />
+      <div className="mt-4">
+        <BookingDetail
+          bookingId={id}
+          cancellationPolicyText={config.cancellation_policy_text}
+          courts={courtSummaryMap(courtsResult)}
+        />
       </div>
     </div>
   )

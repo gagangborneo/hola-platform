@@ -15,19 +15,11 @@ import {
   formatRupiah,
   formatTimeWita,
 } from '../../lib/format.ts'
-import { bookingStatusLabel } from '../../lib/status-labels.ts'
 import { EmptyState } from '../common/EmptyState.tsx'
-import { Badge, type BadgeProps } from '../ui/badge.tsx'
 import { Button } from '../ui/button.tsx'
 import { Card } from '../ui/card.tsx'
 import { Skeleton } from '../ui/skeleton.tsx'
-
-/** Menunggu pembayaran perlu menonjol karena ada tenggat; sisanya cukup netral. */
-function statusVariant(status: string): BadgeProps['variant'] {
-  if (status === 'confirmed' || status === 'completed') return 'default'
-  if (status === 'pending_payment') return 'accent'
-  return 'outline'
-}
+import { BookingStatusBadges } from './BookingStatusBadges.tsx'
 
 function BookingCardSkeleton(): ReactNode {
   return (
@@ -176,9 +168,10 @@ export function BookingList(): ReactNode {
                     <p className="font-display text-base font-bold text-foreground">
                       {booking.booking_code}
                     </p>
-                    <Badge variant={statusVariant(booking.status)}>
-                      {bookingStatusLabel(booking.status)}
-                    </Badge>
+                    <BookingStatusBadges
+                      status={booking.status}
+                      checkedInAt={booking.checked_in_at}
+                    />
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">
                     {formatDateWita(bookingDate)} · {booking.slot_count} slot

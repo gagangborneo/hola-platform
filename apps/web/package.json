@@ -27,6 +27,7 @@
     "hono": "^4.12.32",
     "lucide-react": "^0.487.0",
     "next": "^16.2.12",
+    "qrcode.react": "^4.2.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "sonner": "^2.0.7",
