@@ -2,12 +2,14 @@ import Image from 'next/image'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { Button } from '../ui/button.tsx'
+import { HeaderAccountButton } from './HeaderAccountButton.tsx'
 
 export function SiteHeader(): ReactNode {
   return (
     <header className="sticky top-0 z-40 border-b bg-background/90 backdrop-blur">
       {/* Di bawah `sm` tautan navigasi turun ke baris kedua supaya logo dan tombol
-          Masuk tidak terpotong; tanpa menu JavaScript agar header tetap server-only. */}
+          akun tidak terpotong. Hanya slot akun yang berupa komponen klien —
+          sisanya tetap dirender di peladen. */}
       <nav
         className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-2 gap-y-2 px-4 py-3 sm:gap-x-4 sm:py-4"
         aria-label="Navigasi utama"
@@ -33,9 +35,7 @@ export function SiteHeader(): ReactNode {
             <Link href="/akun/booking">Booking Saya</Link>
           </Button>
         </div>
-        <Button asChild size="sm">
-          <Link href="/login">Masuk</Link>
-        </Button>
+        <HeaderAccountButton />
       </nav>
     </header>
   )

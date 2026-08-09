@@ -375,7 +375,7 @@ nominal ini.
   - Build `apps/web` menuntut berkas `apps/web/.env` yang sungguhan. Mengekspor variabel ke shell tidak setara — Next membaca berkas `.env` saat build untuk meng-inline `NEXT_PUBLIC_*`. Tanpa itu build gagal dengan pesan menyesatkan tentang `useState` null.
 
   **Kualitas, tidak menghambat:**
-  - Tidak ada tombol keluar maupun tautan akun di mana pun; `SessionStatus.tsx` tidak dipakai siapa pun.
+  - `SessionStatus.tsx` tidak dipakai siapa pun. (Tombol keluar dan tautan akun sudah ada sejak shell `/akun` dibuat: `AccountSidebar.tsx` + `HeaderAccountButton.tsx`.)
   - Komponen shadcn `accordion`, `checkbox`, `select`, `sheet` dan dependensinya (plus `sonner`) ikut terpasang tapi belum dipakai.
   - `GET /courts?status=inactive` dapat dienumerasi publik tanpa auth atau rate limit.
   - `GET /bookings/{id}` mengembalikan `internal_note` dan `guest_phone` ke customer pemilik booking.

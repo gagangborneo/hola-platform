@@ -1,6 +1,7 @@
+import { ArrowLeft } from 'lucide-react'
+import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { BookingDetail } from '../../../../components/account/BookingDetail.tsx'
-import { RequireSession } from '../../../../components/common/RequireSession.tsx'
 import { fetchPublicConfig } from '../../../../lib/public-config.ts'
 
 export const dynamic = 'force-dynamic'
@@ -15,10 +16,17 @@ export default async function BookingDetailPage({
   const [{ id }, config] = await Promise.all([params, fetchPublicConfig()])
 
   return (
-    <RequireSession>
-      <main className="mx-auto max-w-3xl px-4 py-12">
+    <div>
+      <Link
+        className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
+        href="/akun/booking"
+      >
+        <ArrowLeft className="size-4" aria-hidden />
+        Kembali ke Booking Saya
+      </Link>
+      <div className="mt-4 rounded-xl border bg-card p-5 sm:p-6">
         <BookingDetail bookingId={id} cancellationPolicyText={config.cancellation_policy_text} />
-      </main>
-    </RequireSession>
+      </div>
+    </div>
   )
 }

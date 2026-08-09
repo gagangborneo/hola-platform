@@ -6,12 +6,11 @@ import { useRouter } from 'next/navigation'
 import type { FormEvent, ReactNode } from 'react'
 import { useState } from 'react'
 import { apiClient } from '../../lib/api-client.ts'
-import { authStore } from '../../lib/auth.ts'
+import { authStore, parseAuthSession } from '../../lib/auth.ts'
 import { Button } from '../ui/button.tsx'
 import { Input } from '../ui/input.tsx'
 import { Label } from '../ui/label.tsx'
 import { formErrorMessage, validationErrorMessage } from './auth-form.ts'
-import { isAuthSessionPayload } from './auth-response.ts'
 
 function formValue(formData: FormData, key: string): string {
   const value = formData.get(key)
@@ -58,8 +57,9 @@ export function LoginForm(): ReactNode {
     try {
       const response = await apiClient.api.v1.auth.login.$post({ json: parsed.data })
       const body: unknown = await response.json()
-      if (!isAuthSessionPayload(body)) throw new Error('Respons login tidak dapat diproses.')
-      authStore.setAccessToken(body.data.access_token)
+      const session = parseAuthSession(body)
+      if (!session) throw new Error('Respons login tidak dapat diproses.')
+      authStore.setSession(session)
       const next = new URLSearchParams(globalThis.location.search).get('next')
       router.replace(resolveNextPath(next))
     } catch (submissionError) {

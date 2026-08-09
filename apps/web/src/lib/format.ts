@@ -20,6 +20,16 @@ const dateWita = new Intl.DateTimeFormat('id-ID', {
   year: 'numeric',
 })
 
+const dayNumberWita = new Intl.DateTimeFormat('id-ID', {
+  timeZone: TIMEZONE,
+  day: 'numeric',
+})
+
+const monthShortWita = new Intl.DateTimeFormat('id-ID', {
+  timeZone: TIMEZONE,
+  month: 'short',
+})
+
 const dateKeyWita = new Intl.DateTimeFormat('en-CA', {
   timeZone: TIMEZONE,
   year: 'numeric',
@@ -43,6 +53,15 @@ export function formatTimeWita(iso: string): string {
 
 export function formatDateWita(iso: string): string {
   return dateWita.format(new Date(iso))
+}
+
+/** Tanggal dan bulan terpisah untuk kalender mini pada kartu booking. */
+export function formatDayNumberWita(iso: string): string {
+  return dayNumberWita.format(new Date(iso))
+}
+
+export function formatMonthShortWita(iso: string): string {
+  return monthShortWita.format(new Date(iso))
 }
 
 /** Indeks mengikuti `EXTRACT(DOW)`: 0 = Minggu. */

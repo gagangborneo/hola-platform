@@ -1,6 +1,21 @@
+/** Identitas tampilan saja — dipakai header dan sidebar akun, tidak untuk otorisasi. */
+export interface AuthenticatedUser {
+  id: string
+  role: string
+  email: string | null
+  phone: string | null
+  fullName: string
+}
+
 export interface AuthSnapshot {
   accessToken: string | null
   isReady: boolean
+  user: AuthenticatedUser | null
+}
+
+export interface AuthSessionData {
+  accessToken: string
+  user: AuthenticatedUser | null
 }
 
 export interface MemoryAuthStoreOptions {
@@ -14,24 +29,50 @@ export interface MemoryAuthStore {
   getServerSnapshot(): AuthSnapshot
   getSnapshot(): AuthSnapshot
   restoreSession(): Promise<string | null>
-  setAccessToken(accessToken: string): void
+  setSession(session: AuthSessionData): void
   subscribe(listener: () => void): () => void
-}
-
-interface RefreshPayload {
-  data: { access_token: string }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
-function isRefreshPayload(value: unknown): value is RefreshPayload {
+function parseUser(value: unknown): AuthenticatedUser | null {
+  if (!isRecord(value)) return null
+  if (typeof value.id !== 'string' || typeof value.full_name !== 'string') return null
+  return {
+    id: value.id,
+    role: typeof value.role === 'string' ? value.role : 'customer',
+    email: typeof value.email === 'string' ? value.email : null,
+    phone: typeof value.phone === 'string' ? value.phone : null,
+    fullName: value.full_name,
+  }
+}
+
+/**
+ * `POST /auth/login` dan `POST /auth/refresh` memakai serializer respons yang
+ * sama di API, jadi satu parser dipakai keduanya — tanpa itu identitas pengguna
+ * hanya hidup sampai reload berikutnya.
+ *
+ * `user` sengaja opsional: identitas hanya menghias header/sidebar, jadi respons
+ * tanpa `user` tetap menghasilkan sesi sah, bukan kegagalan login.
+ */
+export function parseAuthSession(value: unknown): AuthSessionData | null {
+  if (!isRecord(value) || !isRecord(value.data)) return null
+  const accessToken = value.data.access_token
+  if (typeof accessToken !== 'string' || accessToken.length === 0) return null
+  return { accessToken, user: parseUser(value.data.user) }
+}
+
+function isSameUser(left: AuthenticatedUser | null, right: AuthenticatedUser | null): boolean {
+  if (left === right) return true
+  if (!left || !right) return false
   return (
-    isRecord(value) &&
-    isRecord(value.data) &&
-    typeof value.data.access_token === 'string' &&
-    value.data.access_token.length > 0
+    left.id === right.id &&
+    left.role === right.role &&
+    left.email === right.email &&
+    left.phone === right.phone &&
+    left.fullName === right.fullName
   )
 }
 
@@ -49,20 +90,25 @@ export function createMemoryAuthStore(options: MemoryAuthStoreOptions): MemoryAu
   // `window`/`globalThis` — persis yang terjadi bila dipanggil lewat properti objek.
   const requestFetch = options.fetch
   const listeners = new Set<() => void>()
-  const serverSnapshot: AuthSnapshot = { accessToken: null, isReady: false }
-  let snapshot: AuthSnapshot = { accessToken: null, isReady: false }
+  const serverSnapshot: AuthSnapshot = { accessToken: null, isReady: false, user: null }
+  let snapshot: AuthSnapshot = { accessToken: null, isReady: false, user: null }
   let revision = 0
   let refreshInFlight: Promise<string | null> | undefined
 
   const publish = (next: AuthSnapshot): void => {
-    if (snapshot.accessToken === next.accessToken && snapshot.isReady === next.isReady) return
+    if (
+      snapshot.accessToken === next.accessToken &&
+      snapshot.isReady === next.isReady &&
+      isSameUser(snapshot.user, next.user)
+    )
+      return
     snapshot = next
     for (const listener of listeners) listener()
   }
 
-  const setToken = (accessToken: string | null, isReady: boolean): void => {
+  const setSession = (session: AuthSessionData | null, isReady: boolean): void => {
     revision += 1
-    publish({ accessToken, isReady })
+    publish({ accessToken: session?.accessToken ?? null, isReady, user: session?.user ?? null })
   }
 
   const restoreSession = (): Promise<string | null> => {
@@ -78,21 +124,24 @@ export function createMemoryAuthStore(options: MemoryAuthStoreOptions): MemoryAu
           },
         )
         if (!response.ok) {
-          if (requestRevision === revision) publish({ accessToken: null, isReady: true })
+          if (requestRevision === revision)
+            publish({ accessToken: null, isReady: true, user: null })
           return null
         }
 
         const body: unknown = await response.json()
-        if (!isRefreshPayload(body)) {
-          if (requestRevision === revision) publish({ accessToken: null, isReady: true })
+        const session = parseAuthSession(body)
+        if (!session) {
+          if (requestRevision === revision)
+            publish({ accessToken: null, isReady: true, user: null })
           return null
         }
 
         if (requestRevision === revision)
-          publish({ accessToken: body.data.access_token, isReady: true })
-        return body.data.access_token
+          publish({ accessToken: session.accessToken, isReady: true, user: session.user })
+        return session.accessToken
       } catch {
-        if (requestRevision === revision) publish({ accessToken: null, isReady: true })
+        if (requestRevision === revision) publish({ accessToken: null, isReady: true, user: null })
         return null
       }
     })()
@@ -105,7 +154,7 @@ export function createMemoryAuthStore(options: MemoryAuthStoreOptions): MemoryAu
 
   return {
     clearAccessToken(): void {
-      setToken(null, true)
+      setSession(null, true)
     },
     getAccessToken(): string | null {
       return snapshot.accessToken
@@ -117,8 +166,8 @@ export function createMemoryAuthStore(options: MemoryAuthStoreOptions): MemoryAu
       return snapshot
     },
     restoreSession,
-    setAccessToken(accessToken: string): void {
-      setToken(accessToken, true)
+    setSession(session: AuthSessionData): void {
+      setSession(session, true)
     },
     subscribe(listener: () => void): () => void {
       listeners.add(listener)

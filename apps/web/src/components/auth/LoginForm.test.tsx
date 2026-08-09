@@ -16,11 +16,15 @@ vi.mock('../../lib/api-client.ts', () => ({
   apiClient: { api: { v1: { auth: { login: { $post: loginPost } } } } },
 }))
 
-const setAccessToken = vi.fn()
+const setSession = vi.fn()
 
-vi.mock('../../lib/auth.ts', () => ({
-  authStore: { setAccessToken },
-}))
+vi.mock('../../lib/auth.ts', async () => {
+  // `parseAuthSession` sungguhan dipakai supaya test ini ikut menjaga kontrak
+  // bentuk respons login, bukan cuma alur pengalihannya.
+  const actual =
+    await vi.importActual<typeof import('../../lib/auth-store.ts')>('../../lib/auth-store.ts')
+  return { authStore: { setSession }, parseAuthSession: actual.parseAuthSession }
+})
 
 const { LoginForm } = await import('./LoginForm.tsx')
 
@@ -43,7 +47,7 @@ beforeEach(() => {
 afterEach(() => {
   replace.mockClear()
   loginPost.mockClear()
-  setAccessToken.mockClear()
+  setSession.mockClear()
 })
 
 describe('LoginForm: tujuan pengalihan ?next= setelah login', () => {
