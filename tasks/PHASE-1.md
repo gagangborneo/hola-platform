@@ -343,17 +343,17 @@ nominal ini.
 
 ## P1.L — `apps/admin` (minimal, cukup operasional harian) · 9h
 
-- [ ] **P1-81** `1h` — Dashboard "hari ini": booking hari ini per lapangan, pembayaran masuk, hold aktif, booking `pending_payment` yang perlu ditindaklanjuti
-- [ ] **P1-82** `1h` — Kalender slot per lapangan dari `GET /slot-claims` (booking / maintenance dibedakan; event & match menyusul otomatis di Phase 2 & 4 tanpa perubahan UI)
-- [ ] **P1-83** `1h` ⛔ K-06 — CRUD lapangan + jam operasional + foto (presigned upload, kompresi gambar di client sebelum upload — [02 § 6](../docs/02-INFRASTRUCTURE.md#6-object-storage))
-- [ ] **P1-84** `1h` ⛔ K-07 — CRUD `price_rules` + pratinjau harga (`GET /pricing/preview`) + **peringatan slot tanpa rule yang cocok** (mencegah `PRICE_RULE_NOT_FOUND` di produksi, E-11)
-- [ ] **P1-85** `0,5h` — Blokir lapangan (maintenance) + pembatalannya + penanganan `409` dengan daftar booking bentrok dan pilihan force release (E-11)
-- [ ] **P1-86** `1h` — Tabel booking: filter status/tanggal/lapangan/kanal + pencarian `q` + halaman detail booking (items, addon, payments, riwayat)
-- [ ] **P1-87** `1h` 🔒 — **Booking manual**: `channel='admin'`/`walk_in`, customer terdaftar atau guest (`guest_name` + `guest_phone`), + pencatatan pembayaran tunai (`POST /payments/manual` dengan `Idempotency-Key`). Ini kanal pendapatan hari pertama
-- [ ] **P1-88** `0,5h` — Aksi check-in / no-show / pembatalan dengan `reason` wajib
-- [ ] **P1-89** `1h` — CRUD voucher: `percent`/`fixed`, `max_discount_amount` (wajib bila `value_percent > 25`, BR-PR-01), `quota_total`, `quota_per_user`, `valid_from`/`valid_until`, `min_transaction_amount` + statistik `quota_used / quota_total`
-- [ ] **P1-90** `0,5h` — Daftar pembayaran + `sync` + daftar refund + `approve`/`reject`/`mark-completed` (unggah bukti transfer)
-- [ ] **P1-91** `0,5h` — Halaman customer sederhana (daftar + riwayat booking) sebagai pendahulu CRM Phase 2
+- [x] **P1-81** `1h` — Dashboard "hari ini": booking hari ini per lapangan, pembayaran masuk, hold aktif, booking `pending_payment` yang perlu ditindaklanjuti
+- [x] **P1-82** `1h` — Kalender slot per lapangan dari `GET /slot-claims` (booking / maintenance dibedakan; event & match menyusul otomatis di Phase 2 & 4 tanpa perubahan UI)
+- [x] **P1-83** `1h` ⛔ K-06 — CRUD lapangan + jam operasional + foto (presigned upload, kompresi gambar di client sebelum upload — [02 § 6](../docs/02-INFRASTRUCTURE.md#6-object-storage))
+- [x] **P1-84** `1h` ⛔ K-07 — CRUD `price_rules` + pratinjau harga (`GET /pricing/preview`) + **peringatan slot tanpa rule yang cocok** (mencegah `PRICE_RULE_NOT_FOUND` di produksi, E-11)
+- [x] **P1-85** `0,5h` — Blokir lapangan (maintenance) + pembatalannya + penanganan `409` dengan daftar booking bentrok dan pilihan force release (E-11)
+- [x] **P1-86** `1h` — Tabel booking: filter status/tanggal/lapangan/kanal + pencarian `q` + halaman detail booking (items, addon, payments, riwayat)
+- [x] **P1-87** `1h` 🔒 — **Booking manual**: `channel='admin'`/`walk_in`, customer terdaftar atau guest (`guest_name` + `guest_phone`), + pencatatan pembayaran tunai (`POST /payments/manual` dengan `Idempotency-Key`). Ini kanal pendapatan hari pertama
+- [x] **P1-88** `0,5h` — Aksi check-in / no-show / pembatalan dengan `reason` wajib
+- [x] **P1-89** `1h` — CRUD voucher: `percent`/`fixed`, `max_discount_amount` (wajib bila `value_percent > 25`, BR-PR-01), `quota_total`, `quota_per_user`, `valid_from`/`valid_until`, `min_transaction_amount` + statistik `quota_used / quota_total`
+- [x] **P1-90** `0,5h` — Daftar pembayaran + `sync` + daftar refund + `approve`/`reject`/`mark-completed` (unggah bukti transfer)
+- [x] **P1-91** `0,5h` — Halaman customer sederhana (daftar + riwayat booking) sebagai pendahulu CRM Phase 2
 
 ## P1.M — Go-live · 7,5h
 
@@ -382,6 +382,22 @@ nominal ini.
   - `/checkout` tidak memvalidasi bentuk parameter `slots`; URL yang terpotong jatuh ke halaman error umum.
   - `lapangan/[kode]` memanggil API empat kali per render (`generateMetadata` dan badan halaman masing-masing memuat daftar lapangan lalu detailnya).
   - Reset persetujuan harga saat quote baru datang benar, tapi belum ada test regresinya.
+
+  </details>
+
+  <details><summary>Utang teknis yang ditemukan saat P1.L — jangan hilang</summary>
+
+  **Menghambat go-live / UAT:**
+  - **Kanal `walk_in` tidak dapat dipakai.** `POST /bookings` dengan `channel='walk_in'` oleh staff/admin membuat booking langsung `confirmed` **tanpa baris pembayaran apa pun**, sehingga: (1) `POST /payments/manual` menolaknya dengan `409 BOOKING_ALREADY_PAID` — uang tunainya tidak pernah tercatat dan tidak muncul di rekap pemasukan; (2) `POST /bookings/{id}/cancel` menjawab **`500 INTERNAL_ERROR`**, karena `cancelBooking` melempar `err.internal()` untuk booking `confirmed` tanpa pembayaran lunas ([bookings.service.ts](../apps/api/src/modules/bookings/bookings.service.ts) — cari `status === 'confirmed' && !payment`), padahal `buildCancellationPreview` di file yang sama melaporkan `is_cancellable: true` untuk kondisi yang persis sama. Kedua endpoint saling bertentangan. Sementara ini `apps/admin` mengarahkan booking manual ke kanal `admin` (hold → catat tunai → lunas), yang sudah terverifikasi jalan end-to-end, dan mematikan tombol batal untuk booking terkonfirmasi tanpa pembayaran. **Perbaiki di sisi API sebelum P1-96/P1-97** — putuskan apakah `walk_in` seharusnya ikut membuat pembayaran `cash` yang lunas, atau `cancelBooking` yang harus menerima booking tanpa pembayaran.
+
+  **Kualitas, tidak menghambat:**
+  - `GET /pricing/preview` yang disebut P1-84 tidak ada di API. Pratinjau harga dan audit cakupan aturan memakai `POST /bookings/quote` (publik, stateless, pipeline harga yang sama dengan checkout) — lihat `apps/admin/src/lib/quote.ts`. Kalau endpoint khusus dibuat nanti, cukup ganti isi file itu.
+  - Tidak ada endpoint daftar venue. Saat membuat lapangan pertama, `venue_id` harus diketik manual; lapangan berikutnya mewarisi venue dari lapangan yang sudah ada.
+  - `GET /admin/users` hanya untuk admin, sehingga staff tidak dapat mencari akun customer terdaftar saat booking manual — staff hanya bisa memakai jalur tamu (`guest_name` + `guest_phone`).
+  - Tidak ada `GET /bookings/{id}/payments`. Detail booking mencari pembayaran lewat `GET /payments?q=<booking_code>` lalu menyaring ulang `booking_id` di klien.
+  - `GET /slot-claims` dan `GET /payments` dibatasi `per_page` 100, jadi kalender satu hari dan rekap pemasukan harian memakai satu halaman penuh dan memberi peringatan eksplisit saat data melewati batas itu, bukan diam-diam terpotong.
+  - Voucher `free_slot` hanya tampil baca-saja di `apps/admin`; formulirnya baru mendukung `percent` dan `fixed` sesuai lingkup P1-89.
+  - Database dev lokal berisi booking uji `HB-260809-0012` (walk-in, tidak dapat dibatalkan karena bug di atas) yang tersisa dari verifikasi P1.L.
 
   </details>
 

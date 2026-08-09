@@ -41,6 +41,7 @@ const nextConfig: NextConfig = {
         headers: createSecurityHeaders({
           apiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL,
           isDevelopment: process.env.NODE_ENV === 'development',
+          mediaBaseUrl: process.env.NEXT_PUBLIC_MEDIA_BASE_URL,
           sentryDsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
         }),
       },

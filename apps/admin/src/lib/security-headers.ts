@@ -6,6 +6,12 @@ export interface SecurityHeader {
 export interface SecurityHeaderOptions {
   apiBaseUrl: string | undefined
   isDevelopment: boolean
+  /**
+   * Origin object storage. Presigned upload melakukan `PUT` langsung ke sana
+   * dari peramban (docs/02 § 6) — tanpa origin ini di `connect-src`, unggah
+   * foto lapangan diblokir CSP dan hanya terlihat sebagai kegagalan jaringan.
+   */
+  mediaBaseUrl: string | undefined
   sentryDsn: string | undefined
 }
 
@@ -20,7 +26,18 @@ function originOf(value: string | undefined): string | undefined {
 
 /** Header S-4 dengan origin API/Sentry yang dipersempit dari konfigurasi build. */
 export function createSecurityHeaders(options: SecurityHeaderOptions): SecurityHeader[] {
-  const connectSources = ["'self'", originOf(options.apiBaseUrl), originOf(options.sentryDsn)]
+  const mediaOrigin = originOf(options.mediaBaseUrl)
+  const connectSources = [
+    "'self'",
+    originOf(options.apiBaseUrl),
+    mediaOrigin,
+    originOf(options.sentryDsn),
+  ]
+    .filter((source): source is string => source !== undefined)
+    .join(' ')
+  // `https:` menutupi storage produksi; origin eksplisit diperlukan untuk MinIO
+  // lokal yang berjalan di `http://`.
+  const imageSources = ["'self'", 'data:', 'blob:', 'https:', mediaOrigin]
     .filter((source): source is string => source !== undefined)
     .join(' ')
   const scriptSources = options.isDevelopment
@@ -34,7 +51,7 @@ export function createSecurityHeaders(options: SecurityHeaderOptions): SecurityH
     "form-action 'self'",
     `script-src ${scriptSources}`,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob: https:",
+    `img-src ${imageSources}`,
     "font-src 'self' data:",
     `connect-src ${connectSources}`,
   ].join('; ')
