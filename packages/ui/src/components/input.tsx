@@ -8,6 +8,12 @@ import { cn } from '../lib/cn.ts'
  * atributnya sudah harus ada demi pembaca layar, jadi menjadikannya juga
  * pemicu gaya menghapus satu sumber kebenaran yang bisa melenceng — kotak
  * merah tanpa pengumuman ke pembaca layar, atau sebaliknya.
+ *
+ * `suppressHydrationWarning` bukan tambalan malas: ekstensi password manager
+ * menempelkan `style` berisi ikonnya sendiri ke input sebelum React hydrate,
+ * dan React membaca itu sebagai mismatch lalu membuang seluruh pohon untuk
+ * dirender ulang di klien. Isi browser pengguna di luar kendali kita, jadi
+ * atribut input memang sengaja tidak dibandingkan saat hydrate.
  */
 export function Input({
   className,
@@ -28,6 +34,7 @@ export function Input({
       )}
       type={type}
       {...props}
+      suppressHydrationWarning
     />
   )
 }

@@ -20,6 +20,10 @@ interface FieldProps {
  * Kalau setiap pemanggil merangkai id-nya sendiri, cepat atau lambat ada satu
  * ruas yang labelnya tidak tertaut — dan itu tidak terlihat sampai seseorang
  * memakainya dengan pembaca layar.
+ *
+ * `suppressHydrationWarning` ada di pembungkus, bukan cuma di kontrolnya:
+ * ekstensi password manager menyisipkan tombol ikonnya sebagai anak tambahan
+ * di sini, dan mismatch jumlah anak hanya bisa diredam dari induknya.
  */
 export function Field({
   children,
@@ -38,7 +42,7 @@ export function Field({
       .join(' ') || undefined
 
   return (
-    <div className={cn('grid gap-1.5', className)}>
+    <div className={cn('grid gap-1.5', className)} suppressHydrationWarning>
       <Label htmlFor={id}>
         {label}
         {required ? (

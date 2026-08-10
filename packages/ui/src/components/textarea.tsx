@@ -1,6 +1,13 @@
 import type { ReactNode, TextareaHTMLAttributes } from 'react'
 import { cn } from '../lib/cn.ts'
 
+/**
+ * Area teks.
+ *
+ * `suppressHydrationWarning` dipasang dengan alasan yang sama seperti pada
+ * `Input`: ekstensi peramban menyuntik atribut ke kontrol formulir sebelum
+ * React hydrate.
+ */
 export function Textarea({
   className,
   ...props
@@ -16,6 +23,7 @@ export function Textarea({
         className,
       )}
       {...props}
+      suppressHydrationWarning
     />
   )
 }
