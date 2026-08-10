@@ -30,12 +30,35 @@ const monthShortWita = new Intl.DateTimeFormat('id-ID', {
   month: 'short',
 })
 
+const weekdayShortWita = new Intl.DateTimeFormat('id-ID', {
+  timeZone: TIMEZONE,
+  weekday: 'short',
+})
+
 const dateKeyWita = new Intl.DateTimeFormat('en-CA', {
   timeZone: TIMEZONE,
   year: 'numeric',
   month: '2-digit',
   day: '2-digit',
 })
+
+/**
+ * Indeks hari menurut WITA. Dihitung lewat formatter `en-US` (bukan
+ * `Date#getDay`, yang memakai zona waktu peramban) supaya pengunjung di WIB
+ * maupun WIT melihat hari yang sama dengan yang dipakai peladen untuk
+ * menentukan tanggal bisnis booking (BR-B-01).
+ */
+const weekdayKeyWita = new Intl.DateTimeFormat('en-US', { timeZone: TIMEZONE, weekday: 'short' })
+
+const WEEKDAY_INDEX: Record<string, number> = {
+  Sun: 0,
+  Mon: 1,
+  Tue: 2,
+  Wed: 3,
+  Thu: 4,
+  Fri: 5,
+  Sat: 6,
+}
 
 const DAY_NAMES = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'] as const
 
@@ -62,6 +85,22 @@ export function formatDayNumberWita(iso: string): string {
 
 export function formatMonthShortWita(iso: string): string {
   return monthShortWita.format(new Date(iso))
+}
+
+/** Nama hari singkat ("Sen", "Sel", …) untuk pil tanggal pada strip ketersediaan. */
+export function formatWeekdayShortWita(iso: string): string {
+  return weekdayShortWita.format(new Date(iso))
+}
+
+/** Indeks hari menurut WITA; 0 = Minggu, sama seperti `EXTRACT(DOW)`. */
+export function witaWeekdayIndex(iso: string): number {
+  return WEEKDAY_INDEX[weekdayKeyWita.format(new Date(iso))] ?? 0
+}
+
+/** Sabtu dan Minggu — dipakai untuk menandai pil tanggal, bukan untuk menghitung harga. */
+export function isWitaWeekend(iso: string): boolean {
+  const index = witaWeekdayIndex(iso)
+  return index === 0 || index === 6
 }
 
 /** Indeks mengikuti `EXTRACT(DOW)`: 0 = Minggu. */

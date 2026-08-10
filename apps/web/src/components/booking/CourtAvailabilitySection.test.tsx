@@ -1,14 +1,27 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-const { routerPush, capturedGridProps } = vi.hoisted(() => ({
+const { routerPush, capturedGridProps, quotePost } = vi.hoisted(() => ({
   routerPush: vi.fn(),
   capturedGridProps: { current: null as Record<string, unknown> | null },
+  quotePost: vi.fn(),
 }))
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: routerPush }),
+}))
+
+/**
+ * Alasan memock modul `api-client` (bukan `fetch` global) sama dengan
+ * `AvailabilityGrid.test.tsx`: `createHolaClient` menangkap `globalThis.fetch`
+ * saat modulnya dimuat, jadi `vi.stubGlobal('fetch', …)` di dalam `it()` tidak
+ * pernah terlihat olehnya dan request sungguhan akan keluar ke jaringan.
+ */
+vi.mock('../../lib/api-client.ts', () => ({
+  apiClient: { api: { v1: { bookings: { quote: { $post: quotePost } } } } },
 }))
 
 /**
@@ -53,14 +66,39 @@ const baseProps = {
   requireContiguousSlots: false,
 }
 
+function wrapper({ children }: { children: ReactNode }): ReactNode {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  return <QueryClientProvider client={client}>{children}</QueryClientProvider>
+}
+
+function mockQuote(totalAmount: number): void {
+  quotePost.mockResolvedValue(
+    Response.json({
+      data: {
+        lines: [],
+        subtotal_amount: totalAmount,
+        addon_amount: 0,
+        discount_amount: 0,
+        tax_amount: 0,
+        fee_amount: 0,
+        rounding_adjustment_amount: 0,
+        total_amount: totalAmount,
+        promo: null,
+        warnings: [],
+      },
+    }),
+  )
+}
+
 afterEach(() => {
   routerPush.mockReset()
+  quotePost.mockReset()
   capturedGridProps.current = null
 })
 
 describe('CourtAvailabilitySection', () => {
   it('C1: memilih slot melebihi max_slots_per_booking menonaktifkan "Lanjut ke checkout" dengan alasan', async () => {
-    render(<CourtAvailabilitySection {...baseProps} />)
+    render(<CourtAvailabilitySection {...baseProps} />, { wrapper })
 
     await userEvent.click(screen.getByRole('button', { name: 'pilih-lima-slot' }))
 
@@ -70,7 +108,7 @@ describe('CourtAvailabilitySection', () => {
   })
 
   it('pilihan valid mengaktifkan "Lanjut ke checkout" tanpa pesan error', async () => {
-    render(<CourtAvailabilitySection {...baseProps} />)
+    render(<CourtAvailabilitySection {...baseProps} />, { wrapper })
 
     await userEvent.click(screen.getByRole('button', { name: 'pilih-satu-slot' }))
 
@@ -80,7 +118,7 @@ describe('CourtAvailabilitySection', () => {
   })
 
   it('pilihan kosong menonaktifkan tombol tanpa menampilkan pesan error (keadaan awal)', () => {
-    render(<CourtAvailabilitySection {...baseProps} />)
+    render(<CourtAvailabilitySection {...baseProps} />, { wrapper })
 
     const continueButton = screen.getByRole('button', { name: /Lanjut ke checkout/ })
     expect(continueButton.hasAttribute('disabled')).toBe(true)
@@ -88,15 +126,50 @@ describe('CourtAvailabilitySection', () => {
   })
 
   it('I2: slotConflictNotice menampilkan pesan slot baru saja diambil orang lain', () => {
-    render(<CourtAvailabilitySection {...baseProps} slotConflictNotice />)
+    render(<CourtAvailabilitySection {...baseProps} slotConflictNotice />, { wrapper })
 
     expect(
       screen.getByText(/Slot yang kamu pilih sebelumnya baru saja diambil orang lain/),
     ).toBeDefined()
   })
 
+  it('BR-B-12: total di bar sticky datang dari endpoint quote, bukan dijumlah di peramban', async () => {
+    mockQuote(275_000)
+    render(<CourtAvailabilitySection {...baseProps} />, { wrapper })
+
+    await userEvent.click(screen.getByRole('button', { name: 'pilih-satu-slot' }))
+
+    expect(await screen.findByText(/Total Rp275\.000/)).toBeDefined()
+    expect(quotePost).toHaveBeenCalledWith({
+      json: {
+        items: [{ court_id: 'court-1', starts_at: '2026-08-10T06:00:00+08:00' }],
+        addons: [],
+      },
+    })
+  })
+
+  it('quote gagal menampilkan keadaannya, bukan angka tebakan', async () => {
+    quotePost.mockRejectedValue(new Error('boom'))
+    render(<CourtAvailabilitySection {...baseProps} />, { wrapper })
+
+    await userEvent.click(screen.getByRole('button', { name: 'pilih-satu-slot' }))
+
+    expect(await screen.findByText('Harga gagal dihitung')).toBeDefined()
+    expect(screen.queryByText(/Rp/)).toBeNull()
+  })
+
+  it('pilihan tidak valid tidak memanggil quote sama sekali', async () => {
+    mockQuote(100_000)
+    render(<CourtAvailabilitySection {...baseProps} />, { wrapper })
+
+    await userEvent.click(screen.getByRole('button', { name: 'pilih-lima-slot' }))
+
+    expect(await screen.findByText(/Pilih 1–4 slot/)).toBeDefined()
+    expect(quotePost).not.toHaveBeenCalled()
+  })
+
   it('I2: initialDate diteruskan ke AvailabilityGrid supaya tanggal konflik terpilih otomatis', () => {
-    render(<CourtAvailabilitySection {...baseProps} initialDate="2026-08-10" />)
+    render(<CourtAvailabilitySection {...baseProps} initialDate="2026-08-10" />, { wrapper })
 
     expect(capturedGridProps.current?.initialDate).toBe('2026-08-10')
   })

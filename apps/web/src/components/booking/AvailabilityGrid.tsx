@@ -3,12 +3,21 @@
 import { Badge, Button, cn, Skeleton } from '@hola/ui'
 import { useQuery } from '@tanstack/react-query'
 import type { InferResponseType } from 'hono/client'
-import { RefreshCw } from 'lucide-react'
+import { CalendarDays, RefreshCw } from 'lucide-react'
 import type React from 'react'
 import type { ReactNode } from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import { apiClient } from '../../lib/api-client.ts'
-import { formatRupiah, formatTimeWita, witaDateKey } from '../../lib/format.ts'
+import {
+  formatDateWita,
+  formatDayNumberWita,
+  formatMonthShortWita,
+  formatRupiah,
+  formatTimeWita,
+  formatWeekdayShortWita,
+  isWitaWeekend,
+  witaDateKey,
+} from '../../lib/format.ts'
 import { EmptyState } from '../common/EmptyState.tsx'
 import { isBeyondHorizon, rateClassLabel, unavailableLabel } from './availability-labels.ts'
 
@@ -41,6 +50,17 @@ function dateOptions(serverTime: string, horizonDays: number): string[] {
     date.setDate(date.getDate() + index)
     return witaDateKey(date.toISOString())
   })
+}
+
+/**
+ * `dateOptions` selalu mulai dari tanggal WITA milik `serverTime`, jadi indeks 0
+ * adalah hari ini menurut peladen — bukan menurut jam peramban customer, yang
+ * bisa berbeda hari saat dia sedang di zona waktu lain.
+ */
+function relativeDayLabel(index: number): string | null {
+  if (index === 0) return 'Hari ini'
+  if (index === 1) return 'Besok'
+  return null
 }
 
 export function AvailabilityGrid({
@@ -110,21 +130,85 @@ export function AvailabilityGrid({
     setPullStartY(null)
   }
 
+  const selectedIndex = dates.indexOf(selectedDate)
+  const selectedRelativeLabel = relativeDayLabel(selectedIndex)
+
   return (
     <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <CalendarDays size={18} className="text-primary" aria-hidden />
+        <p className="font-display text-lg font-bold text-foreground">
+          {formatDateWita(selectedDate)}
+        </p>
+        {selectedRelativeLabel ? <Badge variant="secondary">{selectedRelativeLabel}</Badge> : null}
+      </div>
+
       {/* biome-ignore lint/a11y/useSemanticElements: strip tanggal bukan form; <fieldset>
           akan membawa semantik dan styling form yang tidak cocok di sini. */}
-      <div className="flex gap-2 overflow-x-auto pb-2" role="group" aria-label="Pilih tanggal">
-        {dates.map((date) => (
-          <Button
-            key={date}
-            size="sm"
-            variant={date === selectedDate ? 'default' : 'outline'}
-            onClick={() => setSelectedDate(date)}
-          >
-            {date.slice(8)}/{date.slice(5, 7)}
-          </Button>
-        ))}
+      <div
+        className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-2"
+        role="group"
+        aria-label="Pilih tanggal"
+      >
+        {dates.map((date, index) => {
+          const isActive = date === selectedDate
+          const isWeekend = isWitaWeekend(date)
+          const relative = relativeDayLabel(index)
+          return (
+            <button
+              key={date}
+              type="button"
+              onClick={() => setSelectedDate(date)}
+              aria-pressed={isActive}
+              // Nama aksesibel lengkap; tiga baris terpisah di dalam pil terbaca
+              // sebagai "Sen 10 Agu" oleh pembaca layar tanpa ini.
+              aria-label={`${formatDateWita(date)}${relative ? ` (${relative})` : ''}`}
+              className={cn(
+                'flex w-18 shrink-0 flex-col items-center gap-0.5 rounded-2xl border px-2 py-2.5 transition-all',
+                isActive
+                  ? 'border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/25'
+                  : 'border-border bg-card hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md',
+              )}
+            >
+              <span
+                className={cn(
+                  'text-[11px] font-bold uppercase tracking-wider',
+                  isActive
+                    ? 'text-primary-foreground/75'
+                    : isWeekend
+                      ? 'text-destructive'
+                      : 'text-muted-foreground',
+                )}
+              >
+                {formatWeekdayShortWita(date)}
+              </span>
+              <span className="font-display text-2xl font-bold leading-none">
+                {formatDayNumberWita(date)}
+              </span>
+              <span
+                className={cn(
+                  'text-[11px] font-medium',
+                  isActive ? 'text-primary-foreground/75' : 'text-muted-foreground',
+                )}
+              >
+                {formatMonthShortWita(date)}
+              </span>
+              {/* Penanda hari ini tetap terlihat walau pil-nya tidak terpilih —
+                  tanpa ini customer kehilangan titik acuan begitu menggeser strip. */}
+              <span
+                aria-hidden
+                className={cn(
+                  'mt-0.5 h-1 w-1 rounded-full',
+                  index === 0
+                    ? isActive
+                      ? 'bg-primary-foreground'
+                      : 'bg-primary'
+                    : 'bg-transparent',
+                )}
+              />
+            </button>
+          )
+        })}
       </div>
 
       <div className="mt-4 flex items-center justify-between gap-3">
