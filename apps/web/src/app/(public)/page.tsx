@@ -4,6 +4,7 @@ import type { ReactNode } from 'react'
 import { CourtCard } from '../../components/court/CourtCard.tsx'
 import { AppTeaserSection } from '../../components/home/AppTeaserSection.tsx'
 import { CtaBanner } from '../../components/home/CtaBanner.tsx'
+import { DevelopmentNoticeDialog } from '../../components/home/DevelopmentNoticeDialog.tsx'
 import { FeaturesSection } from '../../components/home/FeaturesSection.tsx'
 import { HeroSection } from '../../components/home/HeroSection.tsx'
 import { HowItWorksSection } from '../../components/home/HowItWorksSection.tsx'
@@ -15,6 +16,8 @@ export default async function HomePage(): Promise<ReactNode> {
 
   return (
     <main>
+      <DevelopmentNoticeDialog />
+
       <HeroSection
         courtCount={courtsResult.status === 'ok' ? courtsResult.items.length : 0}
         sportCount={sportsResult.status === 'ok' ? sportsResult.items.length : 0}
