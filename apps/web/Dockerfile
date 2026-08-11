@@ -14,9 +14,12 @@ COPY packages/api-client/package.json packages/api-client/package.json
 COPY packages/db/package.json packages/db/package.json
 COPY packages/shared/package.json packages/shared/package.json
 COPY packages/ui/package.json packages/ui/package.json
-# `...` = paket ini beserta dependency workspace-nya (@hola/ui, api-client,
-# shared) saja; dependency native milik API tidak ikut dibangun di sini.
-RUN pnpm install --frozen-lockfile --filter @hola/web...
+# Install penuh, TANPA --filter. `next build` ikut menjalankan type check, dan
+# packages/api-client mengimpor `AppType` dari apps/api/src/app.ts (Hono RPC),
+# sehingga type check apps/web ikut mengetik-periksa seluruh apps/api. Tanpa
+# dependency apps/api (hono, zod, drizzle-orm, @aws-sdk/*, nodemailer) build
+# gagal dengan puluhan TS2307 "Cannot find module".
+RUN pnpm install --frozen-lockfile
 
 FROM dependencies AS build
 WORKDIR /workspace
