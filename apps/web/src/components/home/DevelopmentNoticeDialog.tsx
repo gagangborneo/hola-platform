@@ -75,7 +75,7 @@ export function DevelopmentNoticeDialog(): ReactNode {
         <DialogHeader>
           <DialogTitle>Sistem dalam tahap pengembangan</DialogTitle>
           <DialogDescription>
-            Hola sedang dikembangkan oleh tim{' '}
+            Sistem Aplikasi Hola ini dikembangkan oleh tim{' '}
             <a
               href={NBT_PORTFOLIO_URL}
               target="_blank"
