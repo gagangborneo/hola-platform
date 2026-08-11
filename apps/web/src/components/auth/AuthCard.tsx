@@ -6,9 +6,15 @@ interface AuthCardProps {
   title: string
 }
 
+/**
+ * `flex-1`, bukan `min-h-screen`: halaman auth kini berada di bawah header dan
+ * di atas footer root layout, jadi memaksa setinggi viewport akan mendorong
+ * footer keluar layar dan memunculkan gulir yang tidak perlu. Mengisi sisa
+ * kolom flex membuat kartunya tetap terpusat secara vertikal.
+ */
 export function AuthCard({ children, description, title }: AuthCardProps): ReactNode {
   return (
-    <main className="grid min-h-screen items-center justify-items-center bg-background p-6">
+    <main className="grid flex-1 items-center justify-items-center bg-background p-6">
       <section
         className="w-full max-w-lg rounded-xl border bg-card p-8 shadow-xl shadow-primary/5"
         aria-labelledby="auth-title"
