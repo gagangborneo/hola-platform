@@ -14,6 +14,37 @@ function gitSha(): string {
   }
 }
 
+/**
+ * Origin media diturunkan dari NEXT_PUBLIC_MEDIA_BASE_URL, bukan didaftar
+ * manual: host media berbeda per environment (RustFS lokal, bucket produksi),
+ * dan daftar yang di-hardcode membuat `next/image` menolak foto lapangan
+ * dengan 400 setiap kali host-nya berpindah.
+ */
+function mediaRemotePatterns(): NonNullable<
+  NonNullable<NextConfig['images']>['remotePatterns']
+> {
+  const raw = process.env.NEXT_PUBLIC_MEDIA_BASE_URL
+  if (!raw) return []
+
+  try {
+    const url = new URL(raw)
+    const protocol = url.protocol.replace(':', '')
+    if (protocol !== 'http' && protocol !== 'https') return []
+
+    return [
+      {
+        protocol,
+        hostname: url.hostname,
+        pathname: '/**',
+        ...(url.port ? { port: url.port } : {}),
+      },
+    ]
+  } catch {
+    // URL tidak valid tidak boleh menggagalkan build; foto remote saja yang mati.
+    return []
+  }
+}
+
 const release = gitSha()
 const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN
 const sentryOrg = process.env.SENTRY_ORG
@@ -32,10 +63,7 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
   images: {
-    remotePatterns: [
-      { protocol: 'https', hostname: 'media.hola.id' },
-      { protocol: 'http', hostname: 'localhost', port: '9000' },
-    ],
+    remotePatterns: mediaRemotePatterns(),
   },
   env: {
     NEXT_PUBLIC_SENTRY_RELEASE: release,

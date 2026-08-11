@@ -55,6 +55,11 @@ ENV NODE_ENV=production \
   HOSTNAME=0.0.0.0
 COPY --from=build --chown=hola:hola /workspace/apps/web/.next/standalone ./
 COPY --from=build --chown=hola:hola /workspace/apps/web/.next/static ./apps/web/.next/static
+# `output: 'standalone'` sengaja TIDAK menyertakan public/ — Next mewajibkan
+# folder ini disalin manual, sama seperti .next/static. Tanpa baris ini seluruh
+# /images/* dan /logo/* balas 404, dan /_next/image balas 400 karena optimizer
+# tidak menemukan berkas sumbernya.
+COPY --from=build --chown=hola:hola /workspace/apps/web/public ./apps/web/public
 USER hola
 WORKDIR /app/apps/web
 EXPOSE 3000
