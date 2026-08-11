@@ -56,6 +56,32 @@ describe('RequireSession', () => {
     expect(screen.queryByText('rahasia')).toBeNull()
   })
 
+  it('membawa query string ke tujuan kembali', async () => {
+    // `/checkout` menjawab notFound() tanpa `court`/`slots`, jadi menjatuhkan
+    // query string di sini berarti customer kehilangan pilihan slotnya dan
+    // mendarat di 404 tepat setelah login berhasil.
+    snapshot.accessToken = null
+    snapshot.isReady = true
+    globalThis.history.replaceState(
+      null,
+      '',
+      '/checkout?court=abc&slots=2026-08-12T01%3A00%3A00.000Z',
+    )
+
+    render(
+      <RequireSession>
+        <p>rahasia</p>
+      </RequireSession>,
+    )
+
+    await waitFor(() => {
+      expect(replace).toHaveBeenCalledWith(
+        '/login?next=%2Fcheckout%3Fcourt%3Dabc%26slots%3D2026-08-12T01%253A00%253A00.000Z',
+      )
+    })
+    globalThis.history.replaceState(null, '', '/')
+  })
+
   it('merender isi saat sesi tersedia', () => {
     snapshot.accessToken = 'token'
     snapshot.isReady = true

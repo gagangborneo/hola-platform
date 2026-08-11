@@ -26,7 +26,19 @@ export function RequireSession({ children }: RequireSessionProps): ReactNode {
 
   useEffect(() => {
     if (session.isReady && session.accessToken === null) {
-      router.replace(`/login?next=${encodeURIComponent(pathname)}`)
+      // Query string WAJIB ikut: `usePathname()` membuangnya, padahal justru di
+      // sana konteks pemesanan hidup (`/checkout?court=…&slots=…`). Tanpa ini
+      // customer yang memilih slot lalu diminta masuk akan mendarat di
+      // `/checkout` telanjang setelah login — dan halaman itu menjawab
+      // `notFound()` tanpa `court`/`slots`, jadi pilihannya hilang dan ia
+      // disambut 404 tepat setelah berhasil login.
+      //
+      // Dibaca dari `location` di dalam efek, bukan `useSearchParams()`:
+      // hook itu memaksa halaman statis di bawah `/akun` bailout ke render
+      // klien (atau menuntut Suspense). Efek ini hanya jalan di browser,
+      // jadi `location` selalu tersedia di sini.
+      const search = globalThis.location.search
+      router.replace(`/login?next=${encodeURIComponent(`${pathname}${search}`)}`)
     }
   }, [session.isReady, session.accessToken, pathname, router])
 
