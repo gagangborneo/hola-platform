@@ -4,10 +4,19 @@ FROM node:24-alpine AS dependencies
 RUN corepack enable
 WORKDIR /workspace
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
+# Seluruh manifest workspace wajib hadir: `--frozen-lockfile` memvalidasi semua
+# importer di pnpm-lock.yaml, bukan hanya paket yang dipakai image ini. Kalau
+# ada yang hilang pnpm gagal dengan ERR_PNPM_OUTDATED_LOCKFILE.
 COPY apps/admin/package.json apps/admin/package.json
+COPY apps/api/package.json apps/api/package.json
+COPY apps/web/package.json apps/web/package.json
 COPY packages/api-client/package.json packages/api-client/package.json
+COPY packages/db/package.json packages/db/package.json
 COPY packages/shared/package.json packages/shared/package.json
-RUN pnpm install --frozen-lockfile
+COPY packages/ui/package.json packages/ui/package.json
+# `...` = paket ini beserta dependency workspace-nya (@hola/ui, api-client,
+# shared) saja; dependency native milik API tidak ikut dibangun di sini.
+RUN pnpm install --frozen-lockfile --filter @hola/admin...
 
 FROM dependencies AS build
 WORKDIR /workspace
